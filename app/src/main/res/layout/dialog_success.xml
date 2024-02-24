@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:id="@+id/dialogContainer"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingBottom="16dp"
+    android:gravity="center_horizontal"> <!-- This will center all its children horizontally -->
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Product scanned successfully!"
+        android:gravity="center"
+        android:background="@color/success_green"
+        android:textColor="@android:color/white"
+        android:textSize="25sp"
+        android:padding="8dp"/>
+
+</LinearLayout>
+

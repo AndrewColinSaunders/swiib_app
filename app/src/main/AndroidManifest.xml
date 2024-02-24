@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/swiib_app_icon"
+        android:label="Swiib"
+        android:roundIcon="@mipmap/swiib_app_icon_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.WarehouseTet"
+        tools:targetApi="31">
+        <activity
+            android:name=".ProductDetailActivity"
+            android:exported="false"
+            android:label="Product Details"
+            android:theme="@style/Theme.WarehouseTet" />
+        <activity
+            android:name=".ProductsActivity"
+            android:exported="false"
+            android:label="Products"
+            android:theme="@style/Theme.WarehouseTet" />
+        <activity
+            android:name=".ReceiptsActivity"
+            android:exported="false"
+            android:label="Receipts"
+            android:theme="@style/Theme.WarehouseTet" />
+
+        <activity
+            android:name=".HomePageActivity"
+            android:exported="false"
+            android:label="Warehouse Operations"
+            android:theme="@style/Theme.WarehouseTet" />
+        <activity
+            android:name=".LoginActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">WarehouseTest</string>
+    <string name="title_activity_home_page">HomePageActivity</string>
+    <string name="title_activity_delivery_orders">DeliveryOrdersActivity</string>
+    <string name="title_activity_batch_details">BatchDetailsActivity</string>
+    <string name="title_activity_picking_details">PickingDetailsActivity</string>
+    <string name="title_activity_receipts">ReceiptsActivity</string>
+    <string name="title_activity_products">ProductsActivity</string>
+    <string name="title_activity_product_detail">ProductDetailActivity</string>
+</resources>
