@@ -72,6 +72,7 @@ package com.example.warehousetet
 
 import android.content.Context
 import android.os.Bundle
+import android.text.InputType
 import android.util.Log
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
@@ -79,6 +80,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -169,12 +171,17 @@ private fun fetchProductsForReceipt(receiptId: Int) {
             }
 
             when (trackingType) {
-                "serial", "lot" -> {
+                "serial" -> {
                     // For 'serial' and 'lot', add individual entries for each unit
                     repeat(product.quantity.toInt()) {
                         adjustedProducts.add(product.copy())
                     }
                 }
+                "lot" -> {
+                    // For 'lot', add a single entry regardless of the quantity
+                    adjustedProducts.add(product)
+                }
+
                 else -> {
                     // For 'none', add a single entry for the product
                     adjustedProducts.add(product)
@@ -212,78 +219,38 @@ private fun fetchProductsForReceipt(receiptId: Int) {
         }
     }
 
-//    private fun fetchBarcodesForProducts(products: List<Product>) {
-//        products.forEach { product ->
-//            coroutineScope.launch {
-//                val barcode = odooXmlRpcClient.fetchProductBarcodeByName(product.name)
-//                barcode?.let {
-//                    synchronized(this@ProductsActivity) {
-//                        productBarcodes[product.name] = it
-//                    }
-//                }
-//            }
-//        }
-//    }
-//
-//    private fun verifyBarcode(scannedBarcode: String) {
-//        // Check if the barcode matches any product's barcode
-//        val productName = synchronized(this) { productBarcodes.filterValues { it == scannedBarcode }.keys.firstOrNull() }
-//
-//        if (productName != null) {
-//            // Product matched, now fetch its tracking type asynchronously
-//            lifecycleScope.launch(Dispatchers.IO) {
-//                try {
-//                    val trackingType = odooXmlRpcClient.fetchProductTrackingByName(productName)
-//                    val trackingMessage = when (trackingType) {
-//                        "serial" -> "by unique serial number"
-//                        "lot" -> "by lots"
-//                        "none" -> "no tracking"
-//                        else -> "tracking information not available"
-//                    }
-//                    // Switch back to the main thread to show success message including tracking type
-//                    withContext(Dispatchers.Main) {
-//                        Toast.makeText(this@ProductsActivity, "Success: Product found for the entered barcode. Tracking: $trackingMessage.", Toast.LENGTH_LONG).show()
-//                    }
-//                } catch (e: Exception) {
-//                    // Handle potential errors, for example, network issues or parsing errors
-//                    withContext(Dispatchers.Main) {
-//                        Toast.makeText(this@ProductsActivity, "Error fetching tracking info: ${e.message}", Toast.LENGTH_LONG).show()
-//                    }
-//                }
-//            }
-//        } else {
-//            // Run on UI thread to show error message if no matching product found
-//            runOnUiThread {
-//                Toast.makeText(this, "Error: No matching product found for the entered barcode.", Toast.LENGTH_LONG).show()
-//            }
-//        }
-//    }
-
     private fun verifyBarcode(scannedBarcode: String) {
-        // Check if the barcode matches any product's barcode
+        // First, check if the barcode matches any product's barcode
         val productNameByBarcode = synchronized(this) {
             productBarcodes.filterValues { it == scannedBarcode }.keys.firstOrNull()
         }
 
-        // Check if the scanned barcode matches any product's serial numbers
-        val productNameBySerial = synchronized(this) {
-            productSerialNumbers.entries.firstOrNull { entry ->
-                entry.value.contains(scannedBarcode)
-            }?.key
-        }
+        if (productNameByBarcode != null) {
+            // If a product barcode matched, verify product by barcode
+            verifyProductByBarcode(productNameByBarcode, scannedBarcode)
+        } else {
+            // No product barcode matched; check against serial numbers
+            lifecycleScope.launch(Dispatchers.IO) {
+                val productNameBySerial = productSerialNumbers.entries.firstOrNull { entry ->
+                    scannedBarcode in entry.value
+                }?.key
 
-        when {
-            productNameByBarcode != null -> {
-                // Verify product by barcode if a matching product name is found
-                verifyProductByBarcode(productNameByBarcode, scannedBarcode)
-            }
-            productNameBySerial != null -> {
-                // If no product barcode matched, but a serial number did, show success message
-                Toast.makeText(this, "Success: Serial number matched.", Toast.LENGTH_LONG).show()
-            }
-            else -> {
-                // If neither barcode nor serial number matched, show error message
-                Toast.makeText(this, "Error: No matching product found for the entered barcode.", Toast.LENGTH_LONG).show()
+                if (productNameBySerial != null) {
+                    // Fetch tracking type for matched product by serial number
+                    val trackingType = odooXmlRpcClient.fetchProductTrackingByName(productNameBySerial)
+                    withContext(Dispatchers.Main) {
+                        when (trackingType) {
+                            "serial" -> Toast.makeText(this@ProductsActivity, "Success: Serial number matched.", Toast.LENGTH_LONG).show()
+                            "lot" -> promptForLotQuantity(productNameBySerial) // Prompt for quantity if tracking type is 'lot'
+                            else -> Toast.makeText(this@ProductsActivity, "Error: No tracking information available.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } else {
+                    // If neither barcode nor serial number matched, show error message
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ProductsActivity, "Error: No matching product found for the entered barcode.", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }
@@ -293,11 +260,10 @@ private fun fetchProductsForReceipt(receiptId: Int) {
             try {
                 val trackingType = odooXmlRpcClient.fetchProductTrackingByName(productName)
                 val trackingMessage = when (trackingType) {
-                    "serial" -> "by unique serial number"
-                    "lot" -> "by lots"
-                    "none" -> "no tracking"
-                    null -> "No tracking information available" // Handle null case explicitly if needed
-                    else -> "tracking information not available"
+                    "serial" -> "Tracked by unique serial number"
+                    "lot" -> "Tracked by lots"
+                    "none" -> "No tracking"
+                    else -> "Tracking information not available"
                 }
 
                 // Switch back to the main thread to show success message including tracking type
@@ -307,7 +273,7 @@ private fun fetchProductsForReceipt(receiptId: Int) {
             } catch (e: Exception) {
                 // Handle potential errors, for example, network issues or parsing errors
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@ProductsActivity, "Error fetching tracking info: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@ProductsActivity, "Error fetching tracking info: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -315,6 +281,27 @@ private fun fetchProductsForReceipt(receiptId: Int) {
 
 
 
+    private fun promptForLotQuantity(productName: String) {
+        val editText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "Enter product quantity for lot"
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Enter Quantity")
+            .setMessage("Enter product quantity for lot: $productName")
+            .setView(editText)
+            .setPositiveButton("OK") { _, _ ->
+                val quantity = editText.text.toString().toDoubleOrNull()
+                if (quantity != null) {
+                    Toast.makeText(this, "Quantity for $productName: $quantity", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(this, "Invalid quantity entered", Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 
 
     override fun onDestroy() {
