@@ -27,6 +27,8 @@ class ProductsActivity : AppCompatActivity() {
     private var productBarcodes = hashMapOf<String, String>() // Map product names to their barcodes
     private var productSerialNumbers = hashMapOf<String, List<String>>()
 
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_products)
@@ -34,7 +36,7 @@ class ProductsActivity : AppCompatActivity() {
         odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
         productsAdapter = ProductsAdapter(emptyList())
 
-        val receiptId = intent.getIntExtra("RECEIPT_ID", -1)
+        var receiptId = intent.getIntExtra("RECEIPT_ID", -1)
         if (receiptId != -1) {
             setupRecyclerView()
             fetchProductsForReceipt(receiptId)
@@ -42,11 +44,13 @@ class ProductsActivity : AppCompatActivity() {
             Log.e("ProductsActivity", "Invalid receipt ID passed to ProductsActivity")
         }
 
+        receiptId = intent.getIntExtra("RECEIPT_ID", -1)
+
         barcodeInput = findViewById(R.id.barcodeInput)
         confirmButton = findViewById(R.id.confirmButton)
         confirmButton.setOnClickListener {
             val enteredBarcode = barcodeInput.text.toString().trim()
-            verifyBarcode(enteredBarcode)
+            verifyBarcode(enteredBarcode, receiptId)
 
             // Hide the keyboard
             val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -58,7 +62,7 @@ class ProductsActivity : AppCompatActivity() {
                 (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
                 // Trigger the same logic as the confirmButton's onClick
                 val enteredBarcode = barcodeInput.text.toString().trim()
-                verifyBarcode(enteredBarcode)
+                verifyBarcode(enteredBarcode, receiptId)
 
                 // Hide the keyboard
                 val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -71,6 +75,7 @@ class ProductsActivity : AppCompatActivity() {
 
             handleEnter
         }
+
     }
 
     private fun setupRecyclerView() {
@@ -140,7 +145,7 @@ private fun fetchProductsForReceipt(receiptId: Int) {
         }
     }
 
-    private fun verifyBarcode(scannedBarcode: String) {
+    private fun verifyBarcode(scannedBarcode: String, receiptId: Int) {
         // First, check if the barcode matches any product's barcode
         val productNameByBarcode = synchronized(this) {
             productBarcodes.filterValues { it == scannedBarcode }.keys.firstOrNull()
@@ -162,7 +167,8 @@ private fun fetchProductsForReceipt(receiptId: Int) {
                     withContext(Dispatchers.Main) {
                         when (trackingType) {
                             "serial" -> Toast.makeText(this@ProductsActivity, "Success: Serial number matched.", Toast.LENGTH_LONG).show()
-                            "lot" -> promptForLotQuantity(productNameBySerial) // Prompt for quantity if tracking type is 'lot'
+                            "lot" -> promptForLotQuantity(receiptId)
+
                             else -> Toast.makeText(this@ProductsActivity, "Error: No tracking information available.", Toast.LENGTH_LONG).show()
                         }
                     }
@@ -199,23 +205,52 @@ private fun fetchProductsForReceipt(receiptId: Int) {
             }
         }
     }
+    
+    private fun promptForLotQuantity(receiptId: Int) {
+        val enteredSerialOrLotNumber = barcodeInput.text.toString().trim()
+
+        lifecycleScope.launch {
+            val products = withContext(Dispatchers.IO) { odooXmlRpcClient.fetchProductsForReceipt(receiptId) }
+            var matchedQuantity: Double? = null
+
+            // Search for a product matching the entered serial/lot number
+            for (product in products) {
+                val serialNumbers = withContext(Dispatchers.IO) { odooXmlRpcClient.fetchSerialNumbersByProductName(product.name) }
+                if (serialNumbers?.contains(enteredSerialOrLotNumber) == true) {
+                    matchedQuantity = product.quantity
+                    break
+                }
+            }
+
+            withContext(Dispatchers.Main) {
+                if (matchedQuantity != null) {
+                    showQuantityDialog(enteredSerialOrLotNumber, matchedQuantity!!)
+                } else {
+                    Toast.makeText(this@ProductsActivity, "No matching product found for the entered serial/lot number.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
 
-
-    private fun promptForLotQuantity(productName: String) {
+    private fun showQuantityDialog(serialOrLotNumber: String, matchedQuantity: Double) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
-            hint = "Enter product quantity for lot"
+            hint = "Enter product quantity"
         }
 
         AlertDialog.Builder(this)
             .setTitle("Enter Quantity")
-            .setMessage("Enter product quantity for lot: $productName")
+            .setMessage("Enter product quantity for lot: $serialOrLotNumber")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->
-                val quantity = editText.text.toString().toDoubleOrNull()
-                if (quantity != null) {
-                    Toast.makeText(this, "Quantity for $productName: $quantity", Toast.LENGTH_LONG).show()
+                val enteredQuantity = editText.text.toString().toDoubleOrNull()
+                if (enteredQuantity != null) {
+                    if (enteredQuantity == matchedQuantity) {
+                        Toast.makeText(this, "Quantity matches for lot $serialOrLotNumber.", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(this, "Entered quantity does not match expected quantity.", Toast.LENGTH_LONG).show()
+                    }
                 } else {
                     Toast.makeText(this, "Invalid quantity entered", Toast.LENGTH_LONG).show()
                 }
@@ -223,7 +258,6 @@ private fun fetchProductsForReceipt(receiptId: Int) {
             .setNegativeButton("Cancel", null)
             .show()
     }
-
 
     override fun onDestroy() {
         super.onDestroy()
