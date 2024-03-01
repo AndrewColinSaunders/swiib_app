@@ -117,9 +117,9 @@ class ProductDetailActivity : AppCompatActivity() {
             if (actionId == EditorInfo.IME_ACTION_DONE ||
                 (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
                 alertDialog.getButton(AlertDialog.BUTTON_POSITIVE)?.performClick()
-                true // Indicate event handling is complete
+                true
             } else {
-                false // Continue with other listeners if any
+                false
             }
         }
 
@@ -132,10 +132,10 @@ class ProductDetailActivity : AppCompatActivity() {
         AlertDialog.Builder(this).apply {
             setView(dialogView)
             setPositiveButton("Try Again") { _, _ ->
-                barcodeInput.text.clear() // Clear the barcode input text field
-                barcodeInput.requestFocus() // Optional: Set focus to the barcode input field
+                barcodeInput.text.clear()
+                barcodeInput.requestFocus()
             }
-            setNegativeButton("Cancel", null) // Just dismiss the dialog on cancel
+            setNegativeButton("Cancel", null)
             create()
             show()
         }
@@ -160,6 +160,3 @@ class ProductDetailActivity : AppCompatActivity() {
         }
     }
 }
-
-
-
