@@ -7,8 +7,6 @@ import java.net.URL
 
 class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
-
-
     private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         return try {
             val fullUrl = "${Constants.URL}/xmlrpc/2/$endpoint"
@@ -52,8 +50,15 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         val userId = credentialManager.getUserId()
         val password = credentialManager.getPassword() ?: ""
 
-        val domain = listOf(listOf("picking_type_id.code", "=", "incoming"))
-        val fields = listOf("id", "name", "date")
+        // Updated domain with additional condition for 'state' field
+        val domain = listOf(
+            listOf("picking_type_id.code", "=", "incoming"), // Only 'incoming' operation types
+            listOf("state", "=", "assigned"), // Only receipts with 'Ready' state
+            "|",
+            listOf("user_id", "=", false), // No responsible user
+            listOf("user_id", "=", userId) // Or the current user is the responsible user
+        )
+        val fields = listOf("id", "name", "date", "user_id", "state") // Include 'state' if you want to verify it in the result
 
         val params = listOf(
             Constants.DATABASE,
@@ -67,14 +72,20 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            result.mapNotNull { it as? Map<String, Any> }.map { map ->
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                val receiptUserId = map["user_id"] as? Int
+                // Since the domain already ensures we only fetch relevant receipts,
+                // this additional check might not be necessary unless you need to perform
+                // further filtering.
                 Receipt(
                     id = map["id"] as Int,
                     name = map["name"] as String,
-                    date = map["date"].toString()
+                    date = map["date"].toString(),
+                    // Include user_id if your Receipt class supports it
+                    // Include state if you want to use it for further validation or logic
                 )
             }.also {
-                Log.d("OdooXmlRpcClient", "Fetched ${it.size} receipts")
+                Log.d("OdooXmlRpcClient", "Fetched ${it.size} receipts with 'Ready' state")
             }
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error fetching receipts: ${e.localizedMessage}", e)
@@ -127,7 +138,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         val config = getClientConfig("object") ?: return null
         val client = XmlRpcClient().also { it.setConfig(config) }
         val domain = listOf(listOf("name", "=", productName))
-        val fields = listOf("image_1920") // Adjust the field name if different in your Odoo setup
+        val fields = listOf("image_1920")
 
         val params = listOf(
             Constants.DATABASE,
@@ -156,7 +167,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         val client = XmlRpcClient().also { it.setConfig(config) }
 
         val domain = listOf(listOf("name", "=", productName))
-        val fields = listOf("barcode") // Assuming 'barcode' is the correct field
+        val fields = listOf("barcode")
 
         val params = listOf(
             Constants.DATABASE,
@@ -180,10 +191,95 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
+    suspend fun fetchProductTrackingByName(productName: String): String? {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductTrackingByName.")
+            return null
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId() // Use CredentialManager to get the user ID
+        val password = credentialManager.getPassword() ?: "" // Use CredentialManager to get the password
+        val database = Constants.DATABASE // Use Constants to get the database name
+
+        // Define the search domain to find the product by its name
+        val domain = listOf(listOf("name", "=", productName))
+        // Specify the fields to fetch; we're only interested in the 'tracking' field
+        val fields = listOf("tracking")
+
+        val params = listOf(
+            database,
+            userId,
+            password,
+            "product.template",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            if (result.isNotEmpty()) {
+                val productData = result[0] as Map<*, *>
+                productData["tracking"] as? String
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching product tracking: ${e.localizedMessage}", e)
+            null
+        }
+    }
+
+    suspend fun fetchSerialNumbersByProductName(productName: String): List<String>? {
+        val config = getClientConfig("object") ?: return null
+        val client = XmlRpcClient().also { it.setConfig(config) }
+
+        // Assuming 'product_id' is linked by a field 'name' in 'product.product' model
+        // and serial numbers are stored in 'stock.lot' model under the field 'name'.
+        val productDomain = listOf(listOf("name", "=", productName))
+        val productFields = listOf("id") // We only need the product ID to link to its serial numbers
+
+        val productParams = listOf(
+            Constants.DATABASE,
+            credentialManager.getUserId(),
+            credentialManager.getPassword() ?: "",
+            "product.product",
+            "search_read",
+            listOf(productDomain),
+            mapOf("fields" to productFields)
+        )
+
+        try {
+            val productResults = client.execute("execute_kw", productParams) as? Array<Any>
+            val productId = (productResults?.firstOrNull() as? Map<*, *>)?.get("id") as? Int ?: return null
+
+            // Now fetch serial numbers linked to this product ID in 'stock.lot' model
+            val serialDomain = listOf(listOf("product_id", "=", productId))
+            val serialFields = listOf("name") // The field that stores the serial number
+
+            val serialParams = listOf(
+                Constants.DATABASE,
+                credentialManager.getUserId(),
+                credentialManager.getPassword() ?: "",
+                "stock.lot",
+                "search_read",
+                listOf(serialDomain),
+                mapOf("fields" to serialFields)
+            )
+
+            val serialResults = client.execute("execute_kw", serialParams) as? Array<Any>
+            return serialResults?.mapNotNull { (it as? Map<*, *>)?.get("name") as? String }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching serial numbers: ${e.localizedMessage}", e)
+            return null
+        }
+    }
+
+
+
+
 }
 
 
-
-
-
-
+ 

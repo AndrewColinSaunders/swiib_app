@@ -7,26 +7,37 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.CoroutineScope
+
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
+// Define the ReceiptsActivity class, which extends AppCompatActivity
 class ReceiptsActivity : AppCompatActivity() {
 
     private lateinit var receiptsAdapter: ReceiptsAdapter
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private lateinit var credentialManager: CredentialManager // Add this line
+    private lateinit var credentialManager: CredentialManager
+    private var refreshJob: Job? = null  // Declare a Job to manage the repeating task
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_receipts)
+
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
         initializeRecyclerView()
+
+        // Initial fetch
         fetchReceiptsAndDisplay()
+
+        // Start periodic refresh
+        startPeriodicRefresh()
     }
 
     private fun initializeRecyclerView() {
@@ -44,7 +55,7 @@ class ReceiptsActivity : AppCompatActivity() {
     private fun fetchReceiptsAndDisplay() {
         coroutineScope.launch {
             try {
-                val receipts = odooXmlRpcClient.fetchReceipts() // Implement this method to fetch receipts
+                val receipts = odooXmlRpcClient.fetchReceipts()
                 withContext(Dispatchers.Main) {
                     receiptsAdapter.updateReceipts(receipts)
                 }
@@ -54,8 +65,18 @@ class ReceiptsActivity : AppCompatActivity() {
         }
     }
 
+    private fun startPeriodicRefresh() {
+        refreshJob = coroutineScope.launch {
+            while (isActive) {  // Ensures the loop runs as long as the coroutine is active
+                fetchReceiptsAndDisplay()
+                delay(5000)  // Wait for 10 seconds before the next refresh
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
+        refreshJob?.cancel()  // Ensure to cancel the refresh job when the activity is destroyed
         coroutineScope.cancel()
     }
 }

@@ -7,7 +7,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class ProductsAdapter(private var products: List<Product>) : RecyclerView.Adapter<ProductsAdapter.ProductViewHolder>() {
+class ProductsAdapter(var products: List<Product>) : RecyclerView.Adapter<ProductsAdapter.ProductViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.product_item, parent, false)
@@ -45,3 +45,4 @@ class ProductsAdapter(private var products: List<Product>) : RecyclerView.Adapte
         notifyDataSetChanged()
     }
 }
+
