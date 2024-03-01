@@ -276,6 +276,224 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
+    suspend fun fetchInternalTransfersWithProductDetails(): List<InternalTransfers> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchInternalTransfers.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(
+            listOf("state", "=", "assigned"),
+            listOf("picking_type_id.code", "=", "internal")
+        )
+        val fields = listOf("id", "name", "scheduled_date", "state")
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                val transferId = map["id"] as Int
+                val transferName = map["name"] as String
+                val transferDate = map["scheduled_date"].toString()
+
+                // Fetch products for this internal transfer
+                val products = fetchProductsForInternalTransfer(transferId)
+
+                // Assign the list of products directly to productDetails
+                InternalTransfers(
+                    id = transferId,
+                    transferName = transferName,
+                    transferDate = transferDate,
+                    productDetails = products // Assign the List<Product> directly
+                )
+            }.also {
+                Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details")
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching internal transfers: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+
+
+
+    suspend fun fetchProductsForTransferReference(transferReference: String): List<Product> {
+        val transferId = fetchTransferIdByReference(transferReference) ?: return emptyList()
+        return fetchProductsForInternalTransfer(transferId)
+    }
+
+
+    suspend fun fetchProductNamesForTransfer(transferReference: String): List<String> {
+        val config = getClientConfig("object") ?: return emptyList()
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        // Step 1: Find the specific stock.picking record by its reference
+        val pickingDomain = listOf(listOf("name", "=", transferReference))
+        val pickingFields = listOf("id")
+        val pickingParams = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(pickingDomain),
+            mapOf("fields" to pickingFields)
+        )
+
+        val pickingIds = try {
+            val result = client.execute("execute_kw", pickingParams) as Array<Any>
+            result.mapNotNull { it as? Map<String, Any> }.map { it["id"] as Int }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching stock.picking for reference $transferReference: ${e.localizedMessage}", e)
+            return emptyList()
+        }
+
+        if (pickingIds.isEmpty()) return emptyList()
+
+        // Step 2: Fetch associated stock.move records
+        val moveDomain = listOf(listOf("picking_id", "in", pickingIds))
+        val moveFields = listOf("product_id")
+        val moveParams = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move",
+            "search_read",
+            listOf(moveDomain),
+            mapOf("fields" to moveFields)
+        )
+
+        val productIds = try {
+            val result = client.execute("execute_kw", moveParams) as Array<Any>
+            result.mapNotNull { it as? Map<String, Any> }.flatMap { map ->
+                (map["product_id"] as? Array<*>)?.toList()?.filterIsInstance<Int>() ?: emptyList()
+            }.distinct()
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching stock.move for picking IDs $pickingIds: ${e.localizedMessage}", e)
+            return emptyList()
+        }
+
+        // Step 3: Retrieve product names
+        val productParams = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "product.product",
+            "read",
+            listOf(productIds),
+            listOf("name")
+        )
+
+        return try {
+            val result = client.execute("execute_kw", productParams) as Array<Any>
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { it["name"] as? String }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching product names for product IDs $productIds: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForInternalTransfer.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        // Adjust the domain filter to specifically fetch the desired internal transfer by ID.
+        // The following assumes internal transfers are distinguished within your setup and
+        // the `internal_transfer_summary` field exists and is computed for these records.
+        val domain = listOf(listOf("id", "=", transferId))
+        val fields = listOf("internal_transfer_summary")  // Use the custom computed field for internal transfers
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            // Extract the internal_transfer_summary for the specified transfer
+            val internalTransferSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["internal_transfer_summary"].toString() else ""
+            parseInternalTransferSummary(internalTransferSummary)  // You may need to implement or adjust this method
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching products for internal transfer: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    fun parseInternalTransferSummary(summary: String): List<Product> {
+        // Check if the summary is not empty
+        if (summary.isEmpty()) return emptyList()
+
+        return summary.split(", ").mapNotNull { productString ->
+            val parts = productString.split(": ")
+            if (parts.size == 2) {
+                val productName = parts[0]
+                val productQuantity = parts[1].toDoubleOrNull()  // Convert quantity to Double
+                if (productQuantity != null) {
+                    Product(name = productName, quantity = productQuantity)
+                } else {
+                    null  // If conversion fails, exclude this product from the list
+                }
+            } else {
+                null  // Exclude if the product string format is unexpected
+            }
+        }
+    }
+
+    suspend fun fetchTransferIdByReference(transferReference: String): Int? {
+        // Assuming getClientConfig, XmlRpcClient, userId, and password are accessible here
+        val config = getClientConfig("object") ?: return null
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(listOf("name", "=", transferReference))
+        val fields = listOf("id")
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as? Array<Map<String, Any>> ?: arrayOf()
+            if (result.isNotEmpty()) result[0]["id"] as? Int else null
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching transfer ID for reference $transferReference: ${e.localizedMessage}", e)
+            null
+        }
+    }
 
 
 

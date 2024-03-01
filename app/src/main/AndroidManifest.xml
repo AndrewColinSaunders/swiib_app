@@ -15,6 +15,14 @@
         android:theme="@style/Theme.WarehouseTet"
         tools:targetApi="31">
         <activity
+            android:name=".IntTransferProductsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".InternalTransfersActivity"
+            android:exported="false"
+            android:label="Internal Transfers"
+            android:theme="@style/Theme.WarehouseTet" />
+        <activity
             android:name=".ProductDetailActivity"
             android:exported="false"
             android:label="Product Details"
@@ -29,7 +37,6 @@
             android:exported="false"
             android:label="Receipts"
             android:theme="@style/Theme.WarehouseTet" />
-
         <activity
             android:name=".HomePageActivity"
             android:exported="false"
@@ -45,5 +52,4 @@
             </intent-filter>
         </activity>
     </application>
-
 </manifest>
