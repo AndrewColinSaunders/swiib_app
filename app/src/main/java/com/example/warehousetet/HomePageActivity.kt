@@ -32,6 +32,18 @@ class HomePageActivity : AppCompatActivity() {
             Intent(this, InternalTransfersActivity::class.java).also { startActivity(it) }
         }
 
+        // Modified ClickListener for btnInternalTransfers with haptic feedback
+        findViewById<Button>(R.id.btnPick).setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            Intent(this, PickActivity::class.java).also { startActivity(it) }
+        }
+
+        // Modified ClickListener for btnInternalTransfers with haptic feedback
+        findViewById<Button>(R.id.btnPack).setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            Intent(this, PackActivity::class.java).also { startActivity(it) }
+        }
+
     }
 
     private fun setupOptionButton(buttonId: Int, optionName: String) {

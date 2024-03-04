@@ -6,25 +6,25 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
-class InternalTransfersActivity : AppCompatActivity() {
+class PickActivity : AppCompatActivity() {
+    private lateinit var pickAdapter: PickAdapter
     private lateinit var credentialManager: CredentialManager
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private lateinit var internalTransfersAdapter: InternalTransfersAdapter
     private val refreshScope = CoroutineScope(Dispatchers.IO)
     private var refreshJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_internal_transfers)
+        setContentView(R.layout.activity_pick)
 
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
-        internalTransfersAdapter = InternalTransfersAdapter()
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_internal_transfers)
+        pickAdapter = PickAdapter()
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_picks) // Make sure this ID matches your layout
         recyclerView.apply {
-            layoutManager = LinearLayoutManager(this@InternalTransfersActivity)
-            adapter = internalTransfersAdapter
+            layoutManager = LinearLayoutManager(this@PickActivity)
+            adapter = pickAdapter
         }
 
         startPeriodicRefresh()
@@ -34,10 +34,10 @@ class InternalTransfersActivity : AppCompatActivity() {
         refreshJob = refreshScope.launch {
             while (isActive) {
                 try {
-                    val internalTransfers = odooXmlRpcClient.fetchInternalTransfersWithProductDetails()
+                    val picks = odooXmlRpcClient.fetchInternalTransfersWithProductDetails()
                     withContext(Dispatchers.Main) {
-                        // Use the adapter's method to submit and filter the list
-                        internalTransfersAdapter.submitFilteredInternalTransfers(internalTransfers)
+                        // Use the adapter's method to filter and submit the list
+                        pickAdapter.submitFilteredPicks(picks)
                     }
                 } catch (e: Exception) {
                     // Handle any errors, for example logging or displaying an error message

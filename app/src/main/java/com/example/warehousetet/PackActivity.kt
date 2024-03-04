@@ -6,25 +6,25 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
-class InternalTransfersActivity : AppCompatActivity() {
+class PackActivity : AppCompatActivity() {
+    private lateinit var packAdapter: PackAdapter
     private lateinit var credentialManager: CredentialManager
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private lateinit var internalTransfersAdapter: InternalTransfersAdapter
     private val refreshScope = CoroutineScope(Dispatchers.IO)
     private var refreshJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_internal_transfers)
+        setContentView(R.layout.activity_pack)
 
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
-        internalTransfersAdapter = InternalTransfersAdapter()
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_internal_transfers)
+        packAdapter = PackAdapter()
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_packs) // Ensure this ID matches your RecyclerView in activity_pack.xml
         recyclerView.apply {
-            layoutManager = LinearLayoutManager(this@InternalTransfersActivity)
-            adapter = internalTransfersAdapter
+            layoutManager = LinearLayoutManager(this@PackActivity)
+            adapter = packAdapter
         }
 
         startPeriodicRefresh()
@@ -34,24 +34,23 @@ class InternalTransfersActivity : AppCompatActivity() {
         refreshJob = refreshScope.launch {
             while (isActive) {
                 try {
-                    val internalTransfers = odooXmlRpcClient.fetchInternalTransfersWithProductDetails()
+                    val packs = odooXmlRpcClient.fetchInternalTransfersWithProductDetails() // Adapt fetch method if necessary
                     withContext(Dispatchers.Main) {
-                        // Use the adapter's method to submit and filter the list
-                        internalTransfersAdapter.submitFilteredInternalTransfers(internalTransfers)
+                        packAdapter.submitFilteredPacks(packs) // Filter and display the data
                     }
                 } catch (e: Exception) {
-                    // Handle any errors, for example logging or displaying an error message
+                    // Handle any potential errors here
                     withContext(Dispatchers.Main) {
-                        // Log the error, show a message to the user, etc.
+                        // Log error or notify user
                     }
                 }
-                delay(5000) // Adjust the delay as needed
+                delay(5000) // Adjust the refresh delay as needed
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        refreshJob?.cancel() // Cancel refresh job to prevent memory leaks
+        refreshJob?.cancel() // Prevent memory leaks by cancelling the job when the activity is destroyed
     }
 }
