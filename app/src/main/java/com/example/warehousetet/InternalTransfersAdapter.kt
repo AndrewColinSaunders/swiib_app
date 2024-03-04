@@ -54,8 +54,10 @@ class InternalTransfersAdapter :
             val productDetailsFormatted = internalTransfer.productDetails.joinToString(", ") {
                 "${it.name} (${it.quantity})"
             }
-            productDetailsTextView.text = productDetailsFormatted
+            productDetailsTextView.text = "Product Details: $productDetailsFormatted"
+            itemView.findViewById<TextView>(R.id.textView_sourceDocument).text = "Source Document: ${internalTransfer.sourceDocument}"
         }
+
     }
 
     class DiffCallback : DiffUtil.ItemCallback<InternalTransfers>() {

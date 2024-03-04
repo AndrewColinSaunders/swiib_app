@@ -13,6 +13,13 @@ import androidx.recyclerview.widget.RecyclerView
 class PackAdapter :
     ListAdapter<InternalTransfers, PackAdapter.PackViewHolder>(DiffCallback()) {
 
+    fun filter(searchQuery: String) {
+        val filteredList = currentList.filter {
+            it.sourceDocument.equals(searchQuery, ignoreCase = true)
+        }
+        submitList(filteredList)
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PackViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
         return PackViewHolder(view)
@@ -34,7 +41,7 @@ class PackAdapter :
         private val cardView: CardView = itemView.findViewById(R.id.card_view)
         private val transferNameTextView: TextView = itemView.findViewById(R.id.textView_transfer_title)
         private val transferDateTextView: TextView = itemView.findViewById(R.id.textView_transferDate)
-        private val productDetailsTextView: TextView = itemView.findViewById(R.id.textView_productDetails)
+        //private val productDetailsTextView: TextView = itemView.findViewById(R.id.textView_productDetails)
 
         init {
             cardView.setOnClickListener {
@@ -50,10 +57,11 @@ class PackAdapter :
         fun bind(internalTransfer: InternalTransfers) {
             transferNameTextView.text = internalTransfer.transferName
             transferDateTextView.text = "Date: ${internalTransfer.transferDate}"
-            val productDetailsFormatted = internalTransfer.productDetails.joinToString(", ") {
-                "${it.name} (${it.quantity})"
-            }
-            productDetailsTextView.text = productDetailsFormatted
+            //val productDetailsFormatted = internalTransfer.productDetails.joinToString(", ") {
+            //    "${it.name} (${it.quantity})"
+            //}
+            // productDetailsTextView.text = productDetailsFormatted
+            itemView.findViewById<TextView>(R.id.textView_sourceDocument).text = "Source Document: ${internalTransfer.sourceDocument}"
         }
     }
 
