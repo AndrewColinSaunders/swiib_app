@@ -205,7 +205,7 @@ private fun fetchProductsForReceipt(receiptId: Int) {
             }
         }
     }
-    
+
     private fun promptForLotQuantity(receiptId: Int) {
         val enteredSerialOrLotNumber = barcodeInput.text.toString().trim()
 
