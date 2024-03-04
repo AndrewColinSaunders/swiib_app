@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.HapticFeedbackConstants
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -32,6 +34,23 @@ class PackActivity : AppCompatActivity() {
             layoutManager = LinearLayoutManager(this@PackActivity)
             adapter = packAdapter
         }
+
+        val btnCancelSearch: Button = findViewById(R.id.btnCancelSearch)
+        btnCancelSearch.setOnClickListener {
+            // Provide haptic feedback
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+
+            // Reset the adapter with the full list
+            packAdapter.resetList() // Ensure this method properly resets the list in PackAdapter
+
+            // Hide the button
+            it.visibility = View.GONE
+
+            // Re-enable periodic refresh and restart it
+            isPeriodicRefreshEnabled = true
+            startPeriodicRefresh()
+        }
+
 
         startPeriodicRefresh()
     }
@@ -73,15 +92,16 @@ class PackActivity : AppCompatActivity() {
             .setPositiveButton("Search") { _, _ ->
                 val searchQuery = input.text.toString()
                 packAdapter.filter(searchQuery)
-                isPeriodicRefreshEnabled = false // Disable periodic refresh after search
-                refreshJob?.cancel() // Optionally cancel the current job
+                findViewById<Button>(R.id.btnCancelSearch).visibility = View.VISIBLE // Show the cancel button
+                isPeriodicRefreshEnabled = false
+                refreshJob?.cancel()
             }
             .setNegativeButton("Cancel", null)
             .show()
     }
 
     private fun initiateBarcodeScanning() {
-        // Placeholder - Implement barcode scanning logic here
+        // Placeholder for barcode scanning logic
     }
 
     private fun startPeriodicRefresh() {
@@ -94,16 +114,16 @@ class PackActivity : AppCompatActivity() {
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
-                        // Handle any errors
+                        // Log or handle any errors
                     }
                 }
-                delay(5000)
+                delay(5000) // Refresh delay
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        refreshJob?.cancel()
+        refreshJob?.cancel() // Cancel any ongoing jobs
     }
 }
