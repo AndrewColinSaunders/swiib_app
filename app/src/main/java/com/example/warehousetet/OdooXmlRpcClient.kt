@@ -1,5 +1,6 @@
 package com.example.warehousetet
 
+import IntTransferProducts
 import android.util.Log
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
@@ -304,24 +305,31 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
-                val transferId = map["id"] as Int
-                val transferName = map["name"] as String
-                val transferDate = map["scheduled_date"].toString()
+            result.mapNotNull { it as? Map<String, Any> }
+                .mapNotNull { map ->
+                    val transferId = map["id"] as Int
+                    val transferName = map["name"] as String
+                    val transferDate = map["scheduled_date"].toString()
+                    val products = fetchProductsForInternalTransfer(transferId)
 
-                // Fetch products for this internal transfer
-                val products = fetchProductsForInternalTransfer(transferId)
+                    // Ensure the fetched products are mapped to IntTransferProducts
+                    val intTransferProductsList = products.map { product ->
+                        IntTransferProducts(
+                            name = product.name,
+                            quantity = product.quantity,
+                            transferDate = transferDate // Assuming you want to use the same transfer date for all products
+                        )
+                    }
 
-                // Assign the list of products directly to productDetails
-                InternalTransfers(
-                    id = transferId,
-                    transferName = transferName,
-                    transferDate = transferDate,
-                    productDetails = products // Assign the List<Product> directly
-                )
-            }.also {
-                Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details")
-            }
+                    InternalTransfers(
+                        id = transferId,
+                        transferName = transferName,
+                        transferDate = transferDate,
+                        productDetails = intTransferProductsList
+                    )
+                }.also {
+                    Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details.")
+                }
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error fetching internal transfers: ${e.localizedMessage}", e)
             emptyList()
@@ -331,83 +339,14 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
 
 
+
+
+
     suspend fun fetchProductsForTransferReference(transferReference: String): List<Product> {
         val transferId = fetchTransferIdByReference(transferReference) ?: return emptyList()
         return fetchProductsForInternalTransfer(transferId)
     }
 
-
-    suspend fun fetchProductNamesForTransfer(transferReference: String): List<String> {
-        val config = getClientConfig("object") ?: return emptyList()
-        val client = XmlRpcClient().also { it.setConfig(config) }
-        val userId = credentialManager.getUserId()
-        val password = credentialManager.getPassword() ?: ""
-
-        // Step 1: Find the specific stock.picking record by its reference
-        val pickingDomain = listOf(listOf("name", "=", transferReference))
-        val pickingFields = listOf("id")
-        val pickingParams = listOf(
-            Constants.DATABASE,
-            userId,
-            password,
-            "stock.picking",
-            "search_read",
-            listOf(pickingDomain),
-            mapOf("fields" to pickingFields)
-        )
-
-        val pickingIds = try {
-            val result = client.execute("execute_kw", pickingParams) as Array<Any>
-            result.mapNotNull { it as? Map<String, Any> }.map { it["id"] as Int }
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching stock.picking for reference $transferReference: ${e.localizedMessage}", e)
-            return emptyList()
-        }
-
-        if (pickingIds.isEmpty()) return emptyList()
-
-        // Step 2: Fetch associated stock.move records
-        val moveDomain = listOf(listOf("picking_id", "in", pickingIds))
-        val moveFields = listOf("product_id")
-        val moveParams = listOf(
-            Constants.DATABASE,
-            userId,
-            password,
-            "stock.move",
-            "search_read",
-            listOf(moveDomain),
-            mapOf("fields" to moveFields)
-        )
-
-        val productIds = try {
-            val result = client.execute("execute_kw", moveParams) as Array<Any>
-            result.mapNotNull { it as? Map<String, Any> }.flatMap { map ->
-                (map["product_id"] as? Array<*>)?.toList()?.filterIsInstance<Int>() ?: emptyList()
-            }.distinct()
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching stock.move for picking IDs $pickingIds: ${e.localizedMessage}", e)
-            return emptyList()
-        }
-
-        // Step 3: Retrieve product names
-        val productParams = listOf(
-            Constants.DATABASE,
-            userId,
-            password,
-            "product.product",
-            "read",
-            listOf(productIds),
-            listOf("name")
-        )
-
-        return try {
-            val result = client.execute("execute_kw", productParams) as Array<Any>
-            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { it["name"] as? String }
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching product names for product IDs $productIds: ${e.localizedMessage}", e)
-            emptyList()
-        }
-    }
 
     suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
         val config = getClientConfig("object")
@@ -494,9 +433,6 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             null
         }
     }
-
-
-
 }
 
 

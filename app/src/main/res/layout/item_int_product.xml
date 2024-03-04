@@ -21,7 +21,6 @@
             android:id="@+id/textView_productName"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Chair"
             android:textAppearance="?attr/textAppearanceHeadline6"
             android:textStyle="bold" />
 
@@ -29,7 +28,6 @@
             android:id="@+id/textView_quantity"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Quantity: 35.0"
             android:layout_marginTop="8dp"
             android:textStyle="bold"/>
 
@@ -37,9 +35,8 @@
             android:id="@+id/textView_transferDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Transfer Date: 2024-02-27 (Today)"
             android:layout_marginTop="8dp"
-            android:textStyle="bold"/>
-
+            android:textStyle="bold"
+            android:text="Hello"/>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

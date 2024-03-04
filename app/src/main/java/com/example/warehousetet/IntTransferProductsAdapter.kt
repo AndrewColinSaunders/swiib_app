@@ -1,5 +1,6 @@
 package com.example.warehousetet
 
+import IntTransferProducts
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

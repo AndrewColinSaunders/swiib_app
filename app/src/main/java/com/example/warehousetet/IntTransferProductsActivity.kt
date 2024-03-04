@@ -1,5 +1,6 @@
 package com.example.warehousetet
 
+import IntTransferProducts
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -10,14 +11,10 @@ class IntTransferProductsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_int_products)
 
-        val productList = listOf(
-            IntTransferProducts("Chair", 35.0, "2024-02-27 (Today)"),
-            // Add more products as needed
-        )
+        val products: ArrayList<IntTransferProducts> = intent.getParcelableArrayListExtra<IntTransferProducts>("EXTRA_PRODUCTS") ?: arrayListOf()
 
         val recyclerView: RecyclerView = findViewById(R.id.recyclerView_internal_transfers)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = IntTransferProductsAdapter(productList)
+        recyclerView.adapter = IntTransferProductsAdapter(products)
     }
-
 }

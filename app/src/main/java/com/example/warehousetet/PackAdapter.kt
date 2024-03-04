@@ -10,28 +10,27 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 
-class InternalTransfersAdapter :
-    ListAdapter<InternalTransfers, InternalTransfersAdapter.InternalTransferViewHolder>(DiffCallback()) {
+class PackAdapter :
+    ListAdapter<InternalTransfers, PackAdapter.PackViewHolder>(DiffCallback()) {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): InternalTransferViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PackViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
-        return InternalTransferViewHolder(view)
+        return PackViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: InternalTransferViewHolder, position: Int) {
+    override fun onBindViewHolder(holder: PackViewHolder, position: Int) {
         val internalTransfer = getItem(position)
         holder.bind(internalTransfer)
     }
 
-    // Correctly placed method for filtering and submitting the list
-    fun submitFilteredInternalTransfers(list: List<InternalTransfers>) {
+    fun submitFilteredPacks(list: List<InternalTransfers>) {
         val filteredList = list.filterNot { transfer ->
-            transfer.transferName.contains("PICK", ignoreCase = true) || transfer.transferName.contains("PACK", ignoreCase = true)
+            transfer.transferName.contains("INT", ignoreCase = true) || transfer.transferName.contains("PICK", ignoreCase = true)
         }
         submitList(filteredList)
     }
 
-    inner class InternalTransferViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class PackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val cardView: CardView = itemView.findViewById(R.id.card_view)
         private val transferNameTextView: TextView = itemView.findViewById(R.id.textView_transfer_title)
         private val transferDateTextView: TextView = itemView.findViewById(R.id.textView_transferDate)
@@ -50,7 +49,7 @@ class InternalTransfersAdapter :
 
         fun bind(internalTransfer: InternalTransfers) {
             transferNameTextView.text = internalTransfer.transferName
-            transferDateTextView.text = "Transfer Date: ${internalTransfer.transferDate}"
+            transferDateTextView.text = "Date: ${internalTransfer.transferDate}"
             val productDetailsFormatted = internalTransfer.productDetails.joinToString(", ") {
                 "${it.name} (${it.quantity})"
             }
