@@ -1,6 +1,13 @@
 package com.example.warehousetet
 
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -12,6 +19,7 @@ class PickActivity : AppCompatActivity() {
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private val refreshScope = CoroutineScope(Dispatchers.IO)
     private var refreshJob: Job? = null
+    private var isPeriodicRefreshEnabled = true // Flag to control periodic refresh
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -21,37 +29,93 @@ class PickActivity : AppCompatActivity() {
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
         pickAdapter = PickAdapter()
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_picks) // Make sure this ID matches your layout
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_picks)
         recyclerView.apply {
             layoutManager = LinearLayoutManager(this@PickActivity)
             adapter = pickAdapter
         }
 
+        val btnCancelSearch: Button = findViewById(R.id.btnCancelSearch)
+        btnCancelSearch.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            pickAdapter.resetList()
+            it.visibility = View.GONE
+            isPeriodicRefreshEnabled = true
+            startPeriodicRefresh()
+        }
+
         startPeriodicRefresh()
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_widget_button -> {
+                showSearchMethodDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun showSearchMethodDialog() {
+        val options = arrayOf("Type the source document", "Scan barcode")
+        AlertDialog.Builder(this)
+            .setTitle("Search for package")
+            .setItems(options) { _, which ->
+                window.decorView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                when (which) {
+                    0 -> showTypeSearchDialog()
+                    1 -> initiateBarcodeScanning()
+                }
+            }
+            .show()
+    }
+
+    private fun showTypeSearchDialog() {
+        val input = EditText(this)
+        AlertDialog.Builder(this)
+            .setTitle("Type the source document")
+            .setView(input)
+            .setPositiveButton("Search") { _, _ ->
+                val searchQuery = input.text.toString()
+                pickAdapter.filter(searchQuery)
+                findViewById<Button>(R.id.btnCancelSearch).visibility = View.VISIBLE
+                isPeriodicRefreshEnabled = false
+                refreshJob?.cancel()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun initiateBarcodeScanning() {
+        // Placeholder - Implement your barcode scanning logic here
     }
 
     private fun startPeriodicRefresh() {
         refreshJob = refreshScope.launch {
-            while (isActive) {
+            while (isActive && isPeriodicRefreshEnabled) {
                 try {
-                    val picks = odooXmlRpcClient.fetchInternalTransfersWithProductDetails()
+                    val picks = odooXmlRpcClient.fetchInternalTransfersWithProductDetails() // Adjust fetch method as needed
                     withContext(Dispatchers.Main) {
-                        // Use the adapter's method to filter and submit the list
                         pickAdapter.submitFilteredPicks(picks)
                     }
                 } catch (e: Exception) {
-                    // Handle any errors, for example logging or displaying an error message
                     withContext(Dispatchers.Main) {
-                        // Log the error, show a message to the user, etc.
+                        // Log or handle errors
                     }
                 }
-                delay(5000) // Adjust the delay as needed
+                delay(5000) // Adjust delay as needed
             }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        refreshJob?.cancel() // Cancel refresh job to prevent memory leaks
+        refreshJob?.cancel()
     }
 }

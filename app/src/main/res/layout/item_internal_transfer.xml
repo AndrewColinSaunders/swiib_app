@@ -26,6 +26,13 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/textView_sourceDocument"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Source Document: "
+            android:layout_marginTop="8dp" />
+
+        <TextView
             android:id="@+id/textView_productDetails"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

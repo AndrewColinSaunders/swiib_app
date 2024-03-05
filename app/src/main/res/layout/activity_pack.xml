@@ -24,6 +24,22 @@
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="40dp" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnCancelSearch"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Cancel Search"
+        android:visibility="gone"
+        android:textColor="@android:color/white"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        app:backgroundTint="@color/danger_red" />
+
+
     <!-- RecyclerView for displaying internal transfers -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView_packs"

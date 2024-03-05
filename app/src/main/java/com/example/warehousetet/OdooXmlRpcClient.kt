@@ -291,7 +291,8 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             listOf("state", "=", "assigned"),
             listOf("picking_type_id.code", "=", "internal")
         )
-        val fields = listOf("id", "name", "scheduled_date", "state")
+        val fields = listOf("id", "name", "scheduled_date", "origin", "state")
+
 
         val params = listOf(
             Constants.DATABASE,
@@ -310,6 +311,8 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
                     val transferId = map["id"] as Int
                     val transferName = map["name"] as String
                     val transferDate = map["scheduled_date"].toString()
+                    val sourceDocument = map["origin"] as? String ?: ""
+
                     val products = fetchProductsForInternalTransfer(transferId)
 
                     // Ensure the fetched products are mapped to IntTransferProducts
@@ -317,7 +320,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
                         IntTransferProducts(
                             name = product.name,
                             quantity = product.quantity,
-                            transferDate = transferDate // Assuming you want to use the same transfer date for all products
+                            transferDate = transferDate
                         )
                     }
 
@@ -325,6 +328,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
                         id = transferId,
                         transferName = transferName,
                         transferDate = transferDate,
+                        sourceDocument = sourceDocument,
                         productDetails = intTransferProductsList
                     )
                 }.also {
@@ -335,11 +339,6 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             emptyList()
         }
     }
-
-
-
-
-
 
 
     suspend fun fetchProductsForTransferReference(transferReference: String): List<Product> {
