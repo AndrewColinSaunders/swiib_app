@@ -7,7 +7,7 @@ import kotlinx.parcelize.Parcelize
 data class Product(
     val name: String,
     val quantity: Double,
-    // Add other fields as necessary
+    val barcode: String? = null // Add barcode field
 ) : Parcelable
 
 

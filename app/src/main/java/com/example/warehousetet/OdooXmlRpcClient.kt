@@ -306,34 +306,36 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            result.mapNotNull { it as? Map<String, Any> }
-                .mapNotNull { map ->
-                    val transferId = map["id"] as Int
-                    val transferName = map["name"] as String
-                    val transferDate = map["scheduled_date"].toString()
-                    val sourceDocument = map["origin"] as? String ?: ""
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                val transferId = map["id"] as Int
+                val transferName = map["name"] as String
+                val transferDate = map["scheduled_date"].toString()
+                val sourceDocument = map["origin"] as? String ?: ""
 
-                    val products = fetchProductsForInternalTransfer(transferId)
+                val products = fetchProductsForInternalTransfer(transferId)
 
-                    // Ensure the fetched products are mapped to IntTransferProducts
-                    val intTransferProductsList = products.map { product ->
-                        IntTransferProducts(
-                            name = product.name,
-                            quantity = product.quantity,
-                            transferDate = transferDate
-                        )
-                    }
-
-                    InternalTransfers(
-                        id = transferId,
-                        transferName = transferName,
+                // Adjust this part to include barcode fetching
+                val intTransferProductsList = products.mapNotNull { product ->
+                    // Assuming fetchProductBarcodeByName exists and fetches the barcode based on product name
+                    val barcode = fetchProductBarcodeByName(product.name)
+                    IntTransferProducts(
+                        name = product.name,
+                        quantity = product.quantity,
                         transferDate = transferDate,
-                        sourceDocument = sourceDocument,
-                        productDetails = intTransferProductsList
+                        barcode = barcode // Include the fetched barcode
                     )
-                }.also {
-                    Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details.")
                 }
+
+                InternalTransfers(
+                    id = transferId,
+                    transferName = transferName,
+                    transferDate = transferDate,
+                    sourceDocument = sourceDocument,
+                    productDetails = intTransferProductsList
+                )
+            }.also {
+                Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details.")
+            }
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error fetching internal transfers: ${e.localizedMessage}", e)
             emptyList()

@@ -54,7 +54,6 @@ class PickAdapter :
         private val cardView: CardView = itemView.findViewById(R.id.card_view)
         private val transferNameTextView: TextView = itemView.findViewById(R.id.textView_transfer_title)
         private val transferDateTextView: TextView = itemView.findViewById(R.id.textView_transferDate)
-        private val productDetailsTextView: TextView = itemView.findViewById(R.id.textView_productDetails)
 
         init {
             cardView.setOnClickListener {

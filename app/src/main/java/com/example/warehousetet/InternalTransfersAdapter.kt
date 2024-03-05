@@ -35,7 +35,6 @@ class InternalTransfersAdapter :
         private val cardView: CardView = itemView.findViewById(R.id.card_view)
         private val transferNameTextView: TextView = itemView.findViewById(R.id.textView_transfer_title)
         private val transferDateTextView: TextView = itemView.findViewById(R.id.textView_transferDate)
-        private val productDetailsTextView: TextView = itemView.findViewById(R.id.textView_productDetails)
 
         init {
             cardView.setOnClickListener {
@@ -54,7 +53,6 @@ class InternalTransfersAdapter :
             val productDetailsFormatted = internalTransfer.productDetails.joinToString(", ") {
                 "${it.name} (${it.quantity})"
             }
-            productDetailsTextView.text = "Product Details: $productDetailsFormatted"
             itemView.findViewById<TextView>(R.id.textView_sourceDocument).text = "Source Document: ${internalTransfer.sourceDocument}"
         }
 
