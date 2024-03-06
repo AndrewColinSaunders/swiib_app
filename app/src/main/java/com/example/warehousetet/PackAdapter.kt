@@ -13,6 +13,40 @@ import androidx.recyclerview.widget.RecyclerView
 class PackAdapter :
     ListAdapter<InternalTransfers, PackAdapter.PackViewHolder>(DiffCallback()) {
 
+    // Store the full list for resetting later
+    private var fullList: List<InternalTransfers> = emptyList()
+
+    fun filter(searchQuery: String) {
+        val filteredList = if (searchQuery.isEmpty()) {
+            fullList.filterNot {
+                it.transferName.contains("INT", ignoreCase = true) ||
+                        it.transferName.contains("PICK", ignoreCase = true)
+            }
+        } else {
+            fullList.filter {
+                it.sourceDocument.equals(searchQuery, ignoreCase = true)
+            }
+        }
+        submitList(filteredList)
+    }
+
+    fun submitFilteredPacks(list: List<InternalTransfers>) {
+        fullList = ArrayList(list) // Update the full list
+        val filteredList = list.filterNot {
+            it.transferName.contains("INT", ignoreCase = true) ||
+                    it.transferName.contains("PICK", ignoreCase = true)
+        }
+        submitList(filteredList)
+    }
+
+    // Reset list to the initial filtered state
+    fun resetList() {
+        submitList(fullList.filterNot {
+            it.transferName.contains("INT", ignoreCase = true) ||
+                    it.transferName.contains("PICK", ignoreCase = true)
+        })
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PackViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
         return PackViewHolder(view)
@@ -23,18 +57,10 @@ class PackAdapter :
         holder.bind(internalTransfer)
     }
 
-    fun submitFilteredPacks(list: List<InternalTransfers>) {
-        val filteredList = list.filterNot { transfer ->
-            transfer.transferName.contains("INT", ignoreCase = true) || transfer.transferName.contains("PICK", ignoreCase = true)
-        }
-        submitList(filteredList)
-    }
-
     inner class PackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val cardView: CardView = itemView.findViewById(R.id.card_view)
         private val transferNameTextView: TextView = itemView.findViewById(R.id.textView_transfer_title)
         private val transferDateTextView: TextView = itemView.findViewById(R.id.textView_transferDate)
-        private val productDetailsTextView: TextView = itemView.findViewById(R.id.textView_productDetails)
 
         init {
             cardView.setOnClickListener {
@@ -50,10 +76,7 @@ class PackAdapter :
         fun bind(internalTransfer: InternalTransfers) {
             transferNameTextView.text = internalTransfer.transferName
             transferDateTextView.text = "Date: ${internalTransfer.transferDate}"
-            val productDetailsFormatted = internalTransfer.productDetails.joinToString(", ") {
-                "${it.name} (${it.quantity})"
-            }
-            productDetailsTextView.text = productDetailsFormatted
+            itemView.findViewById<TextView>(R.id.textView_sourceDocument).text = "Source Document: ${internalTransfer.sourceDocument}"
         }
     }
 

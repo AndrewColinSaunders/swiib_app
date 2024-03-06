@@ -13,6 +13,33 @@ import androidx.recyclerview.widget.RecyclerView
 class PickAdapter :
     ListAdapter<InternalTransfers, PickAdapter.PickViewHolder>(DiffCallback()) {
 
+    private var fullList: List<InternalTransfers> = emptyList()
+
+    fun filter(searchQuery: String) {
+        val filteredList = if (searchQuery.isEmpty()) {
+            fullList
+        } else {
+            fullList.filter {
+                it.sourceDocument.equals(searchQuery, ignoreCase = true)
+            }
+        }
+        submitList(filteredList)
+    }
+
+    fun submitFilteredPicks(list: List<InternalTransfers>) {
+        fullList = ArrayList(list) // Update the full list
+        val filteredList = list.filterNot { transfer ->
+            transfer.transferName.contains("INT", ignoreCase = true) || transfer.transferName.contains("PACK", ignoreCase = true)
+        }
+        submitList(filteredList)
+    }
+
+    fun resetList() {
+        submitList(fullList.filterNot {
+            it.transferName.contains("INT", ignoreCase = true) || it.transferName.contains("PACK", ignoreCase = true)
+        })
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PickViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
         return PickViewHolder(view)
@@ -21,14 +48,6 @@ class PickAdapter :
     override fun onBindViewHolder(holder: PickViewHolder, position: Int) {
         val internalTransfer = getItem(position)
         holder.bind(internalTransfer)
-    }
-
-    // Method to filter and submit the list
-    fun submitFilteredPicks(list: List<InternalTransfers>) {
-        val filteredList = list.filterNot { transfer ->
-            transfer.transferName.contains("INT", ignoreCase = true) || transfer.transferName.contains("PACK", ignoreCase = true)
-        }
-        submitList(filteredList)
     }
 
     inner class PickViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -51,10 +70,7 @@ class PickAdapter :
         fun bind(internalTransfer: InternalTransfers) {
             transferNameTextView.text = internalTransfer.transferName
             transferDateTextView.text = "Date: ${internalTransfer.transferDate}"
-            val productDetailsFormatted = internalTransfer.productDetails.joinToString(", ") {
-                "${it.name} (${it.quantity})"
-            }
-            productDetailsTextView.text = productDetailsFormatted
+            itemView.findViewById<TextView>(R.id.textView_sourceDocument).text = "Source Document: ${internalTransfer.sourceDocument}"
         }
     }
 

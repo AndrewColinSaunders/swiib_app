@@ -303,7 +303,8 @@ private fun parseProductSummary(summary: String): List<Product> {
             listOf("state", "=", "assigned"),
             listOf("picking_type_id.code", "=", "internal")
         )
-        val fields = listOf("id", "name", "scheduled_date", "state")
+        val fields = listOf("id", "name", "scheduled_date", "origin", "state")
+
 
         val params = listOf(
             Constants.DATABASE,
@@ -322,6 +323,8 @@ private fun parseProductSummary(summary: String): List<Product> {
                     val transferId = map["id"] as Int
                     val transferName = map["name"] as String
                     val transferDate = map["scheduled_date"].toString()
+                    val sourceDocument = map["origin"] as? String ?: ""
+
                     val products = fetchProductsForInternalTransfer(transferId)
 
                     // Ensure the fetched products are mapped to IntTransferProducts
@@ -329,7 +332,7 @@ private fun parseProductSummary(summary: String): List<Product> {
                         IntTransferProducts(
                             name = product.name,
                             quantity = product.quantity,
-                            transferDate = transferDate // Assuming you want to use the same transfer date for all products
+                            transferDate = transferDate
                         )
                     }
 
@@ -337,6 +340,7 @@ private fun parseProductSummary(summary: String): List<Product> {
                         id = transferId,
                         transferName = transferName,
                         transferDate = transferDate,
+                        sourceDocument = sourceDocument,
                         productDetails = intTransferProductsList
                     )
                 }.also {
@@ -348,10 +352,10 @@ private fun parseProductSummary(summary: String): List<Product> {
         }
     }
 
-    suspend fun fetchProductsForTransferReference(transferReference: String): List<Product> {
-        val transferId = fetchTransferIdByReference(transferReference) ?: return emptyList()
-        return fetchProductsForInternalTransfer(transferId)
-    }
+//<<<<<<< HEAD
+//=======
+//
+//>>>>>>> cc61ecb2232cc4766222d8b665ed6b4c57391b84
 
 
     suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
