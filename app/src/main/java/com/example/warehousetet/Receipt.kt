@@ -4,6 +4,7 @@ data class Receipt(
     val id: Int,
     val name: String,
     val date: String,
+    val origin: String
 
 )
 //test git

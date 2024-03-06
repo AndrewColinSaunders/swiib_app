@@ -31,6 +31,7 @@ class ReceiptsAdapter(
         // References to TextViews within the layout
         private val receiptNameTextView: TextView = itemView.findViewById(R.id.receiptNameTextView)
         private val receiptDateTextView: TextView = itemView.findViewById(R.id.receiptDateTextView)
+        private val receiptOriginTextView: TextView = itemView.findViewById(R.id.receiptOriginTextView)
 
         // Initialization block where click listener is set up for the itemView
         init {
@@ -48,6 +49,7 @@ class ReceiptsAdapter(
             // Set the text of TextViews to display receipt data
             receiptNameTextView.text = receipt.name
             receiptDateTextView.text = receipt.date
+            receiptOriginTextView.text = receipt.origin
         }
     }
 

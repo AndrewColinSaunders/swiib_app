@@ -59,7 +59,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             listOf("user_id", "=", false), // No responsible user
             listOf("user_id", "=", userId) // Or the current user is the responsible user
         )
-        val fields = listOf("id", "name", "date", "user_id", "state") // Include 'state' if you want to verify it in the result
+        val fields = listOf("id", "name", "date", "user_id", "state","origin") // Include 'state' if you want to verify it in the result
 
         val params = listOf(
             Constants.DATABASE,
@@ -82,6 +82,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
                     id = map["id"] as Int,
                     name = map["name"] as String,
                     date = map["date"].toString(),
+                    origin = map["origin"].toString(),
                     // Include user_id if your Receipt class supports it
                     // Include state if you want to use it for further validation or logic
                 )
@@ -126,14 +127,25 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
-    private fun parseProductSummary(summary: String): List<Product> {
-        return summary.split(", ").mapNotNull {
-            val parts = it.split(": ")
-            if (parts.size == 2) {
-                Product(name = parts[0], quantity = parts[1].toDoubleOrNull() ?: 0.0)
-            } else null
+private fun parseProductSummary(summary: String): List<Product> {
+    return summary.split(", ").mapNotNull { productString ->
+        // Split each product entry into ID, Name, and Quantity based on ':'
+        val parts = productString.split(":").map { it.trim() }
+        if (parts.size == 3) {
+            try {
+                val id = parts[0].toInt() // Convert ID to Int
+                val name = parts[1]
+                val quantity = parts[2].toDouble() // Convert Quantity to Double
+                Product(id = id, name = name, quantity = quantity)
+            } catch (e: Exception) {
+                Log.e("parseProductSummary", "Error parsing product summary: $e")
+                null // In case of formatting or conversion issue, return null to exclude this entry
+            }
+        } else {
+            null // Exclude if the product string format does not match expected parts count
         }
     }
+}
 
     suspend fun fetchProductImageByName(productName: String): String? {
         val config = getClientConfig("object") ?: return null
@@ -336,12 +348,6 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
-
-
-
-
-
-
     suspend fun fetchProductsForTransferReference(transferReference: String): List<Product> {
         val transferId = fetchTransferIdByReference(transferReference) ?: return emptyList()
         return fetchProductsForInternalTransfer(transferId)
@@ -385,25 +391,47 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
-    fun parseInternalTransferSummary(summary: String): List<Product> {
-        // Check if the summary is not empty
-        if (summary.isEmpty()) return emptyList()
+//    fun parseInternalTransferSummary(summary: String): List<Product> {
+//        // Check if the summary is not empty
+//        if (summary.isEmpty()) return emptyList()
+//
+//        return summary.split(", ").mapNotNull { productString ->
+//            val parts = productString.split(": ")
+//            if (parts.size == 2) {
+//                val productName = parts[0]
+//                val productQuantity = parts[1].toDoubleOrNull()  // Convert quantity to Double
+//                if (productQuantity != null) {
+//                    Product(name = productName, quantity = productQuantity)
+//                } else {
+//                    null  // If conversion fails, exclude this product from the list
+//                }
+//            } else {
+//                null  // Exclude if the product string format is unexpected
+//            }
+//        }
+//    }
+fun parseInternalTransferSummary(summary: String): List<Product> {
+    // Check if the summary is not empty
+    if (summary.isEmpty()) return emptyList()
 
-        return summary.split(", ").mapNotNull { productString ->
-            val parts = productString.split(": ")
-            if (parts.size == 2) {
-                val productName = parts[0]
-                val productQuantity = parts[1].toDoubleOrNull()  // Convert quantity to Double
-                if (productQuantity != null) {
-                    Product(name = productName, quantity = productQuantity)
-                } else {
-                    null  // If conversion fails, exclude this product from the list
-                }
+    return summary.split(", ").mapNotNull { productString ->
+        // Expected format: "productID:productName: quantity"
+        val parts = productString.split(": ")
+        if (parts.size == 3) {  // Adjusting for the expected three parts
+            val productId = parts[0].toIntOrNull()  // Convert ID to Integer
+            val productName = parts[1]
+            val productQuantity = parts[2].toDoubleOrNull()  // Convert quantity to Double
+            if (productId != null && productQuantity != null) {
+                Product(id = productId, name = productName, quantity = productQuantity)  // Including ID in the constructor
             } else {
-                null  // Exclude if the product string format is unexpected
+                null  // If conversion fails, exclude this product from the list
             }
+        } else {
+            null  // Exclude if the product string format is unexpected
         }
     }
+}
+
 
     suspend fun fetchTransferIdByReference(transferReference: String): Int? {
         // Assuming getClientConfig, XmlRpcClient, userId, and password are accessible here
