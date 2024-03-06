@@ -127,11 +127,22 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
     }
 
     private fun parseProductSummary(summary: String): List<Product> {
-        return summary.split(", ").mapNotNull {
-            val parts = it.split(": ")
-            if (parts.size == 2) {
-                Product(name = parts[0], quantity = parts[1].toDoubleOrNull() ?: 0.0)
-            } else null
+        return summary.split(", ").mapNotNull { productString ->
+            // Split each product entry into ID, Name, and Quantity based on ':'
+            val parts = productString.split(":").map { it.trim() }
+            if (parts.size == 3) {
+                try {
+                    val id = parts[0].toInt() // Convert ID to Int
+                    val name = parts[1]
+                    val quantity = parts[2].toDouble() // Convert Quantity to Double
+                    Product(id = id, name = name, quantity = quantity)
+                } catch (e: Exception) {
+                    Log.e("parseProductSummary", "Error parsing product summary: $e")
+                    null // In case of formatting or conversion issue, return null to exclude this entry
+                }
+            } else {
+                null // Exclude if the product string format does not match expected parts count
+            }
         }
     }
 
@@ -322,6 +333,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
                         name = product.name,
                         quantity = product.quantity,
                         transferDate = transferDate,
+                        sourceDocument = sourceDocument,
                         barcode = barcode // Include the fetched barcode
                     )
                 }
@@ -390,13 +402,24 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         // Check if the summary is not empty
         if (summary.isEmpty()) return emptyList()
 
+        // Initialize a counter for product IDs
+        var productIdCounter = 1
+
         return summary.split(", ").mapNotNull { productString ->
             val parts = productString.split(": ")
             if (parts.size == 2) {
                 val productName = parts[0]
                 val productQuantity = parts[1].toDoubleOrNull()  // Convert quantity to Double
                 if (productQuantity != null) {
-                    Product(name = productName, quantity = productQuantity)
+                    // Use a sequential ID and increment the counter for each product
+                    val product = Product(
+                        id = productIdCounter++,
+                        name = productName,
+                        quantity = productQuantity,
+                        barcode = null,  // Assuming barcode is not available
+                        trackingType = null  // Assuming trackingType is not available
+                    )
+                    product
                 } else {
                     null  // If conversion fails, exclude this product from the list
                 }
@@ -405,6 +428,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             }
         }
     }
+
 
     suspend fun fetchTransferIdByReference(transferReference: String): Int? {
         // Assuming getClientConfig, XmlRpcClient, userId, and password are accessible here

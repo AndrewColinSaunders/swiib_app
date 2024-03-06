@@ -1,7 +1,6 @@
 package com.example.warehousetet
 
 import IntTransferProducts
-import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,8 +9,10 @@ import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
-class IntTransferProductsAdapter(private val productList: List<IntTransferProducts>) :
-    RecyclerView.Adapter<IntTransferProductsAdapter.ProductViewHolder>() {
+class IntTransferProductsAdapter(
+    private val productList: List<IntTransferProducts>,
+    private val verifiedSourceDocuments: List<String>
+) : RecyclerView.Adapter<IntTransferProductsAdapter.ProductViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_int_product, parent, false)
@@ -19,7 +20,8 @@ class IntTransferProductsAdapter(private val productList: List<IntTransferProduc
     }
 
     override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
-        holder.bind(productList[position])
+        val product = productList[position]
+        holder.bind(product, verifiedSourceDocuments.contains(product.sourceDocument))
     }
 
     override fun getItemCount(): Int = productList.size
@@ -28,17 +30,19 @@ class IntTransferProductsAdapter(private val productList: List<IntTransferProduc
         private val nameTextView: TextView = view.findViewById(R.id.textView_productName)
         private val quantityTextView: TextView = view.findViewById(R.id.textView_quantity)
         private val transferDateTextView: TextView = view.findViewById(R.id.textView_transferDate)
-        private val cardView: CardView = view as CardView // Assuming the root view is the CardView
+        private val cardView: CardView = view as CardView
 
-        fun bind(product: IntTransferProducts) {
+        fun bind(product: IntTransferProducts, isVerified: Boolean) {
             nameTextView.text = product.name
             quantityTextView.text = "Quantity: ${product.quantity}"
             transferDateTextView.text = "Transfer Date: ${product.transferDate}"
 
-            // Change the card view background color based on the isScanned flag
-            val backgroundColor = if (product.isScanned) R.color.success_green else android.R.color.white
-            cardView.setCardBackgroundColor(ContextCompat.getColor(cardView.context, backgroundColor))
+            // Change the card view background color based on isVerified
+            if (isVerified) {
+                cardView.setCardBackgroundColor(ContextCompat.getColor(cardView.context, R.color.success_green))
+            } else {
+                cardView.setCardBackgroundColor(ContextCompat.getColor(cardView.context, android.R.color.white))
+            }
         }
     }
 }
-
