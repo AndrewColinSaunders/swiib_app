@@ -354,11 +354,61 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
+    suspend fun completePickingBySourceDocument(sourceDocument: String): Boolean {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting picking completion by source document.")
+            return false
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
 
-    suspend fun fetchProductsForTransferReference(transferReference: String): List<Product> {
-        val transferId = fetchTransferIdByReference(transferReference) ?: return emptyList()
-        return fetchProductsForInternalTransfer(transferId)
+        // This parameter list is adjusted to search pickings by their source document
+        val domain = listOf(listOf("origin", "=", sourceDocument))
+        val fields = listOf("id") // We still need to fetch the ID for the write method
+
+        // First, find the picking ID(s) based on the source document
+        val pickingIdsParams = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search",
+            listOf(domain)
+        )
+
+        val pickingIds: List<Int> = try {
+            client.execute("execute_kw", pickingIdsParams) as? List<Int> ?: emptyList()
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error finding picking by source document: ${e.localizedMessage}", e)
+            return false
+        }
+
+        // Then, update the state of each found picking to 'done'
+        val updateSuccess = pickingIds.map { pickingId ->
+            val params = listOf(
+                Constants.DATABASE,
+                userId,
+                password,
+                "stock.picking",
+                "write",
+                listOf(pickingId),
+                mapOf("state" to "done")
+            )
+            try {
+                client.execute("execute_kw", params) as? Boolean ?: false
+            } catch (e: Exception) {
+                Log.e("OdooXmlRpcClient", "Error updating picking status: ${e.localizedMessage}", e)
+                false
+            }
+        }.all { it } // Ensure all updates were successful
+
+        return updateSuccess
     }
+
+
+
 
 
     suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
@@ -458,6 +508,8 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             null
         }
     }
+
+
 }
 
 

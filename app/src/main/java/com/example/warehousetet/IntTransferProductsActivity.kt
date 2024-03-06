@@ -2,6 +2,7 @@ package com.example.warehousetet
 
 import IntTransferProducts
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -14,6 +15,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.*
+
 
 class IntTransferProductsActivity : AppCompatActivity() {
     private lateinit var barcodeInput: EditText
@@ -21,15 +24,21 @@ class IntTransferProductsActivity : AppCompatActivity() {
     private lateinit var successActionButton: Button
     private var products: ArrayList<IntTransferProducts> = arrayListOf()
     private var productPickKeys = ProductPickKey(sourceDocuments = mutableListOf())
+    private lateinit var odooXmlRpcClient: OdooXmlRpcClient
+    private lateinit var credentialManager: CredentialManager // Assuming you have such a class
+    private val activityScope = CoroutineScope(Job() + Dispatchers.Main)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_int_products)
+        credentialManager = CredentialManager(this)
+        odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
         initializeViews()
         configureBarcodeInput()
         loadVerifiedSourceDocuments()
         loadScannedState()
         loadButtonState()
+        configureSuccessActionButton()
     }
 
     private fun initializeViews() {
@@ -130,7 +139,31 @@ class IntTransferProductsActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        activityScope.cancel() // Ensure coroutine scope is cancelled to avoid leaks
         saveScannedState()
         saveVerifiedSourceDocuments()
     }
+
+    private fun configureSuccessActionButton() {
+        successActionButton.setOnClickListener {
+            if (productPickKeys.sourceDocuments.isNotEmpty()) {
+                val sourceDocument = productPickKeys.sourceDocuments.first()
+                activityScope.launch {
+                    val isCompleted = withContext(Dispatchers.IO) {
+                        odooXmlRpcClient.completePickingBySourceDocument(sourceDocument)
+                    }
+                    if (isCompleted) {
+                        Toast.makeText(this@IntTransferProductsActivity, "Picking completed successfully", Toast.LENGTH_SHORT).show()
+                        startActivity(Intent(this@IntTransferProductsActivity, PickActivity::class.java))
+                        finish()
+                    } else {
+                        Toast.makeText(this@IntTransferProductsActivity, "Failed to complete picking", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } else {
+                Toast.makeText(this@IntTransferProductsActivity, "No source document found", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
 }
