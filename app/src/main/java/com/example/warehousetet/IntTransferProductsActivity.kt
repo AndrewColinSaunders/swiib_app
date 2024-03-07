@@ -4,6 +4,7 @@ import IntTransferProducts
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -24,6 +25,7 @@ class IntTransferProductsActivity : AppCompatActivity() {
     private lateinit var successActionButton: Button
     private var products: ArrayList<IntTransferProducts> = arrayListOf()
     private var productPickKeys = ProductPickKey(sourceDocuments = mutableListOf())
+    private lateinit var transferName: String
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private lateinit var credentialManager: CredentialManager // Assuming you have such a class
     private val activityScope = CoroutineScope(Job() + Dispatchers.Main)
@@ -33,6 +35,9 @@ class IntTransferProductsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_int_products)
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
+        transferName = intent.getStringExtra("EXTRA_TRANSFER_NAME") ?: ""
+
+        Log.d("IntTransferProductsActivity", "Received transfer name: $transferName")
         initializeViews()
         configureBarcodeInput()
         loadVerifiedSourceDocuments()
@@ -146,24 +151,29 @@ class IntTransferProductsActivity : AppCompatActivity() {
 
     private fun configureSuccessActionButton() {
         successActionButton.setOnClickListener {
-            if (productPickKeys.sourceDocuments.isNotEmpty()) {
-                val sourceDocument = productPickKeys.sourceDocuments.first()
+            Log.d("IntTransferProductsActivity", "Transfer Name: $transferName") // Log the transfer name for debugging
+            if (transferName.isNotEmpty()) {
                 activityScope.launch {
                     val isCompleted = withContext(Dispatchers.IO) {
-                        odooXmlRpcClient.completePickingBySourceDocument(sourceDocument)
+                        odooXmlRpcClient.changePickStateToDone(transferName)
                     }
                     if (isCompleted) {
+                        Log.d("IntTransferProductsActivity", "Picking completed successfully for transfer name: $transferName") // Log success
                         Toast.makeText(this@IntTransferProductsActivity, "Picking completed successfully", Toast.LENGTH_SHORT).show()
                         startActivity(Intent(this@IntTransferProductsActivity, PickActivity::class.java))
                         finish()
                     } else {
+                        Log.e("IntTransferProductsActivity", "Failed to complete picking for transfer name: $transferName") // Log failure
                         Toast.makeText(this@IntTransferProductsActivity, "Failed to complete picking", Toast.LENGTH_LONG).show()
                     }
                 }
             } else {
-                Toast.makeText(this@IntTransferProductsActivity, "No source document found", Toast.LENGTH_SHORT).show()
+                Log.e("IntTransferProductsActivity", "No transfer name found") // Log when no transfer name is found
+                Toast.makeText(this@IntTransferProductsActivity, "No transfer name found", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+
 
 }

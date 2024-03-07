@@ -1,7 +1,9 @@
 package com.example.warehousetet
 
 import IntTransferProducts
+import android.content.Context
 import android.util.Log
+import org.apache.xmlrpc.XmlRpcException
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 import java.net.URL
@@ -10,7 +12,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
     private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         return try {
-            val fullUrl = "${Constants.URL}/xmlrpc/2/$endpoint"
+            val fullUrl = "${Constants.URL}xmlrpc/2/$endpoint"
             Log.d("OdooXmlRpcClient", "Connecting to: $fullUrl")
             XmlRpcClientConfigImpl().apply {
                 serverURL = URL(fullUrl)
@@ -354,7 +356,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
-    suspend fun completePickingBySourceDocument(sourceDocument: String): Boolean {
+    /*suspend fun completePickingBySourceDocument(sourceDocument: String): Boolean {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting picking completion by source document.")
@@ -405,7 +407,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }.all { it } // Ensure all updates were successful
 
         return updateSuccess
-    }
+    }*/
 
 
 
@@ -480,7 +482,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
     }
 
 
-    suspend fun fetchTransferIdByReference(transferReference: String): Int? {
+    /*suspend fun fetchTransferIdByReference(transferReference: String): Int? {
         // Assuming getClientConfig, XmlRpcClient, userId, and password are accessible here
         val config = getClientConfig("object") ?: return null
         val client = XmlRpcClient().also { it.setConfig(config) }
@@ -507,8 +509,63 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             Log.e("OdooXmlRpcClient", "Error fetching transfer ID for reference $transferReference: ${e.localizedMessage}", e)
             null
         }
-    }
+    }*/
 
+
+    // Assuming this function is part of a class that has access to a Context object
+
+    suspend fun changePickStateToDone(pickName: String): Boolean {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting changePickStateToDone.")
+            return false
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        if (userId == -1) { // Assuming -1 is an invalid user ID indicating no user is logged in
+            Log.e("OdooXmlRpcClient", "User ID is invalid, please ensure you're logged in correctly.")
+            return false
+        }
+        val password = credentialManager.getPassword() ?: run {
+            Log.e("OdooXmlRpcClient", "Password is null, cannot proceed with changePickStateToDone.")
+            return false
+        }
+
+        val pickIds = try {
+            client.execute("execute_kw", listOf(
+                Constants.DATABASE, userId, password,
+                "stock.picking", "search",
+                listOf(listOf(listOf("name", "=", pickName)))
+            )) as? List<Int> ?: emptyList()
+        } catch (e: XmlRpcException) {
+            Log.e("OdooXmlRpcClient", "XML-RPC Exception during pick search: ${e.message}", e)
+            return false
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "General Exception during pick search: ${e.message}", e)
+            return false
+        }
+
+        if (pickIds.isEmpty()) {
+            Log.e("OdooXmlRpcClient", "No pick found with name: $pickName, ensure the name is correct.")
+            return false
+        }
+
+        return try {
+            val result = client.execute("execute_kw", listOf(
+                Constants.DATABASE, userId, password,
+                "stock.picking", "write",
+                listOf(pickIds.first(), mapOf("state" to "done"))
+            )) as Boolean
+            Log.d("OdooXmlRpcClient", "Changed state of pick $pickName to 'done': $result")
+            result
+        } catch (e: XmlRpcException) {
+            Log.e("OdooXmlRpcClient", "XML-RPC Exception during state change: ${e.message}.", e)
+            false
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "General Exception during state change: ${e.message}", e)
+            false
+        }
+    }
 
 }
 

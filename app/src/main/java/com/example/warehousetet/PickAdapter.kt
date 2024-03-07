@@ -1,6 +1,7 @@
 package com.example.warehousetet
 
 import android.content.Intent
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -60,6 +61,11 @@ class PickAdapter :
                 val context = it.context
                 val internalTransfer = getItem(adapterPosition)
                 val intent = Intent(context, IntTransferProductsActivity::class.java).apply {
+
+                    Log.d("PickAdapter", "Transfer Name before intent: ${internalTransfer.transferName}")
+
+                    putExtra("EXTRA_TRANSFER_NAME", internalTransfer.transferName)
+                    putExtra("EXTRA_SOURCE_DOCUMENT", internalTransfer.sourceDocument)
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)

@@ -7,4 +7,8 @@
     <string name="title_activity_receipts">ReceiptsActivity</string>
     <string name="title_activity_products">ProductsActivity</string>
     <string name="title_activity_product_detail">ProductDetailActivity</string>
+    <string name="picking_completed_successfully">Picking completed successfully.</string>
+    <string name="failed_to_complete_picking">Failed to complete picking.</string>
+    <string name="error_completing_picking">Error completing picking.</string>
+    <string name="no_transfer_name_found">No transfer name found.</string>
 </resources>
