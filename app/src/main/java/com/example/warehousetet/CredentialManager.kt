@@ -18,7 +18,24 @@ class CredentialManager(context: Context) {
     fun getUserId(): Int = sharedPreferences.getInt("userId", -1)
     fun getUsername(): String? = sharedPreferences.getString("username", null)
     fun getPassword(): String? = sharedPreferences.getString("password", null)
+
+    fun storeSessionId(sessionId: String) {
+        with(sharedPreferences.edit()) {
+            putString("sessionId", sessionId)
+            apply()
+        }
+    }
+
+    fun getSessionId(): String? = sharedPreferences.getString("sessionId", null)
+
+    fun clearSession() {
+        with(sharedPreferences.edit()) {
+            remove("sessionId")
+            // Consider also clearing other user credentials if logging out
+            remove("username")
+            remove("password")
+            remove("userId")
+            apply()
+        }
+    }
 }
-
-
-

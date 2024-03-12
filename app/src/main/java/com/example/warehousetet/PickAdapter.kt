@@ -1,7 +1,10 @@
 package com.example.warehousetet
 
+import android.content.Context
 import android.content.Intent
-import android.util.Log
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +18,7 @@ class PickAdapter :
     ListAdapter<InternalTransfers, PickAdapter.PickViewHolder>(DiffCallback()) {
 
     private var fullList: List<InternalTransfers> = emptyList()
+    private lateinit var vibrator: Vibrator
 
     fun filter(searchQuery: String) {
         val filteredList = if (searchQuery.isEmpty()) {
@@ -43,6 +47,7 @@ class PickAdapter :
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PickViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
+        vibrator = parent.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator // Initialize Vibrator
         return PickViewHolder(view)
     }
 
@@ -61,14 +66,12 @@ class PickAdapter :
                 val context = it.context
                 val internalTransfer = getItem(adapterPosition)
                 val intent = Intent(context, IntTransferProductsActivity::class.java).apply {
-
-                    Log.d("PickAdapter", "Transfer Name before intent: ${internalTransfer.transferName}")
-
                     putExtra("EXTRA_TRANSFER_NAME", internalTransfer.transferName)
                     putExtra("EXTRA_SOURCE_DOCUMENT", internalTransfer.sourceDocument)
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)
+                triggerHapticFeedback()
             }
         }
 
@@ -76,6 +79,14 @@ class PickAdapter :
             transferNameTextView.text = internalTransfer.transferName
             transferDateTextView.text = "Date: ${internalTransfer.transferDate}"
             itemView.findViewById<TextView>(R.id.textView_sourceDocument).text = "Source Document: ${internalTransfer.sourceDocument}"
+        }
+
+        private fun triggerHapticFeedback() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                vibrator.vibrate(50)
+            }
         }
     }
 

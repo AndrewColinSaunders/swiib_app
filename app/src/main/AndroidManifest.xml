@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:allowBackup="true"
@@ -17,6 +19,8 @@
 
         <!-- Service Declaration Inside Application Block -->
         <service android:name=".ClearStateService" />
+
+
 
         <activity
             android:name=".PackActivity"

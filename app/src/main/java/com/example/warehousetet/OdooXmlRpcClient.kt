@@ -3,10 +3,19 @@ package com.example.warehousetet
 import IntTransferProducts
 import android.content.Context
 import android.util.Log
-import org.apache.xmlrpc.XmlRpcException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
+import java.io.IOException
+import java.net.URL
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
-import java.net.URL
+
 
 class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
@@ -35,13 +44,20 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
             val client = XmlRpcClient().also { it.setConfig(config) }
             val params = listOf(Constants.DATABASE, username, password, emptyMap<String, Any>())
             val result = client.execute("authenticate", params) as Int
-            if (result > 0) credentialManager.storeUserCredentials(username, password, result)
+            if (result > 0) {
+                credentialManager.storeUserCredentials(username, password, result)
+                // Assuming the session ID is part of the result or a separate call is made to obtain it
+                // Here you would retrieve the session ID and store it
+                val sessionId = "RETRIEVED_SESSION_ID" // Replace with actual retrieval logic
+                credentialManager.storeSessionId(sessionId)
+            }
             result
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error during login: ${e.localizedMessage}")
             -1
         }
     }
+
 
     suspend fun fetchReceipts(): List<Receipt> {
         val config = getClientConfig("object")
@@ -356,62 +372,6 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
-    /*suspend fun completePickingBySourceDocument(sourceDocument: String): Boolean {
-        val config = getClientConfig("object")
-        if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting picking completion by source document.")
-            return false
-        }
-        val client = XmlRpcClient().also { it.setConfig(config) }
-        val userId = credentialManager.getUserId()
-        val password = credentialManager.getPassword() ?: ""
-
-        // This parameter list is adjusted to search pickings by their source document
-        val domain = listOf(listOf("origin", "=", sourceDocument))
-        val fields = listOf("id") // We still need to fetch the ID for the write method
-
-        // First, find the picking ID(s) based on the source document
-        val pickingIdsParams = listOf(
-            Constants.DATABASE,
-            userId,
-            password,
-            "stock.picking",
-            "search",
-            listOf(domain)
-        )
-
-        val pickingIds: List<Int> = try {
-            client.execute("execute_kw", pickingIdsParams) as? List<Int> ?: emptyList()
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error finding picking by source document: ${e.localizedMessage}", e)
-            return false
-        }
-
-        // Then, update the state of each found picking to 'done'
-        val updateSuccess = pickingIds.map { pickingId ->
-            val params = listOf(
-                Constants.DATABASE,
-                userId,
-                password,
-                "stock.picking",
-                "write",
-                listOf(pickingId),
-                mapOf("state" to "done")
-            )
-            try {
-                client.execute("execute_kw", params) as? Boolean ?: false
-            } catch (e: Exception) {
-                Log.e("OdooXmlRpcClient", "Error updating picking status: ${e.localizedMessage}", e)
-                false
-            }
-        }.all { it } // Ensure all updates were successful
-
-        return updateSuccess
-    }*/
-
-
-
-
 
     suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
         val config = getClientConfig("object")
@@ -481,91 +441,92 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
-
-    /*suspend fun fetchTransferIdByReference(transferReference: String): Int? {
-        // Assuming getClientConfig, XmlRpcClient, userId, and password are accessible here
-        val config = getClientConfig("object") ?: return null
-        val client = XmlRpcClient().also { it.setConfig(config) }
-        val userId = credentialManager.getUserId()
-        val password = credentialManager.getPassword() ?: ""
-
-        val domain = listOf(listOf("name", "=", transferReference))
-        val fields = listOf("id")
-
-        val params = listOf(
-            Constants.DATABASE,
-            userId,
-            password,
-            "stock.picking",
-            "search_read",
-            listOf(domain),
-            mapOf("fields" to fields)
-        )
-
-        return try {
-            val result = client.execute("execute_kw", params) as? Array<Map<String, Any>> ?: arrayOf()
-            if (result.isNotEmpty()) result[0]["id"] as? Int else null
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching transfer ID for reference $transferReference: ${e.localizedMessage}", e)
-            null
-        }
-    }*/
-
-
     // Assuming this function is part of a class that has access to a Context object
 
-    suspend fun changePickStateToDone(pickName: String): Boolean {
-        val config = getClientConfig("object")
-        if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting changePickStateToDone.")
-            return false
-        }
-        val client = XmlRpcClient().also { it.setConfig(config) }
-        val userId = credentialManager.getUserId()
-        if (userId == -1) { // Assuming -1 is an invalid user ID indicating no user is logged in
-            Log.e("OdooXmlRpcClient", "User ID is invalid, please ensure you're logged in correctly.")
-            return false
-        }
-        val password = credentialManager.getPassword() ?: run {
-            Log.e("OdooXmlRpcClient", "Password is null, cannot proceed with changePickStateToDone.")
-            return false
+    suspend fun changePickState(context: Context, pickName: String) {
+        val credentialManager = CredentialManager(context)
+        var sessionId = credentialManager.getSessionId()
+        if (sessionId == null) {
+            logError("Session ID is null, aborting changePickState.")
+            return
         }
 
-        val pickIds = try {
-            client.execute("execute_kw", listOf(
-                Constants.DATABASE, userId, password,
-                "stock.picking", "search",
-                listOf(listOf(listOf("name", "=", pickName)))
-            )) as? List<Int> ?: emptyList()
-        } catch (e: XmlRpcException) {
-            Log.e("OdooXmlRpcClient", "XML-RPC Exception during pick search: ${e.message}", e)
-            return false
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "General Exception during pick search: ${e.message}", e)
-            return false
+        // Log the retrieved session ID for debugging
+        Log.d("OdooXmlRpcClient", "Using Session ID: $sessionId")
+
+        val client = OkHttpClient.Builder().build()
+        val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+        if (mediaType == null) {
+            logError("Failed to create MediaType, aborting changePickState.")
+            return
         }
 
-        if (pickIds.isEmpty()) {
-            Log.e("OdooXmlRpcClient", "No pick found with name: $pickName, ensure the name is correct.")
-            return false
+        val requestBody = """{"jsonrpc": "2.0", "params": {"pick_name": "$pickName"}}""".toRequestBody(mediaType)
+        val requestUrl = "${Constants.URL}pick_state_changer/change_state"
+
+        var request = buildRequest(requestUrl, sessionId, requestBody)
+        var response = makeRequest(client, request)
+
+        if (response?.isSuccessful == false && isSessionExpired(response)) {
+            // Attempt to renew the session
+            val username = credentialManager.getUsername()
+            val password = credentialManager.getPassword()
+            if (username != null && password != null) {
+                val userId = login(username, password) // Ensure this function is adapted to return the new session ID on success
+                if (userId > 0) {
+                    // If login is successful, retry the original request with the new session ID
+                    sessionId = credentialManager.getSessionId() ?: return logError("Failed to retrieve new session ID after login.")
+                    // Log the new session ID for debugging
+                    Log.d("OdooXmlRpcClient", "New Session ID: $sessionId")
+                    request = buildRequest(requestUrl, sessionId, requestBody)
+                    response = makeRequest(client, request)
+                }
+            }
         }
 
-        return try {
-            val result = client.execute("execute_kw", listOf(
-                Constants.DATABASE, userId, password,
-                "stock.picking", "write",
-                listOf(pickIds.first(), mapOf("state" to "done"))
-            )) as Boolean
-            Log.d("OdooXmlRpcClient", "Changed state of pick $pickName to 'done': $result")
-            result
-        } catch (e: XmlRpcException) {
-            Log.e("OdooXmlRpcClient", "XML-RPC Exception during state change: ${e.message}.", e)
-            false
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "General Exception during state change: ${e.message}", e)
-            false
+        logResponse(response)
+    }
+
+
+    private fun buildRequest(url: String, sessionId: String, requestBody: RequestBody): Request {
+        return Request.Builder()
+            .url(url)
+            .addHeader("Cookie", "session_id=$sessionId")
+            .post(requestBody)
+            .build()
+    }
+
+    private suspend fun makeRequest(client: OkHttpClient, request: Request): Response? {
+        return withContext(Dispatchers.IO) {
+            try {
+                client.newCall(request).execute()
+            } catch (e: Exception) {
+                logError("Exception occurred during request: ${e.message}")
+                null
+            }
         }
     }
+
+    private fun logResponse(response: Response?) {
+        if (response == null) {
+            logError("Response is null.")
+        } else if (!response.isSuccessful) {
+            logError("Request failed with HTTP status code: ${response.code}")
+        } else {
+            val responseBody = response.body?.string()
+            Log.d("OdooXmlRpcClient", "Successfully changed pick state. Response: $responseBody")
+        }
+    }
+
+    private fun logError(message: String) {
+        Log.e("OdooXmlRpcClient", message)
+    }
+
+    private fun isSessionExpired(response: Response): Boolean {
+        val responseBody = response.body?.string()
+        return responseBody?.contains("Session expired", ignoreCase = true) ?: false
+    }
+
 
 }
 

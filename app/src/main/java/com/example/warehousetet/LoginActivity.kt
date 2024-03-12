@@ -1,8 +1,9 @@
 package com.example.warehousetet
 
-
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.os.Vibrator
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
@@ -12,6 +13,7 @@ import kotlinx.coroutines.*
 
 class LoginActivity : AppCompatActivity() {
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
+    private lateinit var vibrator: Vibrator
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,6 +25,7 @@ class LoginActivity : AppCompatActivity() {
         val passwordEditText = findViewById<EditText>(R.id.password)
 
         val credentialManager = CredentialManager(this)
+        vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator // Initialize Vibrator
 
         usernameEditText.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -47,6 +50,8 @@ class LoginActivity : AppCompatActivity() {
                     }
                 }
             }
+            // Trigger haptic feedback
+            vibrator.vibrate(50)
         }
     }
 
@@ -71,5 +76,3 @@ class LoginActivity : AppCompatActivity() {
         coroutineScope.cancel()
     }
 }
-
-

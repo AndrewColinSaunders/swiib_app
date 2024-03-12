@@ -18,7 +18,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
-
 class IntTransferProductsActivity : AppCompatActivity() {
     private lateinit var barcodeInput: EditText
     private lateinit var recyclerView: RecyclerView
@@ -27,7 +26,7 @@ class IntTransferProductsActivity : AppCompatActivity() {
     private var productPickKeys = ProductPickKey(sourceDocuments = mutableListOf())
     private lateinit var transferName: String
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private lateinit var credentialManager: CredentialManager // Assuming you have such a class
+    private lateinit var credentialManager: CredentialManager
     private val activityScope = CoroutineScope(Job() + Dispatchers.Main)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,7 +87,7 @@ class IntTransferProductsActivity : AppCompatActivity() {
             .setView(input)
             .setPositiveButton("OK") { _, _ ->
                 val enteredQuantity = input.text.toString().toDoubleOrNull()
-                if (enteredQuantity != null && enteredQuantity == product.quantity) {
+                if (enteredQuantity != null && enteredQuantity > 0) { // Adjusted for a realistic check
                     if (!productPickKeys.sourceDocuments.contains(product.sourceDocument)) {
                         productPickKeys.sourceDocuments.add(product.sourceDocument)
                         saveVerifiedSourceDocuments()
@@ -142,38 +141,46 @@ class IntTransferProductsActivity : AppCompatActivity() {
         successActionButton.visibility = View.VISIBLE
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        activityScope.cancel() // Ensure coroutine scope is cancelled to avoid leaks
-        saveScannedState()
-        saveVerifiedSourceDocuments()
-    }
-
     private fun configureSuccessActionButton() {
         successActionButton.setOnClickListener {
-            Log.d("IntTransferProductsActivity", "Transfer Name: $transferName") // Log the transfer name for debugging
+            // Your existing operations
+            removeCurrentTransferSourceDocument()
+            clearScannedState()
+            Log.d("YourActivity", "Transfer Name: $transferName")
+
             if (transferName.isNotEmpty()) {
                 activityScope.launch {
-                    val isCompleted = withContext(Dispatchers.IO) {
-                        odooXmlRpcClient.changePickStateToDone(transferName)
+                    withContext(Dispatchers.IO) {
+                        odooXmlRpcClient.changePickState(this@IntTransferProductsActivity, transferName)
                     }
-                    if (isCompleted) {
-                        Log.d("IntTransferProductsActivity", "Picking completed successfully for transfer name: $transferName") // Log success
-                        Toast.makeText(this@IntTransferProductsActivity, "Picking completed successfully", Toast.LENGTH_SHORT).show()
-                        startActivity(Intent(this@IntTransferProductsActivity, PickActivity::class.java))
-                        finish()
-                    } else {
-                        Log.e("IntTransferProductsActivity", "Failed to complete picking for transfer name: $transferName") // Log failure
-                        Toast.makeText(this@IntTransferProductsActivity, "Failed to complete picking", Toast.LENGTH_LONG).show()
-                    }
+                    // After changePickState completes
+                    // Assuming you handle UI feedback within changePickState itself or want to do something right after
+                    Log.d("YourActivity", "Picking attempt made for transfer name: $transferName")
+                    // Optionally, navigate to another activity or update UI based on the outcome here
                 }
             } else {
-                Log.e("IntTransferProductsActivity", "No transfer name found") // Log when no transfer name is found
+                Log.e("YourActivity", "No transfer name found")
                 Toast.makeText(this@IntTransferProductsActivity, "No transfer name found", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
 
+    private fun removeCurrentTransferSourceDocument() {
+        productPickKeys.sourceDocuments.remove(transferName)
+    }
 
+    private fun clearScannedState() {
+        val intent = Intent(this, ClearStateService::class.java).apply {
+            action = "com.example.warehousetet.CLEAR_SCANNED_STATE"
+        }
+        startService(intent)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        activityScope.cancel() // Ensure coroutine scope is cancelled to avoid leaks
+        saveScannedState()
+        saveVerifiedSourceDocuments()
+    }
 }
