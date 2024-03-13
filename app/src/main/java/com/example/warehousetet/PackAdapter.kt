@@ -66,7 +66,12 @@ class PackAdapter :
             cardView.setOnClickListener {
                 val context = it.context
                 val internalTransfer = getItem(adapterPosition)
-                val intent = Intent(context, IntTransferProductsActivity::class.java).apply {
+                val intent = Intent(context, IntTransferProductsPackActivity::class.java).apply {
+                    // Include the transfer ID, name, and source document in the intent
+                    putExtra("EXTRA_TRANSFER_ID", internalTransfer.id)
+                    putExtra("EXTRA_TRANSFER_NAME", internalTransfer.transferName)
+                    putExtra("EXTRA_SOURCE_DOCUMENT", internalTransfer.sourceDocument)
+                    // Also passing the product details if needed
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)

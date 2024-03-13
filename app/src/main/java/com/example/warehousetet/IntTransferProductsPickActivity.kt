@@ -18,7 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
-class IntTransferProductsActivity : AppCompatActivity() {
+class IntTransferProductsPickActivity : AppCompatActivity() {
     private lateinit var barcodeInput: EditText
     private lateinit var recyclerView: RecyclerView
     private lateinit var successActionButton: Button
@@ -28,15 +28,19 @@ class IntTransferProductsActivity : AppCompatActivity() {
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private lateinit var credentialManager: CredentialManager
     private val activityScope = CoroutineScope(Job() + Dispatchers.Main)
+    private var pickingId: Int = 225 // Initialize picking ID
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_int_products)
+        setContentView(R.layout.activity_int_transfer_products_pick)
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
         transferName = intent.getStringExtra("EXTRA_TRANSFER_NAME") ?: ""
+        pickingId = intent.getIntExtra("EXTRA_TRANSFER_ID", -1) // Corrected key
 
         Log.d("IntTransferProductsActivity", "Received transfer name: $transferName")
+        Log.d("IntTransferProductsActivity", "Received picking ID: $pickingId")
+
         initializeViews()
         configureBarcodeInput()
         loadVerifiedSourceDocuments()
@@ -51,7 +55,7 @@ class IntTransferProductsActivity : AppCompatActivity() {
         successActionButton = findViewById(R.id.successActionButton)
         recyclerView.layoutManager = LinearLayoutManager(this)
         products = intent.getParcelableArrayListExtra("EXTRA_PRODUCTS") ?: arrayListOf()
-        recyclerView.adapter = IntTransferProductsAdapter(products, productPickKeys.sourceDocuments)
+        recyclerView.adapter = IntTransferProductsPickAdapter(products, productPickKeys.sourceDocuments)
     }
 
     private fun configureBarcodeInput() {
@@ -143,27 +147,33 @@ class IntTransferProductsActivity : AppCompatActivity() {
 
     private fun configureSuccessActionButton() {
         successActionButton.setOnClickListener {
-            // Your existing operations
-            removeCurrentTransferSourceDocument()
-            clearScannedState()
-            Log.d("YourActivity", "Transfer Name: $transferName")
-
             if (transferName.isNotEmpty()) {
                 activityScope.launch {
-                    withContext(Dispatchers.IO) {
-                        odooXmlRpcClient.changePickState(this@IntTransferProductsActivity, transferName)
+                    val validationSuccess = withContext(Dispatchers.IO) {
+                        odooXmlRpcClient.changePickState(this@IntTransferProductsPickActivity, pickingId)
                     }
-                    // After changePickState completes
-                    // Assuming you handle UI feedback within changePickState itself or want to do something right after
-                    Log.d("YourActivity", "Picking attempt made for transfer name: $transferName")
-                    // Optionally, navigate to another activity or update UI based on the outcome here
+                    if (validationSuccess) {
+                        // If validation is successful, redirect back to PickActivity
+                        navigateBackToPickActivity()
+                    } else {
+                        // Handle validation failure as needed
+                        Toast.makeText(this@IntTransferProductsPickActivity, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } else {
-                Log.e("YourActivity", "No transfer name found")
-                Toast.makeText(this@IntTransferProductsActivity, "No transfer name found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@IntTransferProductsPickActivity, "No picking ID found", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+    private fun navigateBackToPickActivity() {
+        val intent = Intent(this, PickActivity::class.java)
+        // If you want to clear all previous activities on the stack and bring PickActivity to the top
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
+        finish() // Optional: if you want to remove the current activity from the stack
+    }
+
 
 
     private fun removeCurrentTransferSourceDocument() {

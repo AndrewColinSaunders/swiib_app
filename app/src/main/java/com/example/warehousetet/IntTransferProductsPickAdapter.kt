@@ -9,10 +9,10 @@ import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
-class IntTransferProductsAdapter(
+class IntTransferProductsPickAdapter(
     private val productList: List<IntTransferProducts>,
     private val verifiedSourceDocuments: List<String>
-) : RecyclerView.Adapter<IntTransferProductsAdapter.ProductViewHolder>() {
+) : RecyclerView.Adapter<IntTransferProductsPickAdapter.ProductViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_int_product, parent, false)

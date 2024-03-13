@@ -45,7 +45,7 @@ class InternalTransfersAdapter :
         init {
             cardView.setOnClickListener {
                 val internalTransfer = getItem(adapterPosition)
-                val intent = Intent(context, IntTransferProductsActivity::class.java).apply {
+                val intent = Intent(context, IntTransferProductsPickActivity::class.java).apply {
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)

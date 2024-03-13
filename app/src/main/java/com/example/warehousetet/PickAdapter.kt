@@ -65,7 +65,8 @@ class PickAdapter :
             cardView.setOnClickListener {
                 val context = it.context
                 val internalTransfer = getItem(adapterPosition)
-                val intent = Intent(context, IntTransferProductsActivity::class.java).apply {
+                val intent = Intent(context, IntTransferProductsPickActivity::class.java).apply {
+                    putExtra("EXTRA_TRANSFER_ID", internalTransfer.id) // Use consistent key here
                     putExtra("EXTRA_TRANSFER_NAME", internalTransfer.transferName)
                     putExtra("EXTRA_SOURCE_DOCUMENT", internalTransfer.sourceDocument)
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
