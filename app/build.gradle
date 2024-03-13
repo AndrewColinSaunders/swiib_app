@@ -10,6 +10,8 @@ android {
 
     packagingOptions {
         merge 'META-INF/DEPENDENCIES'
+        exclude 'META-INF/NOTICE.md'
+        exclude 'META-INF/LICENSE.md'
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
         }
@@ -95,4 +97,11 @@ dependencies {
 
     implementation "androidx.security:security-crypto:1.1.0-alpha03"
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
+
+
+    implementation 'com.sun.mail:android-mail:1.6.7'
+    implementation 'com.sun.mail:android-activation:1.6.7'
+
+
+
 }

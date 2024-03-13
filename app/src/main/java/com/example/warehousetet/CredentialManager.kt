@@ -18,6 +18,7 @@ class CredentialManager(context: Context) {
     fun getUserId(): Int = sharedPreferences.getInt("userId", -1)
     fun getUsername(): String? = sharedPreferences.getString("username", null)
     fun getPassword(): String? = sharedPreferences.getString("password", null)
+
 }
 
 
