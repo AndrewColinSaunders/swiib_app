@@ -44,6 +44,11 @@ class HomePageActivity : AppCompatActivity() {
             Intent(this, PackActivity::class.java).also { startActivity(it) }
         }
 
+        findViewById<Button>(R.id.btnDeliveryOrders).setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            Intent(this, DeliveryOrdersActivity::class.java).also { startActivity(it) }
+        }
+
     }
 
     private fun setupOptionButton(buttonId: Int, optionName: String) {
