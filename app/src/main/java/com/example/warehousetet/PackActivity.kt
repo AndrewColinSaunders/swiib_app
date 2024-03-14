@@ -1,5 +1,6 @@
 package com.example.warehousetet
 
+import android.content.Context
 import android.os.Bundle
 import android.view.HapticFeedbackConstants
 import android.view.Menu
@@ -13,13 +14,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
-class PackActivity : AppCompatActivity() {
+class PackActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
     private lateinit var packAdapter: PackAdapter
     private lateinit var credentialManager: CredentialManager
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private val refreshScope = CoroutineScope(Dispatchers.IO)
     private var refreshJob: Job? = null
     private var isPeriodicRefreshEnabled = true // Flag to control periodic refresh
+    private var isInstantRefreshRequested = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,29 +30,27 @@ class PackActivity : AppCompatActivity() {
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
-        packAdapter = PackAdapter()
+        // Instantiation of pickAdapter moved here to ensure it uses the correct context and listener
+        packAdapter = PackAdapter(this, this)
+
         val recyclerView: RecyclerView = findViewById(R.id.recyclerView_packs)
-        recyclerView.apply {
-            layoutManager = LinearLayoutManager(this@PackActivity)
-            adapter = packAdapter
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = packAdapter
+
+        val sharedPreferences = getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
+        isInstantRefreshRequested = sharedPreferences.getBoolean("InstantRefreshRequested", false)
+        if (isInstantRefreshRequested) {
+            sharedPreferences.edit().remove("InstantRefreshRequested").apply()
         }
 
         val btnCancelSearch: Button = findViewById(R.id.btnCancelSearch)
         btnCancelSearch.setOnClickListener {
-            // Provide haptic feedback
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-
-            // Reset the adapter with the full list
-            packAdapter.resetList() // Ensure this method properly resets the list in PackAdapter
-
-            // Hide the button
+            packAdapter.resetList()
             it.visibility = View.GONE
-
-            // Re-enable periodic refresh and restart it
             isPeriodicRefreshEnabled = true
             startPeriodicRefresh()
         }
-
 
         startPeriodicRefresh()
     }
@@ -122,8 +122,13 @@ class PackActivity : AppCompatActivity() {
         }
     }
 
+    override fun onInternalTransferFinish() {
+        finish()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         refreshJob?.cancel() // Cancel any ongoing jobs
     }
+
 }

@@ -14,11 +14,13 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 
-class PickAdapter :
-    ListAdapter<InternalTransfers, PickAdapter.PickViewHolder>(DiffCallback()) {
+
+class PickAdapter(private val context: Context, private val listener: OnInternalTransferSelectedListener) :
+    ListAdapter<InternalTransfers, PickAdapter.PickViewHolder>(DiffCallback()){
 
     private var fullList: List<InternalTransfers> = emptyList()
     private lateinit var vibrator: Vibrator
+
 
     fun filter(searchQuery: String) {
         val filteredList = if (searchQuery.isEmpty()) {
@@ -47,7 +49,7 @@ class PickAdapter :
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PickViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
-        vibrator = parent.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator // Initialize Vibrator
+        vibrator = parent.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         return PickViewHolder(view)
     }
 
@@ -63,16 +65,15 @@ class PickAdapter :
 
         init {
             cardView.setOnClickListener {
-                val context = it.context
                 val internalTransfer = getItem(adapterPosition)
                 val intent = Intent(context, IntTransferProductsPickActivity::class.java).apply {
-                    putExtra("EXTRA_TRANSFER_ID", internalTransfer.id) // Use consistent key here
+                    putExtra("EXTRA_TRANSFER_ID", internalTransfer.id)
                     putExtra("EXTRA_TRANSFER_NAME", internalTransfer.transferName)
                     putExtra("EXTRA_SOURCE_DOCUMENT", internalTransfer.sourceDocument)
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)
-                triggerHapticFeedback()
+                listener.onInternalTransferFinish()
             }
         }
 

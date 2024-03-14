@@ -20,29 +20,29 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.*
 
-class IntTransferProductsPackActivity : AppCompatActivity() {
+class InternalTransfersProductsActivity : AppCompatActivity() {
     private lateinit var barcodeInput: EditText
     private lateinit var recyclerView: RecyclerView
     private lateinit var successActionButton: Button
     private var products: ArrayList<IntTransferProducts> = arrayListOf()
-    private var productPackKeys = ProductPackKey(packID = mutableListOf())
+    private var productInternalTransferKeys = ProductInternalTransferKey(internalTransferID = mutableListOf())
     private lateinit var transferName: String
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private lateinit var credentialManager: CredentialManager
     private val activityScope = CoroutineScope(Job() + Dispatchers.Main)
-    private var packId: Int = 0 // Initialize picking ID
+    private var internalTransferId: Int = 0 // Initialize picking ID
     private var allItemsShouldBeGreen: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_int_transfer_products_pack)
+        setContentView(R.layout.activity_internal_transfers_products)
 
         // Initialize components after setContentView
         initializeComponents()
 
         // Check if all items should be green and make necessary UI updates
-        productPackKeys = fetchProductPackKeys(this)
-        allItemsShouldBeGreen = productPackKeys.packID.contains(packId)
+        productInternalTransferKeys = fetchProductInternalTransferKeys(this)
+        allItemsShouldBeGreen = productInternalTransferKeys.internalTransferID.contains(internalTransferId)
 
         if (allItemsShouldBeGreen) {
             makeCardViewsGreenAndButtonVisible()
@@ -53,10 +53,10 @@ class IntTransferProductsPackActivity : AppCompatActivity() {
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
         transferName = intent.getStringExtra("EXTRA_TRANSFER_NAME") ?: ""
-        packId = intent.getIntExtra("EXTRA_TRANSFER_ID", -1)
+        internalTransferId = intent.getIntExtra("EXTRA_TRANSFER_ID", -1)
 
-        Log.d("IntTransferProductsPackActivity", "Received transfer name: $transferName")
-        Log.d("IntTransferProductsPackActivity", "Received packing ID: $packId")
+        Log.d("InternalTransfersProductsActivity", "Received transfer name: $transferName")
+        Log.d("InternalTransfersProductsActivity", "Received picking ID: $internalTransferId")
 
         barcodeInput = findViewById(R.id.barcodeInput)
         recyclerView = findViewById(R.id.recyclerView_internal_transfers)
@@ -64,25 +64,25 @@ class IntTransferProductsPackActivity : AppCompatActivity() {
 
         recyclerView.layoutManager = LinearLayoutManager(this)
         products = intent.getParcelableArrayListExtra("EXTRA_PRODUCTS") ?: arrayListOf()
-        recyclerView.adapter = IntTransferProductsPackAdapter(products, allItemsShouldBeGreen)
+        recyclerView.adapter = InternalTransfersProductsAdapter(products, allItemsShouldBeGreen)
 
         configureBarcodeInput()
         configureSuccessActionButton()
     }
 
 
-    fun fetchProductPackKeys(context: Context): ProductPackKey {
+    fun fetchProductInternalTransferKeys(context: Context): ProductInternalTransferKey {
         val sharedPreferences = context.getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
         val gson = Gson()
         val json = sharedPreferences.getString("internalTransferKeys", null)
 
         return if (json != null) {
             val type = object : TypeToken<MutableList<Int>>() {}.type
-            val packId: MutableList<Int> = gson.fromJson(json, type)
-            ProductPackKey(packId)
+            val internalTransferID: MutableList<Int> = gson.fromJson(json, type)
+            ProductInternalTransferKey(internalTransferID)
         } else {
             // Return an empty ProductInternalTransferKey if nothing was found
-            ProductPackKey(mutableListOf())
+            ProductInternalTransferKey(mutableListOf())
         }
     }
 
@@ -128,11 +128,11 @@ class IntTransferProductsPackActivity : AppCompatActivity() {
                 if (enteredQuantity != null && enteredQuantity > 0) {
                     products[productIndex].isScanned = true
                     // Update UI immediately
-                    (recyclerView.adapter as? IntTransferProductsPackAdapter)?.notifyItemChanged(productIndex)
+                    (recyclerView.adapter as? InternalTransfersProductsAdapter)?.notifyItemChanged(productIndex)
                     showSuccessActionButton()
 
                     // Append internalTransferId to the list and save/update as needed
-                    appendPackIdAndSave(packId)
+                    appendInternalTransferIdAndSave(internalTransferId)
                 } else {
                     Toast.makeText(this, "Quantity mismatch.", Toast.LENGTH_SHORT).show()
                 }
@@ -141,23 +141,25 @@ class IntTransferProductsPackActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun appendPackIdAndSave(id: Int) {
+    private fun appendInternalTransferIdAndSave(id: Int) {
         // Check if the ID is already in the list to avoid duplicates
-        if (!productPackKeys.packID.contains(id)) {
-            productPackKeys.packID.add(id)
-            saveProductPackKeys()
+        if (!productInternalTransferKeys.internalTransferID.contains(id)) {
+            productInternalTransferKeys.internalTransferID.add(id)
+            saveProductInternalTransferKeys()
         }
     }
 
-    private fun saveProductPackKeys() {
+    private fun saveProductInternalTransferKeys() {
         // Assuming you're using SharedPreferences to persist the data
         val sharedPreferences = getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
         val editor = sharedPreferences.edit()
         val gson = Gson()
-        val json = gson.toJson(productPackKeys.packID)
+        val json = gson.toJson(productInternalTransferKeys.internalTransferID)
         editor.putString("internalTransferKeys", json)
         editor.apply()
     }
+
+
 
 
     private fun showSuccessActionButton() {
@@ -169,26 +171,24 @@ class IntTransferProductsPackActivity : AppCompatActivity() {
             if (transferName.isNotEmpty()) {
                 activityScope.launch {
                     val validationSuccess = withContext(Dispatchers.IO) {
-                        odooXmlRpcClient.validateOperation(this@IntTransferProductsPackActivity, packId)
+                        odooXmlRpcClient.validateOperation(this@InternalTransfersProductsActivity, internalTransferId)
                     }
                     if (validationSuccess) {
                         // If validation is successful, redirect back to PickActivity
-                        navigateBackToPackActivity()
+                        navigateBackToInternalTransfersActivity()
                     } else {
                         // Handle validation failure as needed
-                        Toast.makeText(this@IntTransferProductsPackActivity, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@InternalTransfersProductsActivity, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
                     }
                 }
             } else {
-                Toast.makeText(this@IntTransferProductsPackActivity, "No picking ID found", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@InternalTransfersProductsActivity, "No picking ID found", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun navigateBackToPackActivity() {
-        val intent = Intent(this, PackActivity::class.java)
-        val sharedPreferences = getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
-        sharedPreferences.edit().putBoolean("InstantRefreshRequested", true).apply()
+    private fun navigateBackToInternalTransfersActivity() {
+        val intent = Intent(this, InternalTransfersActivity::class.java)
         // If you want to clear all previous activities on the stack and bring PackActivity to the top
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         startActivity(intent)

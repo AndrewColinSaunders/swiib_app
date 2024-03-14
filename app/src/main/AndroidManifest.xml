@@ -16,11 +16,29 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WarehouseTet"
         tools:targetApi="31">
+
+        <service android:name=".ClearStateService" />
+
+        <activity
+            android:name=".DeliveryOrdersActivity"
+            android:exported="false"
+            android:label="Delivery Orders"
+            android:theme="@style/Theme.WarehouseTet" />
+        <activity
+            android:name=".IntTransferProductsDeliveryOrdersActivity"
+            android:exported="false"
+            android:label="Delivery Orders"
+            android:theme="@style/Theme.WarehouseTet" />
+        <activity
+            android:name=".InternalTransfersProductsActivity"
+            android:exported="false"
+            android:label="Internal Transfers"
+            android:theme="@style/Theme.WarehouseTet" />
         <activity
             android:name=".IntTransferProductsPackActivity"
-            android:exported="false" />
-        <!-- Service Declaration Inside Application Block -->
-        <service android:name=".ClearStateService" />
+            android:exported="false"
+            android:label="Packing"
+            android:theme="@style/Theme.WarehouseTet" />
 
         <activity
             android:name=".PackActivity"
@@ -35,7 +53,7 @@
         <activity
             android:name=".IntTransferProductsPickActivity"
             android:exported="false"
-            android:label="Internal Transfers"
+            android:label="Picking"
             android:theme="@style/Theme.WarehouseTet" />
         <activity
             android:name=".InternalTransfersActivity"
@@ -67,8 +85,10 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
     </application>
+
 </manifest>

@@ -1,4 +1,4 @@
 package com.example.warehousetet
 
-data class ProductPickKey(val sourceDocuments: MutableList<String>)
+data class ProductPickKey(val pickID: MutableList<Int>)
 

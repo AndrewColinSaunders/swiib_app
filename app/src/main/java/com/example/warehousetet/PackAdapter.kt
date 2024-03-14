@@ -1,5 +1,6 @@
 package com.example.warehousetet
 
+import android.content.Context
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
@@ -10,8 +11,8 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 
-class PackAdapter :
-    ListAdapter<InternalTransfers, PackAdapter.PackViewHolder>(DiffCallback()) {
+class PackAdapter(private val context: Context, private val listener: OnInternalTransferSelectedListener) :
+    ListAdapter<InternalTransfers, PackAdapter.PackViewHolder>(DiffCallback()){
 
     // Store the full list for resetting later
     private var fullList: List<InternalTransfers> = emptyList()
@@ -75,6 +76,7 @@ class PackAdapter :
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)
+                listener.onInternalTransferFinish()
             }
         }
 

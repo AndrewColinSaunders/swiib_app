@@ -2,9 +2,6 @@ package com.example.warehousetet
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,57 +11,79 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 
+class InternalTransfersAdapter(private val context: Context, private val listener: OnInternalTransferSelectedListener) :
+    ListAdapter<InternalTransfers, InternalTransfersAdapter.PackViewHolder>(InternalTransfersAdapter.DiffCallback()){
 
-class InternalTransfersAdapter :
-    ListAdapter<InternalTransfers, InternalTransfersAdapter.InternalTransferViewHolder>(DiffCallback()) {
+    // Store the full list for resetting later
+    private var fullList: List<InternalTransfers> = emptyList()
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): InternalTransferViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
-        return InternalTransferViewHolder(view, parent.context)
-    }
-
-    override fun onBindViewHolder(holder: InternalTransferViewHolder, position: Int) {
-        val internalTransfer = getItem(position)
-        holder.bind(internalTransfer)
-    }
-
-    // Correctly placed method for filtering and submitting the list
-    fun submitFilteredInternalTransfers(list: List<InternalTransfers>) {
-        val filteredList = list.filterNot { transfer ->
-            transfer.transferName.contains("PICK", ignoreCase = true) || transfer.transferName.contains("PACK", ignoreCase = true)
+    fun filter(searchQuery: String) {
+        val filteredList = if (searchQuery.isEmpty()) {
+            fullList.filterNot {
+                it.transferName.contains("OUT", ignoreCase = true) ||
+                        it.transferName.contains("PICK", ignoreCase = true)
+            }
+        } else {
+            fullList.filter {
+                it.sourceDocument.equals(searchQuery, ignoreCase = true)
+            }
         }
         submitList(filteredList)
     }
 
-    inner class InternalTransferViewHolder(itemView: View, private val context: Context) : RecyclerView.ViewHolder(itemView) {
+    fun submitFilteredInternalTransfers(list: List<InternalTransfers>) {
+        fullList = ArrayList(list) // Update the full list
+        val filteredList = list.filterNot {
+            it.transferName.contains("OUT", ignoreCase = true) ||
+                    it.transferName.contains("PICK", ignoreCase = true)
+        }
+        submitList(filteredList)
+    }
+
+    // Reset list to the initial filtered state
+    fun resetList() {
+        submitList(fullList.filterNot {
+            it.transferName.contains("OUT", ignoreCase = true) ||
+                    it.transferName.contains("PICK", ignoreCase = true)
+        })
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PackViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_internal_transfer, parent, false)
+        return PackViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: PackViewHolder, position: Int) {
+        val internalTransfer = getItem(position)
+        holder.bind(internalTransfer)
+    }
+
+    inner class PackViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val cardView: CardView = itemView.findViewById(R.id.card_view)
         private val transferNameTextView: TextView = itemView.findViewById(R.id.textView_transfer_title)
         private val transferDateTextView: TextView = itemView.findViewById(R.id.textView_transferDate)
-        private val vibrator: Vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
         init {
             cardView.setOnClickListener {
+                val context = it.context
                 val internalTransfer = getItem(adapterPosition)
-                val intent = Intent(context, IntTransferProductsPickActivity::class.java).apply {
+                val intent = Intent(context, InternalTransfersProductsActivity::class.java).apply {
+                    // Include the transfer ID, name, and source document in the intent
+                    putExtra("EXTRA_TRANSFER_ID", internalTransfer.id)
+                    putExtra("EXTRA_TRANSFER_NAME", internalTransfer.transferName)
+                    putExtra("EXTRA_SOURCE_DOCUMENT", internalTransfer.sourceDocument)
+                    // Also passing the product details if needed
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)
-                triggerHapticFeedback()
+                listener.onInternalTransferFinish()
             }
         }
 
         fun bind(internalTransfer: InternalTransfers) {
             transferNameTextView.text = internalTransfer.transferName
-            transferDateTextView.text = "Transfer Date: ${internalTransfer.transferDate}"
+            transferDateTextView.text = "Date: ${internalTransfer.transferDate}"
             itemView.findViewById<TextView>(R.id.textView_sourceDocument).text = "Source Document: ${internalTransfer.sourceDocument}"
-        }
-
-        private fun triggerHapticFeedback() {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                vibrator.vibrate(50)
-            }
         }
     }
 
@@ -73,3 +92,4 @@ class InternalTransfersAdapter :
         override fun areContentsTheSame(oldItem: InternalTransfers, newItem: InternalTransfers): Boolean = oldItem == newItem
     }
 }
+

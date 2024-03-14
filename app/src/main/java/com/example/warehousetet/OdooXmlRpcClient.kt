@@ -468,44 +468,9 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
-    // Assuming this function is part of a class that has access to a Context object
 
-    suspend fun changePickState(context: Context, pickingId: Int): Boolean {
-        return try {
-            val username = credentialManager.getUsername()
-            val password = credentialManager.getPassword()
 
-            if (username == null || password == null) {
-                Log.e("OdooXmlRpcClient", "Credentials are null, aborting changePickState.")
-                return false
-            }
-
-            val db = Constants.DATABASE
-            val config = XmlRpcClientConfigImpl().apply {
-                serverURL = URL("${Constants.URL}xmlrpc/2/object")
-            }
-            val client = XmlRpcClient()
-            client.setConfig(config)
-
-            val userId = login(username, password)
-            if (userId <= 0) {
-                Log.e("OdooXmlRpcClient", "Login failed, cannot change pick state.")
-                return false
-            }
-
-            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(pickingId)))
-
-            client.execute("execute_kw", validateParams).let {
-                Log.d("OdooXmlRpcClient", "Picking validated successfully.")
-                return true
-            }
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error during changePickState: ${e.message}", e)
-            false
-        }
-    }
-
-    suspend fun changePackState(context: Context, packingId: Int): Boolean {
+    suspend fun validateOperation(context: Context, packingId: Int): Boolean {
         return try {
             val username = credentialManager.getUsername()
             val password = credentialManager.getPassword()
@@ -540,10 +505,140 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
+    suspend fun fetchDeliveryOrdersWithProductDetails(): List<DeliveryOrders> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchDeliveryOrders.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
 
-    private fun logError(message: String) {
-        Log.e("OdooXmlRpcClient", message)
+        val domain = listOf(
+            listOf("state", "=", "assigned"),
+            listOf("picking_type_id.code", "=", "outgoing")  // Adjusted for delivery orders
+        )
+        val fields = listOf("id", "name", "scheduled_date", "origin", "state")
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                val orderId = map["id"] as Int
+                val orderName = map["name"] as String
+                val deliveryDate = map["scheduled_date"].toString()
+                val sourceDocument = map["origin"] as? String ?: ""
+
+                val products = fetchProductsForDeliveryOrder(orderId)
+
+                // Adjust this part to include barcode fetching, similar to internal transfers
+                val deliveryProductsList = products.mapNotNull { product ->
+                    val barcode = fetchProductBarcodeByName(product.name)
+                    DeliveryProduct(
+                        name = product.name,
+                        quantity = product.quantity,
+                        barcode = barcode
+                    )
+                }
+
+                DeliveryOrders(
+                    id = orderId,
+                    orderName = orderName,
+                    deliveryDate = deliveryDate,
+                    sourceDocument = sourceDocument,
+                    productDetails = deliveryProductsList
+                )
+            }.also {
+                Log.d("OdooXmlRpcClient", "Fetched ${it.size} delivery orders with product details.")
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching delivery orders: ${e.localizedMessage}", e)
+            emptyList()
+        }
     }
+
+    suspend fun fetchProductsForDeliveryOrder(deliveryOrderId: Int): List<Product> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForDeliveryOrder.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        // Adjust the domain filter to specifically fetch the desired delivery order by ID.
+        // Assuming delivery orders are also managed via stock.picking but with a different picking_type_id.code
+        val domain = listOf(
+            listOf("id", "=", deliveryOrderId),
+            listOf("picking_type_id.code", "=", "outgoing")  // This targets delivery orders specifically
+        )
+        val fields = listOf("delivery_order_summary")  // This assumes you have a similar computed field for delivery orders
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            // Assuming you have a similar method to parse delivery order summaries as you did for internal transfers
+            val deliveryOrderSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["delivery_order_summary"].toString() else ""
+            parseDeliveryOrderSummary(deliveryOrderSummary)
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching products for delivery order: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    fun parseDeliveryOrderSummary(summary: String): List<Product> {
+        // Check if the summary is not empty
+        if (summary.isEmpty()) return emptyList()
+
+        // Initialize a counter for product IDs
+        var productIdCounter = 1
+
+        return summary.split(", ").mapNotNull { productString ->
+            val parts = productString.split(": ")
+            if (parts.size == 2) {
+                val productName = parts[0]
+                val productQuantity = parts[1].toDoubleOrNull()  // Convert quantity to Double
+                if (productQuantity != null) {
+                    // Use a sequential ID and increment the counter for each product
+                    val product = Product(
+                        id = productIdCounter++,  // Sequential ID for each product
+                        name = productName,
+                        quantity = productQuantity,
+                        barcode = null,  // Assuming barcode is not available in summary
+                        trackingType = null  // Assuming trackingType is not available in summary
+                    )
+                    product
+                } else {
+                    null  // If conversion fails, exclude this product from the list
+                }
+            } else {
+                null  // Exclude if the product string format is unexpected
+            }
+        }
+    }
+
+
+
 
 }
 
