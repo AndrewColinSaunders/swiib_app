@@ -1,18 +1,18 @@
 package com.example.warehousetet
 
 import IntTransferProducts
-    import android.view.LayoutInflater
-    import android.view.View
-    import android.view.ViewGroup
-    import android.widget.TextView
-    import androidx.cardview.widget.CardView
-    import androidx.core.content.ContextCompat
-    import androidx.recyclerview.widget.RecyclerView
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.RecyclerView
 
-class IntTransferProductsPickAdapter (
+class IntTransferProductsDeliveryOrdersAdapter(
     private val productList: List<IntTransferProducts>,
     private val allItemsShouldBeGreen: Boolean
-    ) : RecyclerView.Adapter<IntTransferProductsPickAdapter.ProductViewHolder>() {
+) : RecyclerView.Adapter<IntTransferProductsDeliveryOrdersAdapter.ProductViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
         val view =

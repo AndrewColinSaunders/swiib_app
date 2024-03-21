@@ -379,7 +379,7 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
                         quantity = product.quantity,
                         transferDate = transferDate,
                         sourceDocument = sourceDocument,
-                        barcode = barcode // Include the fetched barcode
+                        barcode = barcode
                     )
                 }
 
@@ -544,9 +544,11 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
                 // Adjust this part to include barcode fetching, similar to internal transfers
                 val deliveryProductsList = products.mapNotNull { product ->
                     val barcode = fetchProductBarcodeByName(product.name)
-                    DeliveryProduct(
+                    IntTransferProducts(
                         name = product.name,
                         quantity = product.quantity,
+                        transferDate = deliveryDate,
+                        sourceDocument = sourceDocument,
                         barcode = barcode
                     )
                 }
@@ -577,13 +579,12 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         val userId = credentialManager.getUserId()
         val password = credentialManager.getPassword() ?: ""
 
-        // Adjust the domain filter to specifically fetch the desired delivery order by ID.
-        // Assuming delivery orders are also managed via stock.picking but with a different picking_type_id.code
+        // Corrected domain filter for delivery orders specifically
         val domain = listOf(
             listOf("id", "=", deliveryOrderId),
-            listOf("picking_type_id.code", "=", "outgoing")  // This targets delivery orders specifically
+            listOf("picking_type_id.code", "=", "outgoing")
         )
-        val fields = listOf("delivery_order_summary")  // This assumes you have a similar computed field for delivery orders
+        val fields = listOf("delivery_order_product_summary") // Corrected field name
 
         val params = listOf(
             Constants.DATABASE,
@@ -597,8 +598,8 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            // Assuming you have a similar method to parse delivery order summaries as you did for internal transfers
-            val deliveryOrderSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["delivery_order_summary"].toString() else ""
+            // Parse the corrected summary field
+            val deliveryOrderSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["delivery_order_product_summary"].toString() else ""
             parseDeliveryOrderSummary(deliveryOrderSummary)
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error fetching products for delivery order: ${e.localizedMessage}", e)
@@ -606,40 +607,29 @@ class OdooXmlRpcClient(private val credentialManager: CredentialManager) {
         }
     }
 
+
     fun parseDeliveryOrderSummary(summary: String): List<Product> {
-        // Check if the summary is not empty
         if (summary.isEmpty()) return emptyList()
 
-        // Initialize a counter for product IDs
-        var productIdCounter = 1
-
         return summary.split(", ").mapNotNull { productString ->
+            // Expected format: "ProductID:ProductName: Quantity"
             val parts = productString.split(": ")
-            if (parts.size == 2) {
-                val productName = parts[0]
-                val productQuantity = parts[1].toDoubleOrNull()  // Convert quantity to Double
-                if (productQuantity != null) {
-                    // Use a sequential ID and increment the counter for each product
-                    val product = Product(
-                        id = productIdCounter++,  // Sequential ID for each product
+            if (parts.size == 3) {
+                val productId = parts[0].toIntOrNull()
+                val productName = parts[1]
+                val productQuantity = parts[2].toDoubleOrNull()
+                if (productId != null && productQuantity != null) {
+                    Product(
+                        id = productId,
                         name = productName,
                         quantity = productQuantity,
-                        barcode = null,  // Assuming barcode is not available in summary
-                        trackingType = null  // Assuming trackingType is not available in summary
+                        barcode = null,  // You will need to adjust how you're fetching the barcode
+                        trackingType = null  // This remains the same, assuming it's not available in summary
                     )
-                    product
-                } else {
-                    null  // If conversion fails, exclude this product from the list
-                }
-            } else {
-                null  // Exclude if the product string format is unexpected
-            }
+                } else null
+            } else null
         }
     }
-
-
-
-
 }
 
 
