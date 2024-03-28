@@ -1,14 +1,31 @@
 package com.example.warehousetet
 
 import android.content.Context
+<<<<<<< Updated upstream
+=======
+import android.content.Intent
+import android.graphics.Color
+import android.graphics.PorterDuff
+import android.graphics.Typeface
+>>>>>>> Stashed changes
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
 import android.view.KeyEvent
+<<<<<<< Updated upstream
+=======
+import android.view.Menu
+import android.view.MenuItem
+import android.view.WindowManager
+>>>>>>> Stashed changes
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+<<<<<<< Updated upstream
+=======
+import android.widget.TextView
+>>>>>>> Stashed changes
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -38,11 +55,162 @@ class ProductsActivity : AppCompatActivity() {
         val receiptId = intent.getIntExtra("RECEIPT_ID", -1)
         productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId)
 
+<<<<<<< Updated upstream
         if (receiptId != -1) {
             setupRecyclerView()
             fetchProductsForReceipt(receiptId)
         } else {
             Log.e("ProductsActivity", "Invalid receipt ID passed to ProductsActivity.")
+=======
+//    // Set ActionBar background color
+//    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
+
+//    // Change the status bar color to match the ActionBar
+//    window.statusBarColor = ContextCompat.getColor(this, R.color.cardGrey) // Use the color defined as cardGrey
+
+    odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
+    barcodeInput = findViewById(R.id.barcodeInput)
+    confirmButton = findViewById(R.id.confirmButton)
+    val receiptId = intent.getIntExtra("RECEIPT_ID", -1)
+    receiptName = intent.getStringExtra("RECEIPT_NAME")
+    Log.d("ProductsActivity", "Received receipt name: $receiptName")
+    val titleTextView: TextView = findViewById(R.id.productsTitleTextView)
+    titleTextView.text = receiptName
+
+    productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId)
+
+    if (receiptId != -1) {
+        setupRecyclerView()
+        fetchProductsForReceipt(receiptId)
+    } else {
+        Log.e("ProductsActivity", "Invalid receipt ID passed to ProductsActivity.")
+    }
+
+    findViewById<Button>(R.id.clearButton).setOnClickListener {
+        findViewById<EditText>(R.id.barcodeInput).text.clear()
+    }
+
+
+    supportActionBar?.setDisplayHomeAsUpEnabled(true)
+    setupBarcodeVerification(receiptId)
+    loadMatchStatesFromPreferences(receiptId)
+}
+
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_products_activity, menu)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        val menuItem = menu.findItem(R.id.action_flag_receipt)
+        val spanString = SpannableString(menuItem.title).apply {
+            setSpan(ForegroundColorSpan(ContextCompat.getColor(this@ProductsActivity, R.color.danger_red)), 0, length, 0)
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        menuItem.title = spanString
+        return true
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    return when (item.itemId) {
+        R.id.action_flag_receipt -> {
+            AlertDialog.Builder(this).apply {
+                setTitle("Flag Receipt")
+                setMessage("Are you sure you want to flag this receipt?")
+                setPositiveButton("Flag Receipt") { _, _ ->
+                    flagReceipt()
+                }
+                setNegativeButton(android.R.string.cancel, null)
+            }.show()
+            true
+        }
+        android.R.id.home -> {
+            onBackPressed()
+            true
+        }
+        else -> super.onOptionsItemSelected(item)
+    }
+}
+
+    private fun showRedToast(message: String) {
+        // Inflate the custom toast layout
+        val inflater = layoutInflater
+        val layout =
+            inflater.inflate(R.layout.custom_toast, findViewById(R.id.custom_toast_container))
+
+        // Find the TextView within the custom layout and set the message
+        val textView = layout.findViewById<TextView>(R.id.toast_text)
+        textView.text = message
+
+        // Set the background color of the custom toast to #4CAF50
+        val dangerRed = ContextCompat.getColor(applicationContext, R.color.danger_red)
+        layout.background.setColorFilter(dangerRed, PorterDuff.Mode.SRC_IN)
+        textView.setTextColor(Color.WHITE) // Ensure the text color is white for contrast
+
+        // Create and show the custom toast
+        with(Toast(applicationContext)) {
+            duration = Toast.LENGTH_SHORT
+            view = layout
+            show()
+        }
+    }
+    private fun showGreenToast(message: String) {
+        // Inflate the custom toast layout
+        val inflater = layoutInflater
+        val layout =
+            inflater.inflate(R.layout.custom_toast, findViewById(R.id.custom_toast_container))
+
+        // Find the TextView within the custom layout and set the message
+        val textView = layout.findViewById<TextView>(R.id.toast_text)
+        textView.text = message
+
+        // Set the background color of the custom toast to #4CAF50
+        val successGreen = ContextCompat.getColor(applicationContext, R.color.success_green)
+        layout.background.setColorFilter(successGreen, PorterDuff.Mode.SRC_IN)
+        textView.setTextColor(Color.WHITE) // Ensure the text color is white for contrast
+
+        // Create and show the custom toast
+        with(Toast(applicationContext)) {
+            duration = Toast.LENGTH_SHORT
+            view = layout
+            show()
+        }
+    }
+
+    private fun flagReceipt() {
+    val receiptId = intent.getIntExtra("RECEIPT_ID", -1) // Assuming you have receiptId
+    if (receiptId == -1) {
+        Log.e("ProductsActivity", "Invalid receipt ID")
+        return
+    }
+
+    coroutineScope.launch {
+        val receiptName = this@ProductsActivity.receiptName ?: return@launch
+        odooXmlRpcClient.fetchAndLogBuyerDetails(receiptName)?.let { buyerDetails ->
+            sendEmailFlaggingReceipt(buyerDetails.login, buyerDetails.name, receiptName)
+            withContext(Dispatchers.Main) {
+                Log.d("ProductsActivity", "Receipt flagged and buyer notified via email.")
+                showRedToast("Receipt flagged")
+            }
+        } ?: run {
+            withContext(Dispatchers.Main) {
+                Log.e("ProductsActivity", "Failed to fetch buyer details or flag the receipt.")
+//                Toast.makeText(this@ProductsActivity, "Failed to flag receipt", Toast.LENGTH_SHORT).show()
+                  showRedToast("Failed to flag receipt")
+            }
+        }
+    }
+}
+
+    private fun sendEmailFlaggingReceipt(buyerEmail: String, buyerName: String, receiptName: String) {
+        val props = Properties().apply {
+            put("mail.smtp.host", "mail.dattec.co.za")
+            put("mail.smtp.socketFactory.port", "465")
+            put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
+            put("mail.smtp.auth", "true")
+            put("mail.smtp.port", "465")
+>>>>>>> Stashed changes
         }
 
         setupBarcodeVerification(receiptId)
@@ -200,8 +368,29 @@ class ProductsActivity : AppCompatActivity() {
         // This might involve adding a method in your adapter to return the position based on product ID
         val position = productsAdapter.findProductPositionById(productId)
         if (position != -1) {
+<<<<<<< Updated upstream
             runOnUiThread {
                 productsAdapter.notifyItemChanged(position)
+=======
+            runOnUiThread { productsAdapter.notifyItemChanged(position) }
+        }
+        if (allProductsMatched) {
+            coroutineScope.launch {
+                val validated = odooXmlRpcClient.validateOperation(this@ProductsActivity,receiptId)
+                withContext(Dispatchers.Main) {
+                    if (validated) {
+//                        Log.d("ProductsActivity", "Receipt validated successfully.")
+                           showGreenToast("Receipt validated")
+                        // Redirect to ReceiptsActivity
+                        val intent = Intent(this@ProductsActivity, ReceiptsActivity::class.java)
+                        startActivity(intent)
+                        finish() // Optional: if you want to remove the current activity from the stack
+                    } else {
+//                        Log.e("ProductsActivity", "Failed to validate receipt.")
+                        showRedToast("Failed to validate receipt")
+                    }
+                }
+>>>>>>> Stashed changes
             }
         }
     }

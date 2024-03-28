@@ -67,9 +67,12 @@ class PickAdapter(private val context: Context, private val listener: OnInternal
             cardView.setOnClickListener {
                 val internalTransfer = getItem(adapterPosition)
                 val intent = Intent(context, IntTransferProductsPickActivity::class.java).apply {
+<<<<<<< Updated upstream
                     putExtra("EXTRA_TRANSFER_ID", internalTransfer.id)
                     putExtra("EXTRA_TRANSFER_NAME", internalTransfer.transferName)
                     putExtra("EXTRA_SOURCE_DOCUMENT", internalTransfer.sourceDocument)
+=======
+>>>>>>> Stashed changes
                     putParcelableArrayListExtra("EXTRA_PRODUCTS", ArrayList(internalTransfer.productDetails))
                 }
                 context.startActivity(intent)

@@ -10,8 +10,17 @@
     <color name="swiib">#B30BFF</color>
     <color name="success_green">#4CAF50</color>
     <color name="danger_red">#F44336</color>
+<<<<<<< Updated upstream
     <color name="todo_blue">#2196F3</color>
     <color name="disabled_blue">#802196F3</color>
     <color name="disabled_gray">#E0E0E0</color>
     <color name="disabled_text_color">#9E9E9E</color>
 </resources>
+=======
+    <color name="cardGrey">#212d40</color>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="backgroundGrey">#11151c</color>
+    <!-- Add your new color definition below -->
+    <color name="todo_blue">#11151c</color>
+</resources>
+>>>>>>> Stashed changes
