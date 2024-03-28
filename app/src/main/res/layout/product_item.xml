@@ -28,7 +28,8 @@
             android:layout_height="wrap_content"
             android:text="Quantity"
             android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:visibility="gone"/>
 
         <TextView
             android:id="@+id/productIdTextView"
@@ -36,7 +37,8 @@
             android:layout_height="wrap_content"
             android:text="ID"
             android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            android:visibility="gone"/>
 
         <TextView
             android:id="@+id/productTrackingTypeTextView"
@@ -44,8 +46,8 @@
             android:layout_height="wrap_content"
             android:text="Tracking"
             android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
-
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            />
 
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

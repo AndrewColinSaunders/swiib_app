@@ -55,18 +55,25 @@ class ProductsAdapter(
             idTextView.text = "ID: ${product.id}"
             trackingTypeTextView.text = "Tracking Type: ${product.trackingType ?: "N/A"}"
 
+            // Set text color to white for all TextViews
+            val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white) // or R.color.white if you have it defined
+            nameTextView.setTextColor(whiteColor)
+            quantityTextView.setTextColor(whiteColor)
+            idTextView.setTextColor(whiteColor)
+            trackingTypeTextView.setTextColor(whiteColor)
+
             val context = itemView.context // Use itemView's context to ensure correct resource access
             cardView.setCardBackgroundColor(
                 if (matches) ContextCompat.getColor(context, R.color.success_green) // Use your success_green color
-                else ContextCompat.getColor(context, android.R.color.white) // Default or original card background color
+                else ContextCompat.getColor(context, R.color.cardGrey) // Default or original card background color
             )
 
-            itemView.setOnClickListener {
-                val intent = Intent(context, ProductDetailActivity::class.java).apply {
-                    putExtra("PRODUCT_ID", product.id)
-                }
-                context.startActivity(intent)
-            }
+//            itemView.setOnClickListener {
+//                val intent = Intent(context, ProductDetailActivity::class.java).apply {
+//                    putExtra("PRODUCT_ID", product.id)
+//                }
+//                context.startActivity(intent)
+//            }
         }
     }
 }

@@ -10,4 +10,7 @@
     <color name="swiib">#B30BFF</color>
     <color name="success_green">#4CAF50</color>
     <color name="danger_red">#F44336</color>
+    <color name="cardGrey">#212d40</color>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="backgroundGrey">#11151c</color>
 </resources>

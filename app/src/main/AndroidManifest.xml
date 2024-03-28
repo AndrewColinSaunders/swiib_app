@@ -14,6 +14,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WarehouseTet"
         tools:targetApi="31">
+
+        <!-- SetupActivity -->
+        <activity
+            android:name=".SetupActivity"
+            android:exported="true"
+            />
+<!--        android:theme="@style/Theme.AppCompat.Light.NoActionBar"-->
+
         <activity
             android:name=".PackActivity"
             android:exported="false"
@@ -34,11 +42,11 @@
             android:exported="false"
             android:label="Internal Transfers"
             android:theme="@style/Theme.WarehouseTet" />
-        <activity
-            android:name=".ProductDetailActivity"
-            android:exported="false"
-            android:label="Product Details"
-            android:theme="@style/Theme.WarehouseTet" />
+<!--        <activity-->
+<!--            android:name=".ProductDetailActivity"-->
+<!--            android:exported="false"-->
+<!--            android:label="Product Details"-->
+<!--            android:theme="@style/Theme.WarehouseTet" />-->
         <activity
             android:name=".ProductsActivity"
             android:exported="false"
@@ -52,14 +60,25 @@
         <activity
             android:name=".HomePageActivity"
             android:exported="false"
-            android:label="Warehouse Operations"
-            android:theme="@style/Theme.WarehouseTet" />
+            android:label="Swiib - Warehouse Operations"
+            android:theme="@style/Theme.WarehouseTet"/>
+<!--        android:theme="@style/Theme.AppCompat.NoActionBar"-->
+<!--            android:theme="@style/Theme.WarehouseTet" />-->
+
+<!--        <activity-->
+<!--            android:name=".LoginActivity"-->
+<!--            android:exported="true">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
         <activity
             android:name=".LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/menu/menu_products_activity.xml -->
+<!-- res/menu/menu_products_activity.xml -->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"> <!-- Add this line -->
+    <item
+        android:id="@+id/action_flag_receipt"
+        android:title="Flag receipt"
+        android:orderInCategory="100"
+        app:showAsAction="ifRoom" />
+</menu>
+

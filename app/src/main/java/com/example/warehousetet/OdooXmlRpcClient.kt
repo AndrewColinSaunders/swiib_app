@@ -548,6 +548,7 @@
 package com.example.warehousetet
 
 import IntTransferProducts
+import android.content.Context
 
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -1198,6 +1199,109 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
         }
     }
 
+    suspend fun updateMoveLinesByPickingWithLot(pickingId: Int, productId: Int, lotName: String, quantity: Int, expirationDate: String?) {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesByPickingWithLot.")
+            return
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        // Format the expiration date if not null; else pass null
+        val formattedExpirationDate = expirationDate?.let { "$it 00:00:00" }
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line",
+            "create_update_move_line_with_lot", // Updated method name for lots
+            listOf(pickingId, productId, lotName, quantity, formattedExpirationDate)
+        )
+
+        try {
+            val result = client.execute("execute_kw", params) as? Boolean
+            if (result == true) {
+                Log.d("OdooXmlRpcClient", "Successfully updated/created stock.move.line record with lot.")
+            } else {
+                Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record with lot.")
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesByPickingWithLot: ${e.localizedMessage}")
+        }
+    }
+
+    suspend fun updateMoveLinesWithoutExpirationWithLot(pickingId: Int, productId: Int, lotName: String, quantity: Int) {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesWithoutExpirationWithLot.")
+            return
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line",
+            "create_update_move_line_lot_without_expiration", // Adjusted method name for lots without expiration
+            listOf(pickingId, productId, lotName, quantity)
+        )
+
+        try {
+            val result = client.execute("execute_kw", params) as? Boolean
+            if (result == true) {
+                Log.d("OdooXmlRpcClient", "Successfully updated/created stock.move.line record without expiration date for lot.")
+            } else {
+                Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record without expiration date for lot.")
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesWithoutExpirationWithLot: ${e.localizedMessage}")
+        }
+    }
+
+
+
+    suspend fun validateOperation(packingId: Int): Boolean {
+        return try {
+            val username = credentialManager.getUsername()
+            val password = credentialManager.getPassword()
+
+            if (username == null || password == null) {
+                Log.e("OdooXmlRpcClient", "Credentials are null, aborting changePickState.")
+                return false
+            }
+
+            val db = Constants.DATABASE
+            val config = XmlRpcClientConfigImpl().apply {
+                serverURL = URL("${Constants.URL}xmlrpc/2/object")
+            }
+            val client = XmlRpcClient()
+            client.setConfig(config)
+
+            val userId = login(username, password)
+            if (userId <= 0) {
+                Log.e("OdooXmlRpcClient", "Login failed, cannot change pick state.")
+                return false
+            }
+
+            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(packingId)))
+
+            client.execute("execute_kw", validateParams).let {
+                Log.d("OdooXmlRpcClient", "Picking validated successfully.")
+                return true
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error during changePickState: ${e.message}", e)
+            false
+        }
+    }
 
 
 

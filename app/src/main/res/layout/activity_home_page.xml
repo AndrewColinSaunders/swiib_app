@@ -1,116 +1,116 @@
-<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:fillViewport="true"
+    android:background="#11151c">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:gravity="center_horizontal"
         android:padding="16dp">
 
         <TextView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Warehouse Operations"
             android:textSize="30sp"
             android:textStyle="bold"
             android:textAlignment="center"
-            android:layout_marginBottom="40dp"
-            android:layout_marginTop="40dp"
-            android:textColor="@color/black"/>
-
-        <Button
-            android:id="@+id/btnReceipt"
+            android:layout_marginBottom="20dp"
             android:layout_marginTop="20dp"
-            style="@style/Widget.AppCompat.Button.Borderless"
+            android:textColor="@color/white"/>
+
+        <!-- Row 1 -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/rounded_button"
-            android:text="Receipt"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:textAlignment="textStart"
-            android:drawableEnd="@drawable/ic_arrow_right"
-            />
+            android:orientation="horizontal"
+            android:gravity="center">
 
-        <Button
-            android:id="@+id/btnInternalTransfers"
-            android:layout_marginTop="20dp"
-            style="@style/Widget.AppCompat.Button.Borderless"
+            <Button
+                android:id="@+id/btnReceipt"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/arrow_right_to_bracket_solid"
+                android:text="Receipt"
+                android:background="@drawable/rounded_button"
+                android:padding="8dp"
+                android:layout_margin="8dp"/>
+
+            <Button
+                android:id="@+id/btnInternalTransfers"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/right_left_solid"
+                android:text="Internal Transfers"
+                android:background="@drawable/rounded_button"
+                android:padding="8dp"
+                android:layout_margin="8dp"/>
+        </LinearLayout>
+
+        <!-- Row 2 -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/rounded_button"
-            android:text="Internal Transfers"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:textAlignment="textStart"
-            android:drawableEnd="@drawable/ic_arrow_right"
-            />
+            android:orientation="horizontal"
+            android:gravity="center">
 
-        <Button
-            android:id="@+id/btnPick"
-            android:layout_marginTop="20dp"
-            style="@style/Widget.AppCompat.Button.Borderless"
+            <Button
+                android:id="@+id/btnPick"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/hand_back_fist_regular"
+                android:text="Pick"
+                android:background="@drawable/rounded_button"
+                android:padding="8dp"
+                android:layout_margin="8dp"/>
+
+            <Button
+                android:id="@+id/btnPack"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/box_open_solid"
+                android:text="Pack"
+                android:background="@drawable/rounded_button"
+                android:padding="8dp"
+                android:layout_margin="8dp"/>
+        </LinearLayout>
+
+        <!-- Row 3 -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/rounded_button"
-            android:text="Pick"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:textAlignment="textStart"
-            android:drawableEnd="@drawable/ic_arrow_right"
-            />
+            android:orientation="horizontal"
+            android:gravity="center">
 
-        <Button
-            android:id="@+id/btnPack"
-            android:layout_marginTop="20dp"
-            style="@style/Widget.AppCompat.Button.Borderless"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/rounded_button"
-            android:text="Pack"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:textAlignment="textStart"
-            android:drawableEnd="@drawable/ic_arrow_right"
-            />
+            <Button
+                android:id="@+id/btnDeliveryOrders"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/truck_fast_solid"
+                android:text="Delivery Orders"
+                android:background="@drawable/rounded_button"
+                android:padding="8dp"
+                android:layout_margin="8dp"/>
 
-        <Button
-            android:id="@+id/btnDeliveryOrders"
-            android:layout_marginTop="20dp"
-            style="@style/Widget.AppCompat.Button.Borderless"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/rounded_button"
-            android:text="Delivery Orders"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:textAlignment="textStart"
-            android:drawableEnd="@drawable/ic_arrow_right"
-            />
-
-        <Button
-            android:id="@+id/btnReturns"
-            android:layout_marginTop="20dp"
-            style="@style/Widget.AppCompat.Button.Borderless"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/rounded_button"
-            android:text="Returns"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:textAlignment="textStart"
-            android:drawableEnd="@drawable/ic_arrow_right"
-            />
+            <Button
+                android:id="@+id/btnReturns"
+                android:layout_width="0dp"
+                android:layout_height="120dp"
+                android:layout_weight="1"
+                android:drawableTop="@drawable/rotate_left_solid"
+                android:text="Returns"
+                android:background="@drawable/rounded_button"
+                android:padding="8dp"
+                android:layout_margin="8dp"/>
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>
