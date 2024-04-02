@@ -13,4 +13,6 @@
     <color name="cardGrey">#212d40</color>
     <color name="colorPrimary">#6200EE</color>
     <color name="backgroundGrey">#11151c</color>
+    <color name="todo_blue">#2196F3</color>
+    <color name="disabled_blue">#802196F3</color>
 </resources>

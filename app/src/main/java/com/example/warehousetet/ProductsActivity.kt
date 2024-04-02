@@ -1057,7 +1057,7 @@ private fun promptForExpirationDate(productName: String, receiptId: Int, product
         }
         if (allProductsMatched) {
             coroutineScope.launch {
-                val validated = odooXmlRpcClient.validateOperation(receiptId)
+                val validated = odooXmlRpcClient.validateOperation(this@ProductsActivity, productId)
                 withContext(Dispatchers.Main) {
                     if (validated) {
 //                        Log.d("ProductsActivity", "Receipt validated successfully.")

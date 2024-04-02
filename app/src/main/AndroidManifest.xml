@@ -4,6 +4,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -21,6 +23,37 @@
             android:exported="true"
             />
 <!--        android:theme="@style/Theme.AppCompat.Light.NoActionBar"-->
+
+        <activity
+            android:name=".DeliveryOrdersActivity"
+            android:exported="false"
+            android:label="DeliveryOrdersActivity"
+            android:theme="@style/Theme.WarehouseTet" />
+
+        <activity
+            android:name=".InternalTransfersProductsActivity"
+            android:exported="false"
+            android:label="InternalTransfersProductsActivity"
+            android:theme="@style/Theme.WarehouseTet" />
+
+        <activity
+            android:name=".IntTransferProductsPickActivity"
+            android:exported="false"
+            android:label="IntTransferProductsDeliveryOrdersActivity"
+            android:theme="@style/Theme.WarehouseTet" />
+
+        <activity
+            android:name=".IntTransferProductsDeliveryOrdersActivity"
+            android:exported="false"
+            android:label="IntTransferProductsDeliveryOrdersActivity"
+            android:theme="@style/Theme.WarehouseTet" />
+
+
+        <activity
+            android:name="IntTransferProductsPackActivity"
+            android:exported="false"
+            android:label="IntTransferProductsPackActivity"
+            android:theme="@style/Theme.WarehouseTet" />
 
         <activity
             android:name=".PackActivity"

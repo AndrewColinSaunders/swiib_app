@@ -882,6 +882,8 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
         }
     }
 
+
+
     suspend fun fetchInternalTransfersWithProductDetails(): List<InternalTransfers> {
         val config = getClientConfig("object")
         if (config == null) {
@@ -911,41 +913,44 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            result.mapNotNull { it as? Map<String, Any> }
-                .mapNotNull { map ->
-                    val transferId = map["id"] as Int
-                    val transferName = map["name"] as String
-                    val transferDate = map["scheduled_date"].toString()
-                    val sourceDocument = map["origin"] as? String ?: ""
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                val transferId = map["id"] as Int
+                val transferName = map["name"] as String
+                val transferDate = map["scheduled_date"].toString()
+                val sourceDocument = map["origin"] as? String ?: ""
 
-                    val products = fetchProductsForInternalTransfer(transferId)
+                val products = fetchProductsForInternalTransfer(transferId)
 
-                    // Ensure the fetched products are mapped to IntTransferProducts
-                    val intTransferProductsList = products.map { product ->
-                        IntTransferProducts(
-                            name = product.name,
-                            quantity = product.quantity,
-                            transferDate = transferDate
-                        )
-                    }
-
-                    InternalTransfers(
-                        id = transferId,
-                        transferName = transferName,
+                // Adjust this part to include barcode fetching
+                val intTransferProductsList = products.mapNotNull { product ->
+                    // Assuming fetchProductBarcodeByName exists and fetches the barcode based on product name
+                    val barcode = fetchProductBarcodeByName(product.name)
+                    IntTransferProducts(
+                        name = product.name,
+                        quantity = product.quantity,
                         transferDate = transferDate,
                         sourceDocument = sourceDocument,
-                        productDetails = intTransferProductsList
+                        barcode = barcode
                     )
-                }.also {
-                    Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details.")
                 }
+
+                InternalTransfers(
+                    id = transferId,
+                    transferName = transferName,
+                    transferDate = transferDate,
+                    sourceDocument = sourceDocument,
+                    productDetails = intTransferProductsList
+                )
+            }.also {
+                Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details.")
+            }
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error fetching internal transfers: ${e.localizedMessage}", e)
             emptyList()
         }
     }
 
-    private suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
+    suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForInternalTransfer.")
@@ -982,19 +987,28 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
         }
     }
 
-    private fun parseInternalTransferSummary(summary: String): List<Product> {
+    fun parseInternalTransferSummary(summary: String): List<Product> {
         // Check if the summary is not empty
         if (summary.isEmpty()) return emptyList()
 
+        // Initialize a counter for product IDs
+        var productIdCounter = 1
+
         return summary.split(", ").mapNotNull { productString ->
-            // Expected format: "productID:productName: quantity"
             val parts = productString.split(": ")
-            if (parts.size == 3) {  // Adjusting for the expected three parts
-                val productId = parts[0].toIntOrNull()  // Convert ID to Integer
-                val productName = parts[1]
-                val productQuantity = parts[2].toDoubleOrNull()  // Convert quantity to Double
-                if (productId != null && productQuantity != null) {
-                    Product(id = productId, name = productName, quantity = productQuantity)  // Including ID in the constructor
+            if (parts.size == 2) {
+                val productName = parts[0]
+                val productQuantity = parts[1].toDoubleOrNull()  // Convert quantity to Double
+                if (productQuantity != null) {
+                    // Use a sequential ID and increment the counter for each product
+                    val product = Product(
+                        id = productIdCounter++,
+                        name = productName,
+                        quantity = productQuantity,
+                        barcode = null,  // Assuming barcode is not available
+                        trackingType = null  // Assuming trackingType is not available
+                    )
+                    product
                 } else {
                     null  // If conversion fails, exclude this product from the list
                 }
@@ -1268,7 +1282,7 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
 
 
 
-    suspend fun validateOperation(packingId: Int): Boolean {
+    suspend fun validateOperation(context: Context, operationId: Int): Boolean {
         return try {
             val username = credentialManager.getUsername()
             val password = credentialManager.getPassword()
@@ -1291,7 +1305,7 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
                 return false
             }
 
-            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(packingId)))
+            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(operationId)))
 
             client.execute("execute_kw", validateParams).let {
                 Log.d("OdooXmlRpcClient", "Picking validated successfully.")
@@ -1300,6 +1314,133 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error during changePickState: ${e.message}", e)
             false
+        }
+    }
+
+
+    suspend fun fetchDeliveryOrdersWithProductDetails(): List<DeliveryOrders> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchDeliveryOrders.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(
+            listOf("state", "=", "assigned"),
+            listOf("picking_type_id.code", "=", "outgoing")  // Adjusted for delivery orders
+        )
+        val fields = listOf("id", "name", "scheduled_date", "origin", "state")
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                val orderId = map["id"] as Int
+                val orderName = map["name"] as String
+                val deliveryDate = map["scheduled_date"].toString()
+                val sourceDocument = map["origin"] as? String ?: ""
+
+                val products = fetchProductsForDeliveryOrder(orderId)
+
+                // Adjust this part to include barcode fetching, similar to internal transfers
+                val deliveryProductsList = products.mapNotNull { product ->
+                    val barcode = fetchProductBarcodeByName(product.name)
+                    IntTransferProducts(
+                        name = product.name,
+                        quantity = product.quantity,
+                        transferDate = deliveryDate,
+                        sourceDocument = sourceDocument,
+                        barcode = barcode
+                    )
+                }
+
+                DeliveryOrders(
+                    id = orderId,
+                    orderName = orderName,
+                    deliveryDate = deliveryDate,
+                    sourceDocument = sourceDocument,
+                    productDetails = deliveryProductsList
+                )
+            }.also {
+                Log.d("OdooXmlRpcClient", "Fetched ${it.size} delivery orders with product details.")
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching delivery orders: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    suspend fun fetchProductsForDeliveryOrder(deliveryOrderId: Int): List<Product> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForDeliveryOrder.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        // Corrected domain filter for delivery orders specifically
+        val domain = listOf(
+            listOf("id", "=", deliveryOrderId),
+            listOf("picking_type_id.code", "=", "outgoing")
+        )
+        val fields = listOf("delivery_order_product_summary") // Corrected field name
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            // Parse the corrected summary field
+            val deliveryOrderSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["delivery_order_product_summary"].toString() else ""
+            parseDeliveryOrderSummary(deliveryOrderSummary)
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching products for delivery order: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+
+    fun parseDeliveryOrderSummary(summary: String): List<Product> {
+        if (summary.isEmpty()) return emptyList()
+
+        return summary.split(", ").mapNotNull { productString ->
+            // Expected format: "ProductID:ProductName: Quantity"
+            val parts = productString.split(": ")
+            if (parts.size == 3) {
+                val productId = parts[0].toIntOrNull()
+                val productName = parts[1]
+                val productQuantity = parts[2].toDoubleOrNull()
+                if (productId != null && productQuantity != null) {
+                    Product(
+                        id = productId,
+                        name = productName,
+                        quantity = productQuantity,
+                        barcode = null,  // You will need to adjust how you're fetching the barcode
+                        trackingType = null  // This remains the same, assuming it's not available in summary
+                    )
+                } else null
+            } else null
         }
     }
 

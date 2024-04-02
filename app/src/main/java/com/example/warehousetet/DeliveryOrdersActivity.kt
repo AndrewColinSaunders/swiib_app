@@ -14,8 +14,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
-class PickActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
-    private lateinit var pickAdapter: PickAdapter
+class DeliveryOrdersActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
+    private lateinit var deliveryOrdersAdapter: DeliveryOrdersAdapter
     private lateinit var credentialManager: CredentialManager
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private val refreshScope = CoroutineScope(Dispatchers.IO)
@@ -25,17 +25,17 @@ class PickActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pick)
+        setContentView(R.layout.activity_delivery_orders)
 
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
         // Instantiation of pickAdapter moved here to ensure it uses the correct context and listener
-        pickAdapter = PickAdapter(this, this)
+        deliveryOrdersAdapter = DeliveryOrdersAdapter(this, this)
 
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_picks)
+        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_delivery_orders)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = pickAdapter
+        recyclerView.adapter = deliveryOrdersAdapter
 
         val sharedPreferences = getSharedPreferences("MyPreferences", Context.MODE_PRIVATE)
         isInstantRefreshRequested = sharedPreferences.getBoolean("InstantRefreshRequested", false)
@@ -46,7 +46,7 @@ class PickActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
         val btnCancelSearch: Button = findViewById(R.id.btnCancelSearch)
         btnCancelSearch.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            pickAdapter.resetList()
+            deliveryOrdersAdapter.resetList()
             it.visibility = View.GONE
             isPeriodicRefreshEnabled = true
             startPeriodicRefresh()
@@ -93,7 +93,7 @@ class PickActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
             .setView(input)
             .setPositiveButton("Search") { _, _ ->
                 val searchQuery = input.text.toString()
-                pickAdapter.filter(searchQuery)
+                deliveryOrdersAdapter.filter(searchQuery)
                 findViewById<Button>(R.id.btnCancelSearch).visibility = View.VISIBLE
                 isPeriodicRefreshEnabled = false
                 refreshJob?.cancel()
@@ -111,9 +111,9 @@ class PickActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
             while (isActive && isPeriodicRefreshEnabled) {
                 try {
                     // Fetch data and update UI
-                    val picks = odooXmlRpcClient.fetchInternalTransfersWithProductDetails()
+                    val deliveryOrders = odooXmlRpcClient.fetchDeliveryOrdersWithProductDetails()
                     withContext(Dispatchers.Main) {
-                        pickAdapter.submitFilteredPicks(picks)
+                        deliveryOrdersAdapter.submitFilteredPicks(deliveryOrders)
                     }
                 } catch (e: Exception) {
                     // Handle errors
@@ -138,5 +138,3 @@ class PickActivity : AppCompatActivity(), OnInternalTransferSelectedListener {
         refreshJob?.cancel()
     }
 }
-
-
