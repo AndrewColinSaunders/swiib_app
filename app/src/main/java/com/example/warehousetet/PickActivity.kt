@@ -1,121 +1,102 @@
 package com.example.warehousetet
 
+import android.content.Intent
 import android.os.Bundle
-import android.view.HapticFeedbackConstants
-import android.view.Menu
+import android.util.Log
 import android.view.MenuItem
-import android.view.View
-import android.widget.Button
-import android.widget.EditText
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
 
 class PickActivity : AppCompatActivity() {
+
     private lateinit var pickAdapter: PickAdapter
-    private lateinit var credentialManager: CredentialManager
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private val refreshScope = CoroutineScope(Dispatchers.IO)
+    private lateinit var credentialManager: CredentialManager
     private var refreshJob: Job? = null
-    private var isPeriodicRefreshEnabled = true // Flag to control periodic refresh
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pick)
+        setContentView(R.layout.activity_delivery_orders)
+
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
 
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
-        pickAdapter = PickAdapter()
-        val recyclerView: RecyclerView = findViewById(R.id.recyclerView_picks)
-        recyclerView.apply {
-            layoutManager = LinearLayoutManager(this@PickActivity)
-            adapter = pickAdapter
-        }
-
-        val btnCancelSearch: Button = findViewById(R.id.btnCancelSearch)
-        btnCancelSearch.setOnClickListener {
-            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            pickAdapter.resetList()
-            it.visibility = View.GONE
-            isPeriodicRefreshEnabled = true
-            startPeriodicRefresh()
-        }
-
+        initializeRecyclerView()
+        fetchPicksAndDisplay()
         startPeriodicRefresh()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)
-        return true
+    override fun onResume() {
+        super.onResume()
+        startPeriodicRefresh()
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_widget_button -> {
-                showSearchMethodDialog()
-                true
+    override fun onPause() {
+        super.onPause()
+        stopPeriodicRefresh()
+    }
+
+    private fun initializeRecyclerView() {
+        val recyclerView: RecyclerView = findViewById(R.id.deliveryOrdersRecyclerView) // Make sure your layout file for PickActivity includes a RecyclerView with this ID
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        pickAdapter = PickAdapter(listOf()) { deliveryOrder ->
+            // Launch ProductsActivity with delivery order ID, similar to how it's done with receipts
+            Intent(this, PickProductsActivity::class.java).also { intent ->
+                intent.putExtra("DELIVERY_ORDER_ID", deliveryOrder.id)
+                intent.putExtra("DELIVERY_ORDER_NAME", deliveryOrder.name)
+                intent.putExtra("DELIVERY_ORDER_ORIGIN", deliveryOrder.origin) // Assuming Pick class includes similar fields as Receipt
+                startActivity(intent)
             }
-            else -> super.onOptionsItemSelected(item)
         }
+        recyclerView.adapter = pickAdapter
     }
 
-    private fun showSearchMethodDialog() {
-        val options = arrayOf("Type the source document", "Scan barcode")
-        AlertDialog.Builder(this)
-            .setTitle("Search for package")
-            .setItems(options) { _, which ->
-                window.decorView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                when (which) {
-                    0 -> showTypeSearchDialog()
-                    1 -> initiateBarcodeScanning()
+    private fun fetchPicksAndDisplay() {
+        coroutineScope.launch {
+            try {
+                val deliveryOrders = odooXmlRpcClient.fetchPicks() // Implement this method in OdooXmlRpcClient
+                withContext(Dispatchers.Main) {
+                    pickAdapter.updateDeliveryOrders(deliveryOrders)
                 }
+            } catch (e: Exception) {
+                Log.e("PickActivity", "Error fetching delivery orders: ${e.localizedMessage}")
             }
-            .show()
-    }
-
-    private fun showTypeSearchDialog() {
-        val input = EditText(this)
-        AlertDialog.Builder(this)
-            .setTitle("Type the source document")
-            .setView(input)
-            .setPositiveButton("Search") { _, _ ->
-                val searchQuery = input.text.toString()
-                pickAdapter.filter(searchQuery)
-                findViewById<Button>(R.id.btnCancelSearch).visibility = View.VISIBLE
-                isPeriodicRefreshEnabled = false
-                refreshJob?.cancel()
-            }
-            .setNegativeButton("Cancel", null)
-            .show()
-    }
-
-    private fun initiateBarcodeScanning() {
-        // Placeholder - Implement your barcode scanning logic here
+        }
     }
 
     private fun startPeriodicRefresh() {
-        refreshJob = refreshScope.launch {
-            while (isActive && isPeriodicRefreshEnabled) {
-                try {
-                    val picks = odooXmlRpcClient.fetchInternalTransfersWithProductDetails() // Adjust fetch method as needed
-                    withContext(Dispatchers.Main) {
-                        pickAdapter.submitFilteredPicks(picks)
-                    }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        // Log or handle errors
-                    }
-                }
-                delay(5000) // Adjust delay as needed
+        refreshJob?.cancel() // Cancel any existing job to avoid duplicates
+        refreshJob = coroutineScope.launch {
+            while (isActive) {
+                fetchPicksAndDisplay()
+                delay(5000) // Refresh every 5 seconds
             }
         }
+    }
+
+    private fun stopPeriodicRefresh() {
+        refreshJob?.cancel()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed()
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         refreshJob?.cancel()
+        coroutineScope.cancel()
     }
 }

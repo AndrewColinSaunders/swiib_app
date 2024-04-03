@@ -68,12 +68,6 @@ class ProductsAdapter(
                 else ContextCompat.getColor(context, R.color.cardGrey) // Default or original card background color
             )
 
-//            itemView.setOnClickListener {
-//                val intent = Intent(context, ProductDetailActivity::class.java).apply {
-//                    putExtra("PRODUCT_ID", product.id)
-//                }
-//                context.startActivity(intent)
-//            }
         }
     }
 }

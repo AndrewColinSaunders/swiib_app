@@ -54,7 +54,7 @@ class ProductsActivity : AppCompatActivity() {
     private lateinit var barcodeInput: EditText
     private lateinit var confirmButton: Button
 
-    private var productBarcodes = hashMapOf<String, String>()
+//    private var productBarcodes = hashMapOf<String, String>()
     private var productSerialNumbers = hashMapOf<ProductReceiptKey, MutableList<String>>()
     val lotQuantities: MutableMap<ProductReceiptKey, Int> = mutableMapOf()
     private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
@@ -62,43 +62,42 @@ class ProductsActivity : AppCompatActivity() {
 
     private var receiptName: String? = null
 
-override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_products)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_products)
 
-//    // Set ActionBar background color
-//    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
+    //    // Set ActionBar background color
+    //    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
 
-//    // Change the status bar color to match the ActionBar
-//    window.statusBarColor = ContextCompat.getColor(this, R.color.cardGrey) // Use the color defined as cardGrey
+    //    // Change the status bar color to match the ActionBar
+    //    window.statusBarColor = ContextCompat.getColor(this, R.color.cardGrey) // Use the color defined as cardGrey
 
-    odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
-    barcodeInput = findViewById(R.id.barcodeInput)
-    confirmButton = findViewById(R.id.confirmButton)
-    val receiptId = intent.getIntExtra("RECEIPT_ID", -1)
-    receiptName = intent.getStringExtra("RECEIPT_NAME")
-    Log.d("ProductsActivity", "Received receipt name: $receiptName")
-    val titleTextView: TextView = findViewById(R.id.productsTitleTextView)
-    titleTextView.text = receiptName
+        odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
+        barcodeInput = findViewById(R.id.barcodeInput)
+        confirmButton = findViewById(R.id.confirmButton)
+        val receiptId = intent.getIntExtra("RECEIPT_ID", -1)
+        receiptName = intent.getStringExtra("RECEIPT_NAME")
+        Log.d("ProductsActivity", "Received receipt name: $receiptName")
+        val titleTextView: TextView = findViewById(R.id.productsTitleTextView)
+        titleTextView.text = receiptName
 
-    productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId)
+        productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId)
 
-    if (receiptId != -1) {
-        setupRecyclerView()
-        fetchProductsForReceipt(receiptId)
-    } else {
-        Log.e("ProductsActivity", "Invalid receipt ID passed to ProductsActivity.")
+        if (receiptId != -1) {
+            setupRecyclerView()
+            fetchProductsForReceipt(receiptId)
+        } else {
+            Log.e("ProductsActivity", "Invalid receipt ID passed to ProductsActivity.")
+        }
+
+        findViewById<Button>(R.id.clearButton).setOnClickListener {
+            findViewById<EditText>(R.id.barcodeInput).text.clear()
+        }
+
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        setupBarcodeVerification(receiptId)
+        loadMatchStatesFromPreferences(receiptId)
     }
-
-    findViewById<Button>(R.id.clearButton).setOnClickListener {
-        findViewById<EditText>(R.id.barcodeInput).text.clear()
-    }
-
-
-    supportActionBar?.setDisplayHomeAsUpEnabled(true)
-    setupBarcodeVerification(receiptId)
-    loadMatchStatesFromPreferences(receiptId)
-}
 
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -302,7 +301,6 @@ override fun onCreate(savedInstanceState: Bundle?) {
         }
     }
 
-
     private fun fetchBarcodesForProducts(products: List<Product>) {
         products.forEach { product ->
             coroutineScope.launch {
@@ -329,41 +327,41 @@ override fun onCreate(savedInstanceState: Bundle?) {
         productsAdapter.updateProducts(products, receiptId, quantityMatches)
     }
 
-private fun verifyBarcode(scannedBarcode: String, receiptId: Int) {
-    coroutineScope.launch {
-        val productId = barcodeToProductIdMap[scannedBarcode]
-        if (productId != null) {
-            val product = productsAdapter.products.find { it.id == productId }
-            product?.let {
-                val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(it.name)
-                val trackingType = trackingAndExpiration?.first ?: "none"
+    private fun verifyBarcode(scannedBarcode: String, receiptId: Int) {
+        coroutineScope.launch {
+            val productId = barcodeToProductIdMap[scannedBarcode]
+            if (productId != null) {
+                val product = productsAdapter.products.find { it.id == productId }
+                product?.let {
+                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(it.name)
+                    val trackingType = trackingAndExpiration?.first ?: "none"
 
-                when (trackingType) {
-                    "serial" -> withContext(Dispatchers.Main) {
-                        // Prompt for a serial number for serialized products
-                        promptForSerialNumber(it.name, receiptId, it.id)
-                    }
-                    "lot" -> withContext(Dispatchers.Main) {
-                        // Prompt for a lot number for lot-tracked products
-                        promptForLotNumber(it.name, receiptId, it.id)
-                    }
-                    "none" -> withContext(Dispatchers.Main) {
-                        // Prompt for product quantity for non-serialized products
-                        promptForProductQuantity(it.name, it.quantity, receiptId, it.id, false)
-                    }
-                    else -> {
-                        // Handle other cases as needed
+                    when (trackingType) {
+                        "serial" -> withContext(Dispatchers.Main) {
+                            // Prompt for a serial number for serialized products
+                            promptForSerialNumber(it.name, receiptId, it.id)
+                        }
+                        "lot" -> withContext(Dispatchers.Main) {
+                            // Prompt for a lot number for lot-tracked products
+                            promptForLotNumber(it.name, receiptId, it.id)
+                        }
+                        "none" -> withContext(Dispatchers.Main) {
+                            // Prompt for product quantity for non-serialized products
+                            promptForProductQuantity(it.name, it.quantity, receiptId, it.id, false)
+                        }
+                        else -> {
+                            // Handle other cases as needed
+                        }
                     }
                 }
-            }
-        } else {
-            withContext(Dispatchers.Main) {
-//                Toast.makeText(this@ProductsActivity, "Barcode not found.", Toast.LENGTH_SHORT).show()
-                  showRedToast("Barcode not found")
+            } else {
+                withContext(Dispatchers.Main) {
+    //                Toast.makeText(this@ProductsActivity, "Barcode not found.", Toast.LENGTH_SHORT).show()
+                      showRedToast("Barcode not found")
+                }
             }
         }
     }
-}
 
 //private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int) {
 //    val editText = EditText(this).apply {
@@ -398,64 +396,64 @@ private fun verifyBarcode(scannedBarcode: String, receiptId: Int) {
 //        .setNegativeButton("Cancel", null)
 //        .show()
 //}
-private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int) {
-    val editText = EditText(this).apply {
-        inputType = InputType.TYPE_CLASS_TEXT
-        hint = "Enter lot number"
-    }
+    private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int) {
+        val editText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "Enter lot number"
+        }
 
-    var actionExecuted = false
+        var actionExecuted = false
 
-    val dialog = AlertDialog.Builder(this)
-        .setTitle("Enter Lot Number")
-        .setMessage("Enter the lot number for $productName.")
-        .setView(editText)
-        .setPositiveButton("OK") { _, _ ->
-            if (!actionExecuted) {
-                actionExecuted = true
-                val enteredLotNumber = editText.text.toString().trim()
-                if (enteredLotNumber.isNotEmpty()) {
-                    coroutineScope.launch {
-                        val product = productsAdapter.products.find { it.id == productId }
-                        if (product?.useExpirationDate == true) {
-                            withContext(Dispatchers.Main) {
-                                // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
-                                promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, true)
-                            }
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
-                                promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, false)
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Enter Lot Number")
+            .setMessage("Enter the lot number for $productName.")
+            .setView(editText)
+            .setPositiveButton("OK") { _, _ ->
+                if (!actionExecuted) {
+                    actionExecuted = true
+                    val enteredLotNumber = editText.text.toString().trim()
+                    if (enteredLotNumber.isNotEmpty()) {
+                        coroutineScope.launch {
+                            val product = productsAdapter.products.find { it.id == productId }
+                            if (product?.useExpirationDate == true) {
+                                withContext(Dispatchers.Main) {
+                                    // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
+                                    promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, true)
+                                }
+                            } else {
+                                withContext(Dispatchers.Main) {
+                                    // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
+                                    promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, false)
+                                }
                             }
                         }
+                    } else {
+                        showRedToast("Please enter a lot number.")
                     }
-                } else {
-                    showRedToast("Please enter a lot number.")
                 }
             }
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        // Request focus and show the keyboard when the dialog is shown
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.setOnShowListener {
+            editText.requestFocus()
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
         }
-        .setNegativeButton("Cancel", null)
-        .create()
 
-    // Request focus and show the keyboard when the dialog is shown
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-    dialog.setOnShowListener {
-        editText.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-    }
-
-    editText.setOnEditorActionListener { _, actionId, event ->
-        if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.performClick()
-            true
-        } else {
-            false
+        editText.setOnEditorActionListener { _, actionId, event ->
+            if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.performClick()
+                true
+            } else {
+                false
+            }
         }
-    }
 
-    dialog.show()
-}
+        dialog.show()
+    }
 
     //private fun promptForLotQuantity(productName: String, receiptId: Int, productId: Int, lotNumber: String, requiresExpirationDate: Boolean) {
 //    val editText = EditText(this).apply {
@@ -633,77 +631,77 @@ private fun promptForLotNumber(productName: String, receiptId: Int, productId: I
 //            .setNegativeButton("Cancel", null)
 //            .show()
 //    }
-private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int) {
-    val editText = EditText(this).apply {
-        inputType = InputType.TYPE_CLASS_TEXT
-        hint = "Enter serial number"
-    }
+    private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int) {
+        val editText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "Enter serial number"
+        }
 
-    var actionExecuted = false
+        var actionExecuted = false
 
-    // Build the dialog but don't show it yet
-    val dialogBuilder = AlertDialog.Builder(this)
-        .setTitle("Enter Serial Number")
-        .setMessage("Enter the serial number for $productName.")
-        .setView(editText)
-        .setNegativeButton("Cancel", null)
+        // Build the dialog but don't show it yet
+        val dialogBuilder = AlertDialog.Builder(this)
+            .setTitle("Enter Serial Number")
+            .setMessage("Enter the serial number for $productName.")
+            .setView(editText)
+            .setNegativeButton("Cancel", null)
 
-    // Create the dialog from the builder
-    val dialog = dialogBuilder.create()
+        // Create the dialog from the builder
+        val dialog = dialogBuilder.create()
 
-    // Now set the positive button separately to have access to 'dialog' variable
-    dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
-        if (!actionExecuted) {
-            actionExecuted = true
-            val enteredSerialNumber = editText.text.toString().trim()
-            if (enteredSerialNumber.isNotEmpty()) {
-                coroutineScope.launch {
-                    val product = productsAdapter.products.find { it.id == productId }
-                    val key = ProductReceiptKey(productId, receiptId)
-                    val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+        // Now set the positive button separately to have access to 'dialog' variable
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
+            if (!actionExecuted) {
+                actionExecuted = true
+                val enteredSerialNumber = editText.text.toString().trim()
+                if (enteredSerialNumber.isNotEmpty()) {
+                    coroutineScope.launch {
+                        val product = productsAdapter.products.find { it.id == productId }
+                        val key = ProductReceiptKey(productId, receiptId)
+                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
 
-                    if (!serialList.contains(enteredSerialNumber)) {
-                        if (product?.useExpirationDate == true) {
-                            withContext(Dispatchers.Main) {
-                                dialog.dismiss() // Correctly reference 'dialog' here
-                                promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber)
+                        if (!serialList.contains(enteredSerialNumber)) {
+                            if (product?.useExpirationDate == true) {
+                                withContext(Dispatchers.Main) {
+                                    dialog.dismiss() // Correctly reference 'dialog' here
+                                    promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber)
+                                }
+                            } else {
+                                odooXmlRpcClient.updateMoveLinesWithoutExpiration(receiptId, productId, enteredSerialNumber)
+                                serialList.add(enteredSerialNumber)
+                                updateProductMatchState(productId, receiptId, matched = true, serialList)
+                                withContext(Dispatchers.Main) {
+                                    showGreenToast("Serial number added for $productName. ${serialList.size}/${product?.quantity?.toInt()} verified")
+                                }
                             }
                         } else {
-                            odooXmlRpcClient.updateMoveLinesWithoutExpiration(receiptId, productId, enteredSerialNumber)
-                            serialList.add(enteredSerialNumber)
-                            updateProductMatchState(productId, receiptId, matched = true, serialList)
                             withContext(Dispatchers.Main) {
-                                showGreenToast("Serial number added for $productName. ${serialList.size}/${product?.quantity?.toInt()} verified")
+                                showRedToast("Serial number already entered for $productName")
                             }
                         }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            showRedToast("Serial number already entered for $productName")
-                        }
                     }
+                } else {
+                    showRedToast("Please enter a serial number")
                 }
-            } else {
-                showRedToast("Please enter a serial number")
             }
         }
-    }
 
-    // Set up dialog properties related to keyboard input
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-    dialog.setOnShowListener {
-        editText.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-    }
-
-    editText.setOnEditorActionListener { _, actionId, event ->
-        if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
-            true
-        } else {
-            false
+        // Set up dialog properties related to keyboard input
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.setOnShowListener {
+            editText.requestFocus()
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
         }
-    }
+
+        editText.setOnEditorActionListener { _, actionId, event ->
+            if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+                true
+            } else {
+                false
+            }
+        }
 
     dialog.show()
 }
@@ -796,64 +794,59 @@ private fun promptForSerialNumber(productName: String, receiptId: Int, productId
 //            .setNegativeButton("Cancel", null)
 //            .show()
 //    }
-private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String) {
-    val editText = EditText(this).apply {
-        inputType = InputType.TYPE_CLASS_NUMBER // Adjusted for numeric input, setupDateInputField will handle formatting
-        hint = "Enter expiration date (dd/MM/yyyy)"
-    }
+    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String) {
+        val editText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER // Adjusted for numeric input, setupDateInputField will handle formatting
+            hint = "Enter expiration date (dd/MM/yyyy)"
+        }
 
-    // Setup the EditText for date input
-    setupDateInputField(editText)
+        // Setup the EditText for date input
+        setupDateInputField(editText)
 
-    val dialog = AlertDialog.Builder(this)
-        .setTitle("Enter Expiration Date")
-        .setMessage("Enter the expiration date for $productName.")
-        .setView(editText)
-        .setPositiveButton("OK") { _, _ ->
-            val enteredExpirationDate = editText.text.toString().trim()
-            val convertedDate = convertToFullDateTime(enteredExpirationDate) // Ensure this conversion to full date
-            if (isValidDateFormat(convertedDate)) {
-                coroutineScope.launch {
-                    val key = ProductReceiptKey(productId, receiptId)
-                    val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
-                    if (!serialList.contains(serialNumber)) {
-                        serialList.add(serialNumber)
-                        // Proceed to update the backend as required, using the serial number and converted date
-                        odooXmlRpcClient.updateMoveLinesByPicking(receiptId, productId, serialNumber, convertedDate)
-                        // Determine if the match state needs to be updated
-                        val isMatched = serialList.size == productsAdapter.products.find { it.id == productId }?.quantity?.toInt()
-                        updateProductMatchState(productId, receiptId, isMatched, serialList)
-                        withContext(Dispatchers.Main) {
-                            showGreenToast("Serial number added for $productName. ${serialList.size}/${productsAdapter.products.find { it.id == productId }?.quantity?.toInt()} verified")
-                        }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            showRedToast("Serial number already entered for $productName")
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Enter Expiration Date")
+            .setMessage("Enter the expiration date for $productName.")
+            .setView(editText)
+            .setPositiveButton("OK") { _, _ ->
+                val enteredExpirationDate = editText.text.toString().trim()
+                val convertedDate = convertToFullDateTime(enteredExpirationDate) // Ensure this conversion to full date
+                if (isValidDateFormat(convertedDate)) {
+                    coroutineScope.launch {
+                        val key = ProductReceiptKey(productId, receiptId)
+                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+                        if (!serialList.contains(serialNumber)) {
+                            serialList.add(serialNumber)
+                            // Proceed to update the backend as required, using the serial number and converted date
+                            odooXmlRpcClient.updateMoveLinesByPicking(receiptId, productId, serialNumber, convertedDate)
+                            // Determine if the match state needs to be updated
+                            val isMatched = serialList.size == productsAdapter.products.find { it.id == productId }?.quantity?.toInt()
+                            updateProductMatchState(productId, receiptId, isMatched, serialList)
+                            withContext(Dispatchers.Main) {
+                                showGreenToast("Serial number added for $productName. ${serialList.size}/${productsAdapter.products.find { it.id == productId }?.quantity?.toInt()} verified")
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                showRedToast("Serial number already entered for $productName")
+                            }
                         }
                     }
+                } else {
+                    showRedToast("Invalid expiration date entered. Please use the format DD/MM/YY")
                 }
-            } else {
-                showRedToast("Invalid expiration date entered. Please use the format DD/MM/YY")
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
+
+        dialog.setOnShowListener {
+            editText.requestFocus()
+            editText.post {
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(editText, InputMethodManager.SHOW_FORCED)
             }
         }
-        .setNegativeButton("Cancel", null)
-        .create()
 
-    dialog.setOnShowListener {
-        editText.requestFocus()
-        editText.post {
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(editText, InputMethodManager.SHOW_FORCED)
-        }
+        dialog.show()
     }
-
-    dialog.show()
-}
-
-
-
-
-
 
     private fun isValidDateFormat(value: String): Boolean {
         return try {
@@ -865,7 +858,6 @@ private fun promptForExpirationDate(productName: String, receiptId: Int, product
             false
         }
     }
-
 
     private fun convertToFullDateTime(simplifiedDate: String): String {
         return try {

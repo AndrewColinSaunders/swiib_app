@@ -38,7 +38,27 @@
         android:hint="Your database name"
         android:minHeight="48dp"
         android:inputType="text"
-        android:imeOptions="actionDone"/>
+        android:imeOptions="actionNext"/>
+
+    <!-- Title for URL Input -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="URL"
+        android:textSize="18sp"
+        android:textColor="@color/black"
+        android:textStyle="bold"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- URL Input -->
+    <EditText
+        android:id="@+id/urlInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="https://databasename.swiib.app/"
+        android:inputType="textUri"
+        android:minHeight="48dp" />
 
     <!-- Confirmation Button -->
     <Button
@@ -53,8 +73,8 @@
         app:backgroundTint="?attr/colorSecondaryVariant"/>
 </LinearLayout>
 
-<!--user enters db name and url-->
-    <!--<?xml version="1.0" encoding="utf-8"?>-->
+
+<!--<?xml version="1.0" encoding="utf-8"?>-->
 <!--<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"-->
 <!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
 <!--    xmlns:tools="http://schemas.android.com/tools"-->
@@ -94,27 +114,7 @@
 <!--        android:hint="Your database name"-->
 <!--        android:minHeight="48dp"-->
 <!--        android:inputType="text"-->
-<!--        android:imeOptions="actionNext"/>-->
-
-<!--    &lt;!&ndash; Title for URL Input &ndash;&gt;-->
-<!--    <TextView-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="URL"-->
-<!--        android:textSize="18sp"-->
-<!--        android:textColor="@color/black"-->
-<!--        android:textStyle="bold"-->
-<!--        android:layout_marginTop="16dp"-->
-<!--        android:layout_marginBottom="8dp"/>-->
-
-<!--    &lt;!&ndash; URL Input &ndash;&gt;-->
-<!--    <EditText-->
-<!--        android:id="@+id/urlInput"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:hint="https://databasename.swiib.app/"-->
-<!--        android:inputType="textUri"-->
-<!--        android:minHeight="48dp" />-->
+<!--        android:imeOptions="actionDone"/>-->
 
 <!--    &lt;!&ndash; Confirmation Button &ndash;&gt;-->
 <!--    <Button-->

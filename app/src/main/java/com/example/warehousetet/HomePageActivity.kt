@@ -3,15 +3,11 @@ package com.example.warehousetet
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.view.HapticFeedbackConstants
-import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
-import com.google.android.material.button.MaterialButton
 
 class HomePageActivity : AppCompatActivity() {
 
@@ -53,9 +49,10 @@ class HomePageActivity : AppCompatActivity() {
 //    }
 
     //current
-override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_home_page)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_home_page)
+
 
 //    // Set ActionBar background color
 //    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
@@ -70,11 +67,14 @@ override fun onCreate(savedInstanceState: Bundle?) {
     setupOptionButton(R.id.btnDeliveryOrders, "Delivery Orders")
     setupOptionButton(R.id.btnReturns, "Returns")
 
+
+
     // ClickListeners for buttons
     findViewById<Button>(R.id.btnReceipt).setOnClickListener {
         it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         Intent(this, ReceiptsActivity::class.java).also { startActivity(it) }
     }
+
 
     findViewById<Button>(R.id.btnInternalTransfers).setOnClickListener {
         it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
@@ -90,7 +90,10 @@ override fun onCreate(savedInstanceState: Bundle?) {
         it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         Intent(this, PackActivity::class.java).also { startActivity(it) }
     }
-}
+
+
+
+    }
 
 
     //    private fun setupOptionButton(buttonId: Int, optionName: String) {
@@ -100,19 +103,19 @@ override fun onCreate(savedInstanceState: Bundle?) {
 //            // Here you can start new activities or perform navigation based on the option
 //        }
 //    }
-private fun setupOptionButton(buttonId: Int, optionName: String) {
-    // Find the button by its ID
-    val button = findViewById<Button>(buttonId)
+    private fun setupOptionButton(buttonId: Int, optionName: String) {
+        // Find the button by its ID
+        val button = findViewById<Button>(buttonId)
 
-    // Set the button's background color to #BDBDBD
-    val color = Color.parseColor("#212d40") // Parse the color string
-    button.backgroundTintList = ColorStateList.valueOf(color) // Apply the color
+        // Set the button's background color to #BDBDBD
+        val color = Color.parseColor("#212d40") // Parse the color string
+        button.backgroundTintList = ColorStateList.valueOf(color) // Apply the color
 
-    // Set a click listener for the button
-    button.setOnClickListener {
-        it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-        Toast.makeText(this, "$optionName clicked", Toast.LENGTH_SHORT).show()
-        // Add additional logic here for navigating to different activities
+        // Set a click listener for the button
+        button.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            Toast.makeText(this, "$optionName clicked", Toast.LENGTH_SHORT).show()
+            // Add additional logic here for navigating to different activities
+        }
     }
-}
 }

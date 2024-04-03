@@ -35,26 +35,26 @@ class ReceiptsActivity : AppCompatActivity() {
 //        fetchReceiptsAndDisplay()
 //        startPeriodicRefresh()
 //    }
-override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    setContentView(R.layout.activity_receipts)
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_receipts)
 
-//    // Set ActionBar background color
-//    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
+    //    // Set ActionBar background color
+    //    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
 
-    // Change the status bar color to match the ActionBar
-//    window.statusBarColor = ContextCompat.getColor(this, R.color.cardGrey) // Use the color defined as cardGrey
+        // Change the status bar color to match the ActionBar
+    //    window.statusBarColor = ContextCompat.getColor(this, R.color.cardGrey) // Use the color defined as cardGrey
 
-    supportActionBar?.setDisplayHomeAsUpEnabled(true)
-    supportActionBar?.setDisplayShowHomeEnabled(true)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setDisplayShowHomeEnabled(true)
 
-    credentialManager = CredentialManager(this)
-    odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
+        credentialManager = CredentialManager(this)
+        odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
-    initializeRecyclerView()
-    fetchReceiptsAndDisplay()
-    startPeriodicRefresh()
-}
+        initializeRecyclerView()
+        fetchReceiptsAndDisplay()
+        startPeriodicRefresh()
+    }
 
 
     override fun onResume() {

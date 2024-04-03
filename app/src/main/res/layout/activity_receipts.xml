@@ -6,29 +6,7 @@
     android:padding="16dp"
     android:background="#11151c">
 
-<!--    <RelativeLayout-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:layout_marginTop="16dp"-->
-<!--        android:layout_marginBottom="24dp">-->
-
-<!--&lt;!&ndash;        <ImageButton&ndash;&gt;-->
-<!--&lt;!&ndash;            android:id="@+id/backButton"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:layout_width="wrap_content"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:layout_height="wrap_content"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:layout_alignParentStart="true"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:background="?attr/selectableItemBackgroundBorderless"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:src="@drawable/ic_back_arrow" />&ndash;&gt;-->
-
-<!--&lt;!&ndash;        <TextView&ndash;&gt;-->
-<!--&lt;!&ndash;            android:layout_width="match_parent"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:layout_height="wrap_content"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:text="Receipts"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:textSize="30sp"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:textStyle="bold"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:textAlignment="center"&ndash;&gt;-->
-<!--&lt;!&ndash;            android:textColor="@color/white"/>&ndash;&gt;-->
-<!--    </RelativeLayout>-->
+<!--comment code-->
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/receiptsRecyclerView"
@@ -36,3 +14,32 @@
         android:layout_height="match_parent" />
 
 </LinearLayout>
+
+
+
+
+
+
+    <!--    <RelativeLayout-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_marginTop="16dp"-->
+    <!--        android:layout_marginBottom="24dp">-->
+
+    <!--&lt;!&ndash;        <ImageButton&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:id="@+id/backButton"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:layout_width="wrap_content"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:layout_height="wrap_content"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:layout_alignParentStart="true"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:background="?attr/selectableItemBackgroundBorderless"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:src="@drawable/ic_back_arrow" />&ndash;&gt;-->
+
+    <!--&lt;!&ndash;        <TextView&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:layout_width="match_parent"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:layout_height="wrap_content"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:text="Receipts"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:textSize="30sp"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:textStyle="bold"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:textAlignment="center"&ndash;&gt;-->
+    <!--&lt;!&ndash;            android:textColor="@color/white"/>&ndash;&gt;-->
+    <!--    </RelativeLayout>-->

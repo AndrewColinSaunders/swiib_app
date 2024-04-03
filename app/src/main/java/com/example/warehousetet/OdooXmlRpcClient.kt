@@ -548,12 +548,8 @@
 package com.example.warehousetet
 
 import IntTransferProducts
-import android.content.Context
 
 import android.util.Log
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 import java.net.URL
@@ -1198,7 +1194,38 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
             Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}")
         }
     }
+//    create_update_move_line_for_pick
+    suspend fun updateMoveLinesForPick(pickingId: Int, productId: Int, serialNumber: String) {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesWithoutExpiration.")
+            return
+        }
 
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line", // Ensure this matches the model where your method is defined
+            "create_update_move_line_for_pick", // Use the adjusted method name that excludes expiration date
+            listOf(pickingId, productId, serialNumber) // Parameters excluding the expiration date
+        )
+
+        try {
+            val result = client.execute("execute_kw", params) as? Boolean
+            if (result == true) {
+                Log.d("OdooXmlRpcClient", "Successfully updated/created stock.move.line record without expiration date.")
+            } else {
+                Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record without expiration date.")
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}")
+        }
+    }
     suspend fun updateMoveLinesByPickingWithLot(pickingId: Int, productId: Int, lotName: String, quantity: Int, expirationDate: String?) {
         val config = getClientConfig("object")
         if (config == null) {
@@ -1302,5 +1329,155 @@ suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<S
             false
         }
     }
+
+//    suspend fun fetchPicks(): List<Pick> {
+//        val config = getClientConfig("object")
+//        if (config == null) {
+//            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchDeliveryOrders.")
+//            return emptyList()
+//        }
+//        val client = XmlRpcClient().also { it.setConfig(config) }
+//        val userId = credentialManager.getUserId()
+//        val password = credentialManager.getPassword() ?: ""
+//
+//        // Adjust domain for 'outgoing' operation types, representing delivery orders
+//        val domain = listOf(
+//            listOf("picking_type_id.code", "=", "internal"), // Fetch 'outgoing' operation types for delivery orders
+//            listOf("state", "in", listOf("assigned", "waiting")), // Example: Fetch delivery orders in 'Ready to Transfer' or 'Waiting Another Operation' state
+//            "|",
+//            listOf("user_id", "=", false), // No responsible user
+//            listOf("user_id", "=", userId) // Or the current user is the responsible user
+//        )
+//        val fields = listOf("id", "name", "date", "user_id", "state", "origin") // Use 'scheduled_date' as the date field for delivery orders
+//
+//        val params = listOf(
+//            Constants.DATABASE,
+//            userId,
+//            password,
+//            "stock.picking",
+//            "search_read",
+//            listOf(domain),
+//            mapOf("fields" to fields)
+//        )
+//
+//        return try {
+//            val result = client.execute("execute_kw", params) as Array<Any>
+//            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+//                Pick(
+//                    id = map["id"] as Int,
+//                    name = map["name"] as String,
+//                    date = map["date"] as String,
+//                    origin = map["origin"].toString(),
+//                    // Additional fields as needed
+//                )
+//            }.also {
+//                Log.d("OdooXmlRpcClient", "Fetched ${it.size} delivery orders with specified states")
+//            }
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error fetching delivery orders: ${e.localizedMessage}", e)
+//            emptyList()
+//        }
+//    }
+    suspend fun fetchPicks(): List<Pick> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchDeliveryOrders.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        // Adjust domain to include 'PICK' in the name
+        val domain = listOf(
+            listOf("picking_type_id.code", "=", "internal"),
+            listOf("state", "in", listOf("assigned", "waiting")),
+            "|",
+            listOf("user_id", "=", false),
+            listOf("user_id", "=", userId),
+            listOf("name", "ilike", "PICK") // Only fetch records where the name contains 'PICK'
+        )
+        val fields = listOf("id", "name", "date", "user_id", "state", "origin")
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            result.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                Pick(
+                    id = map["id"] as Int,
+                    name = map["name"] as String,
+                    date = map["date"] as String,
+                    origin = map["origin"].toString(),
+                )
+            }.also {
+                Log.d("OdooXmlRpcClient", "Fetched ${it.size} picks with 'PICK' in the name")
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching picks: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    suspend fun fetchProductsForDeliveryOrder(deliveryOrderId: Int): List<Product> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForDeliveryOrder.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val fields = listOf("delivery_order_product_summary")
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(listOf(listOf("id", "=", deliveryOrderId))),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            val deliveryOrderSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["delivery_order_product_summary"].toString() else ""
+            parseDelivProductSummary(deliveryOrderSummary)
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching products for delivery order: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    private fun parseDelivProductSummary(summary: String): List<Product> {
+        // The parsing logic remains the same as it's based on the summary text structure
+        return summary.split(", ").mapNotNull { productString ->
+            val parts = productString.split(":").map { it.trim() }
+            if (parts.size == 3) {
+                try {
+                    val id = parts[0].toInt()
+                    val name = parts[1]
+                    val quantity = parts[2].toDouble()
+                    Product(id = id, name = name, quantity = quantity)
+                } catch (e: Exception) {
+                    Log.e("parseProductSummary", "Error parsing product summary: $e")
+                    null
+                }
+            } else {
+                null
+            }
+        }
+    }
+
 
 }
