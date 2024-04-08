@@ -14,7 +14,7 @@
         android:padding="16dp">
 
         <TextView
-            android:id="@+id/doProductNameTextView"
+            android:id="@+id/pickProductNameTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Product Name"
@@ -23,13 +23,21 @@
              />
 
         <TextView
-            android:id="@+id/doProductQuantityTextView"
+            android:id="@+id/pickProductQuantityTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Quantity"
             android:layout_marginTop="4dp"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
              />
+        <TextView
+            android:id="@+id/pickProductTrackingTypeTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tracking"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
 

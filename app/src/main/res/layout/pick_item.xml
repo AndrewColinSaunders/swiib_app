@@ -15,7 +15,7 @@
         android:padding="16dp">
 
         <TextView
-            android:id="@+id/deliveryOrderNameTextView"
+            android:id="@+id/pickNameTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Delivery Order Name"
@@ -23,7 +23,7 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Large"/>
 
         <TextView
-            android:id="@+id/deliveryOrderDateTextView"
+            android:id="@+id/pickDateTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Date"
@@ -32,7 +32,7 @@
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
 
         <TextView
-            android:id="@+id/deliveryOrderOriginTextView"
+            android:id="@+id/pickOriginTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Origin"

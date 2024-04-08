@@ -10,7 +10,7 @@
 //
 //class PickProductsAdapter(
 //        var products: List<Product>,
-//        private  var quantityMatches: Map<ProductDOKey, Boolean>,
+//        private  var quantityMatches: Map<ProductPickKey, Boolean>,
 //        private  var deliveryOrderId: Int
 //) : RecyclerView.Adapter<PickProductsAdapter.ProductViewHolder>() {
 //
@@ -25,19 +25,19 @@
 //
 //    override fun onBindViewHolder(holder: ProductsAdapter.ProductViewHolder, position: Int) {
 //        val product = products[position]
-//        val key = ProductDOKey(product.id, deliveryOrderId)
+//        val key = ProductPickKey(product.id, deliveryOrderId)
 //        val isMatched = quantityMatches[key] ?: false
 //        holder.bind(product, isMatched)
 //    }
 //
 //    override fun getItemCount(): Int = products.size
 //
-////    fun updateProducts(newProducts: List<Product>, newDeliveryOrderId: Int, newQuantityMatches: Map<ProductDOKey, Boolean>) {
+////    fun updateProducts(newProducts: List<Product>, newDeliveryOrderId: Int, newQuantityMatches: Map<ProductPickKey, Boolean>) {
 ////        products = newProducts
 ////        notifyDataSetChanged()
 ////    }
 //
-//    fun updateProducts(newProducts: List<Product>, newDeliveryOrderId: Int, newQuantityMatches: Map<ProductDOKey, Boolean>) {
+//    fun updateProducts(newProducts: List<Product>, newDeliveryOrderId: Int, newQuantityMatches: Map<ProductPickKey, Boolean>) {
 //        this.products = newProducts
 //        this.deliveryOrderId = newDeliveryOrderId
 //        this.quantityMatches = newQuantityMatches
@@ -99,8 +99,8 @@ import com.google.android.material.card.MaterialCardView
 
 class PickProductsAdapter(
     var products: List<Product>,
-    private var quantityMatches: Map<ProductDOKey, Boolean>,
-    private var deliveryOrderId: Int
+    private var quantityMatches: Map<ProductPickKey, Boolean>,
+    private var pickId: Int
 ) : RecyclerView.Adapter<PickProductsAdapter.ProductViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
@@ -110,16 +110,16 @@ class PickProductsAdapter(
 
     override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
         val product = products[position]
-        val key = ProductDOKey(product.id, deliveryOrderId)
+        val key = ProductPickKey(product.id, pickId)
         val isMatched = quantityMatches[key] ?: false
         holder.bind(product, isMatched)
     }
 
     override fun getItemCount(): Int = products.size
 
-    fun updateProducts(newProducts: List<Product>, newDeliveryOrderId: Int, newQuantityMatches: Map<ProductDOKey, Boolean>) {
+    fun updateProducts(newProducts: List<Product>, newDeliveryOrderId: Int, newQuantityMatches: Map<ProductPickKey, Boolean>) {
         this.products = newProducts
-        this.deliveryOrderId = newDeliveryOrderId
+        this.pickId = newDeliveryOrderId
         this.quantityMatches = newQuantityMatches
         notifyDataSetChanged()
     }
@@ -129,10 +129,10 @@ class PickProductsAdapter(
     }
 
     class ProductViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val nameTextView: TextView = itemView.findViewById(R.id.doProductNameTextView)
-        private val quantityTextView: TextView = itemView.findViewById(R.id.doProductQuantityTextView)
+        private val nameTextView: TextView = itemView.findViewById(R.id.pickProductNameTextView)
+        private val quantityTextView: TextView = itemView.findViewById(R.id.pickProductQuantityTextView)
 //        private val idTextView: TextView = itemView.findViewById(R.id.productIdTextView)
-//        private val trackingTypeTextView: TextView = itemView.findViewById(R.id.productTrackingTypeTextView)
+        private val trackingTypeTextView: TextView = itemView.findViewById(R.id.pickProductTrackingTypeTextView)
         private val cardView: MaterialCardView = itemView.findViewById(R.id.doProductItemCard) // Assuming you have MaterialCardView as the root of your item layout
 
         fun bind(product: Product, matches: Boolean) {
@@ -140,13 +140,13 @@ class PickProductsAdapter(
             nameTextView.text = product.name
             quantityTextView.text = "Quantity: ${product.quantity}"
 //            idTextView.text = "ID: ${product.id}"
-//            trackingTypeTextView.text = "Tracking Type: ${product.trackingType ?: "N/A"}"
+            trackingTypeTextView.text = "Tracking Type: ${product.trackingType ?: "N/A"}"
 
             val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)
             nameTextView.setTextColor(whiteColor)
             quantityTextView.setTextColor(whiteColor)
 //            idTextView.setTextColor(whiteColor)
-//            trackingTypeTextView.setTextColor(whiteColor)
+            trackingTypeTextView.setTextColor(whiteColor)
 
             val context = itemView.context
             cardView.setCardBackgroundColor(

@@ -19,7 +19,7 @@ class PickActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_delivery_orders)
+        setContentView(R.layout.activity_pick)
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
@@ -43,14 +43,16 @@ class PickActivity : AppCompatActivity() {
     }
 
     private fun initializeRecyclerView() {
-        val recyclerView: RecyclerView = findViewById(R.id.deliveryOrdersRecyclerView) // Make sure your layout file for PickActivity includes a RecyclerView with this ID
+        val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView) // Make sure your layout file for PickActivity includes a RecyclerView with this ID
         recyclerView.layoutManager = LinearLayoutManager(this)
-        pickAdapter = PickAdapter(listOf()) { deliveryOrder ->
-            // Launch ProductsActivity with delivery order ID, similar to how it's done with receipts
+        pickAdapter = PickAdapter(listOf()) { pick ->
+            // Launch ProductsActivity with pick ID, similar to how it's done with receipts
             Intent(this, PickProductsActivity::class.java).also { intent ->
-                intent.putExtra("DELIVERY_ORDER_ID", deliveryOrder.id)
-                intent.putExtra("DELIVERY_ORDER_NAME", deliveryOrder.name)
-                intent.putExtra("DELIVERY_ORDER_ORIGIN", deliveryOrder.origin) // Assuming Pick class includes similar fields as Receipt
+                intent.putExtra("PICK_ID", pick.id)
+                intent.putExtra("PICK_NAME", pick.name)
+                intent.putExtra("PICK_ORIGIN", pick.origin)
+                intent.putExtra("LOCATION", pick.locationId)
+                intent.putExtra("DEST_LOCATION", pick.locationDestId)
                 startActivity(intent)
             }
         }
@@ -60,12 +62,12 @@ class PickActivity : AppCompatActivity() {
     private fun fetchPicksAndDisplay() {
         coroutineScope.launch {
             try {
-                val deliveryOrders = odooXmlRpcClient.fetchPicks() // Implement this method in OdooXmlRpcClient
+                val picks = odooXmlRpcClient.fetchPicks() // Implement this method in OdooXmlRpcClient
                 withContext(Dispatchers.Main) {
-                    pickAdapter.updateDeliveryOrders(deliveryOrders)
+                    pickAdapter.updateDeliveryOrders(picks)
                 }
             } catch (e: Exception) {
-                Log.e("PickActivity", "Error fetching delivery orders: ${e.localizedMessage}")
+                Log.e("PickActivity", "Error fetching picks: ${e.localizedMessage}")
             }
         }
     }

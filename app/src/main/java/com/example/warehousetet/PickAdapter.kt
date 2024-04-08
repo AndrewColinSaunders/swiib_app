@@ -9,13 +9,13 @@ import androidx.recyclerview.widget.RecyclerView
 // Define the PickAdapter class, which extends RecyclerView.Adapter
     class PickAdapter(
     private var picks: List<Pick>, // List of Pick items
-    private val onDeliveryOrderClicked: (Pick) -> Unit // Lambda function to handle click events
+    private val onPickClicked: (Pick) -> Unit // Lambda function to handle click events
     ) : RecyclerView.Adapter<PickAdapter.ViewHolder>() {
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             // Inflate the layout for a delivery order item view
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.delivery_order_item, parent, false)
-            return ViewHolder(view, onDeliveryOrderClicked)
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.pick_item, parent, false)
+            return ViewHolder(view, onPickClicked)
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -25,24 +25,24 @@ import androidx.recyclerview.widget.RecyclerView
         override fun getItemCount(): Int = picks.size
 
         // ViewHolder class to hold references to views within each item
-        inner class ViewHolder(itemView: View, private val onDeliveryOrderClicked: (Pick) -> Unit) : RecyclerView.ViewHolder(itemView) {
-            private val deliveryOrderNameTextView: TextView = itemView.findViewById(R.id.deliveryOrderNameTextView)
-            private val deliveryOrderDateTextView: TextView = itemView.findViewById(R.id.deliveryOrderDateTextView)
-            private val deliveryOrderOriginTextView: TextView = itemView.findViewById(R.id.deliveryOrderOriginTextView)
+        inner class ViewHolder(itemView: View, private val onPickClicked: (Pick) -> Unit) : RecyclerView.ViewHolder(itemView) {
+            private val pickNameTextView: TextView = itemView.findViewById(R.id.pickNameTextView)
+            private val pickDateTextView: TextView = itemView.findViewById(R.id.pickDateTextView)
+            private val pickOriginTextView: TextView = itemView.findViewById(R.id.pickOriginTextView)
 
             init {
                 itemView.setOnClickListener {
                     val position = adapterPosition
                     if (position != RecyclerView.NO_POSITION) {
-                        onDeliveryOrderClicked(picks[position])
+                        onPickClicked(picks[position])
                     }
                 }
             }
 
             fun bind(pick: Pick) {
-                deliveryOrderNameTextView.text = pick.name
-                deliveryOrderDateTextView.text = pick.date
-                deliveryOrderOriginTextView.text = pick.origin
+                pickNameTextView.text = pick.name
+                pickDateTextView.text = pick.date
+                pickOriginTextView.text = pick.origin
             }
         }
 

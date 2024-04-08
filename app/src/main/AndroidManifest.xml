@@ -23,11 +23,6 @@
         <activity
             android:name=".SetupActivity"
             android:exported="true" /> <!-- android:theme="@style/Theme.AppCompat.Light.NoActionBar" -->
-        <activity
-            android:name=".PackActivity"
-            android:exported="false"
-            android:label="Packing"
-            android:theme="@style/Theme.WarehouseTet" />
 
         <activity
             android:name=".IntTransferProductsActivity"

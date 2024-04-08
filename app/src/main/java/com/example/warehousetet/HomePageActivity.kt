@@ -88,7 +88,7 @@ class HomePageActivity : AppCompatActivity() {
 
     findViewById<Button>(R.id.btnPack).setOnClickListener {
         it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-        Intent(this, PackActivity::class.java).also { startActivity(it) }
+//        Intent(this, PackActivity::class.java).also { startActivity(it) }
     }
 
 
