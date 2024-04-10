@@ -4,16 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PorterDuff
+import android.graphics.Typeface
 import android.os.Bundle
 import android.text.InputType
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MenuItem
-import android.view.WindowManager
+import android.view.View
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -49,9 +51,12 @@ class PickProductsActivity : AppCompatActivity() {
     val lotQuantities: MutableMap<ProductPickKey, Int> = mutableMapOf()
     private var quantityMatches = mutableMapOf<ProductPickKey, Boolean>()
     private var barcodeToProductIdMap = mutableMapOf<String, Int>()
+    // Assuming this is declared at the class level
+    private val accumulatedQuantities: MutableMap<Int, Double> = mutableMapOf()
+
 
     private var pickName: String? = null
-
+    private var destLocationName: String? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pick_activity_products)
@@ -70,7 +75,7 @@ class PickProductsActivity : AppCompatActivity() {
         val locationTextView: TextView = findViewById(R.id.sourceLocationId)
         locationTextView.text = locationName
 
-        val destLocationName = intent.getStringExtra("DEST_LOCATION")
+        destLocationName = intent.getStringExtra("DEST_LOCATION")
         val destLocationTextView: TextView = findViewById(R.id.destinationLocationId)
         destLocationTextView.text = destLocationName
 
@@ -80,7 +85,7 @@ class PickProductsActivity : AppCompatActivity() {
         setupRecyclerView()
 
         if (pickId != -1) {
-            fetchProductsForDeliveryOrder(pickId)
+            fetchProductsForPick(pickId)
             coroutineScope.launch {
                 try {
 //                    displayLocationsForPick(pickId)
@@ -143,13 +148,13 @@ class PickProductsActivity : AppCompatActivity() {
         toast.show()
     }
 
-    private fun fetchProductsForDeliveryOrder(deliveryOrderId: Int) {
+    private fun fetchProductsForPick(pickId: Int) {
         coroutineScope.launch {
-            Log.d("PickProductsActivity", "Fetching products for delivery order ID: $deliveryOrderId")
+            Log.d("PickProductsActivity", "Fetching products for delivery order ID: $pickId")
 
             // Attempt to fetch products associated with the delivery order
             val fetchedProducts = try {
-                odooXmlRpcClient.fetchProductsForReceipt(deliveryOrderId)
+                odooXmlRpcClient.fetchProductsForReceipt(pickId)
             } catch (e: Exception) {
                 Log.e("PickProductsActivity", "Error fetching products for delivery order: ${e.localizedMessage}")
                 emptyList<Product>() // Adjust this to your product data class
@@ -181,7 +186,7 @@ class PickProductsActivity : AppCompatActivity() {
             withContext(Dispatchers.Main) {
                 Log.d("PickProductsActivity", "Updating UI with detailed products for delivery order")
     //            pickProductsAdapter.updateProducts(updatedProductsWithDetails)
-                updateUIForProducts(updatedProductsWithDetails, deliveryOrderId)
+                updateUIForProducts(updatedProductsWithDetails, pickId)
             }
         }
     }
@@ -326,40 +331,35 @@ class PickProductsActivity : AppCompatActivity() {
         }
     }
 
-//    private fun promptForSerialNumber(productName: String, deliveryOrderId: Int, productId: Int) {
+//    private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int) {
 //        val editText = EditText(this).apply {
 //            inputType = InputType.TYPE_CLASS_TEXT
 //            hint = "Enter serial number"
 //        }
 //
-//        var actionExecuted = false
-//
-//        // Build the dialog but don't show it yet
 //        val dialogBuilder = AlertDialog.Builder(this)
 //            .setTitle("Enter Serial Number")
 //            .setMessage("Enter the serial number for $productName.")
 //            .setView(editText)
 //            .setNegativeButton("Cancel", null)
 //
-//        // Create the dialog from the builder
 //        val dialog = dialogBuilder.create()
 //
-//        // Now set the positive button separately to have access to 'dialog' variable
 //        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
-//            if (!actionExecuted) {
-//                actionExecuted = true
-//                val enteredSerialNumber = editText.text.toString().trim()
-//                if (enteredSerialNumber.isNotEmpty()) {
-//                    coroutineScope.launch {
-//                        val product = pickProductsAdapter.products.find { it.id == productId }
-//                        val key = ProductPickKey(productId, deliveryOrderId) // Adjusted to use ProductPickKey assuming you have such a class
+//            val enteredSerialNumber = editText.text.toString().trim()
+//            if (enteredSerialNumber.isNotEmpty()) {
+//                coroutineScope.launch {
+//                    val serialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
+//                    if (serialNumbers?.contains(enteredSerialNumber) == true) {
+//                        // Serial number exists, proceed
+//                        val key = ProductPickKey(productId, pickId)
 //                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
 //
 //                        if (!serialList.contains(enteredSerialNumber)) {
 //                            serialList.add(enteredSerialNumber)
-//                            odooXmlRpcClient.updateMoveLinesForPick(deliveryOrderId, productId, enteredSerialNumber)
+//                            odooXmlRpcClient.updateMoveLinesForPick(pickId, productId, enteredSerialNumber)
 //
-//                            updateProductMatchState(productId, deliveryOrderId, matched = true, serialList)
+//                            updateProductMatchState(productId, pickId, matched = true, serialList)
 //                            withContext(Dispatchers.Main) {
 //                                showGreenToast("Serial number added for $productName. ${serialList.size} verified")
 //                            }
@@ -368,136 +368,447 @@ class PickProductsActivity : AppCompatActivity() {
 //                                showRedToast("Serial number already entered for $productName")
 //                            }
 //                        }
+//                    } else {
+//                        // Serial number does not exist, notify and prompt again
+//                        withContext(Dispatchers.Main) {
+//                            showRedToast("Serial number does not exist. Please enter a valid serial number.")
+//                            promptForSerialNumber(productName, pickId, productId) // Prompt again
+//                        }
 //                    }
-//                } else {
-//
-//                        showRedToast("Please enter a serial number")
-//
 //                }
-//            }
-//        }
-//
-//        // Set up dialog properties related to keyboard input
-//        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-//        dialog.setOnShowListener {
-//            editText.requestFocus()
-//            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-//            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-//        }
-//
-//        editText.setOnEditorActionListener { _, actionId, event ->
-//            if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
-//                dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
-//                true
 //            } else {
-//                false
+//                // No serial number entered, prompt again
+//                showRedToast("Please enter a serial number")
+//                promptForSerialNumber(productName, pickId, productId)
 //            }
 //        }
 //
 //        dialog.show()
+//        // Immediately show the keyboard for input
+//        editText.requestFocus()
+//        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+//    }
+
+
+//        private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int) {
+//            // Create the parent layout
+//            val container = LinearLayout(this).apply {
+//                orientation = LinearLayout.VERTICAL
+//                layoutParams = LinearLayout.LayoutParams(
+//                    LinearLayout.LayoutParams.MATCH_PARENT,
+//                    LinearLayout.LayoutParams.WRAP_CONTENT
+//                )
+//                setPadding(16, 8, 16, 16)
+//            }
+//
+//// Create the serial number input
+//            val serialNumberInput = EditText(this).apply {
+//                inputType = InputType.TYPE_CLASS_TEXT
+//                hint = "Enter serial number"
+//            }
+//            container.addView(serialNumberInput)
+//
+//// Add subheading TextView for the "Store to" input
+//            val subheading = TextView(this).apply {
+//                text = "Store To Location" // Your subheading text here
+//                textSize = 14f // Adjust text size as needed
+//                // Optional: styling for the subheading
+//                setTypeface(null, Typeface.BOLD)
+//                val topMargin = (8 * resources.displayMetrics.density).toInt() // Adjust top margin as needed
+//                layoutParams = LinearLayout.LayoutParams(
+//                    LinearLayout.LayoutParams.WRAP_CONTENT,
+//                    LinearLayout.LayoutParams.WRAP_CONTENT
+//                ).apply {
+//                    setMargins(0, topMargin, 0, 0) // Adding top margin for spacing
+//                }
+//            }
+//            container.addView(subheading)
+//
+//// Create the "Store to" input with destLocationName as default value
+//            val storeToInput = EditText(this).apply {
+//                inputType = InputType.TYPE_CLASS_TEXT
+//                hint = "Store to"
+//                setText(destLocationName)
+//
+//                // Convert dp to pixels for setting margins
+//                val marginInPixels = (8 * resources.displayMetrics.density).toInt()
+//
+//                // Create LayoutParams and set margins
+//                layoutParams = LinearLayout.LayoutParams(
+//                    LinearLayout.LayoutParams.MATCH_PARENT,
+//                    LinearLayout.LayoutParams.WRAP_CONTENT
+//                ).apply {
+//                    setMargins(0, marginInPixels, 0, 0) // Adding top margin
+//                }
+//            }
+//            container.addView(storeToInput)
+//
+//
+//
+//            val dialogBuilder = AlertDialog.Builder(this)
+//                .setTitle("Enter Serial Number")
+//                .setMessage("Enter the serial number for $productName.")
+//                .setView(container)
+//                .setNegativeButton("Cancel", null)
+//
+//            val dialog = dialogBuilder.create()
+//
+//            dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
+//                val enteredSerialNumber = serialNumberInput.text.toString().trim()
+//                val enteredStoreTo = storeToInput.text.toString().trim()
+//
+//                if (enteredSerialNumber.isNotEmpty()) {
+//                    coroutineScope.launch {
+//                        val serialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
+//
+//                        if (serialNumbers?.contains(enteredSerialNumber) == true) {
+//                                                    // Serial number exists, proceed
+//                            val key = ProductPickKey(productId, pickId)
+//                            val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+//                                serialList.add(enteredSerialNumber)
+//                                odooXmlRpcClient.updateMoveLinesForPick(pickId, productId, enteredSerialNumber)
+//
+//                                updateProductMatchState(productId, pickId, matched = true, serialList)
+//                                withContext(Dispatchers.Main) {
+//                                    showGreenToast("Serial number added for $productName. ${serialList.size} verified")
+//                                }
+//                        } else {
+//                            // Serial number does not exist, notify and prompt again
+//                            withContext(Dispatchers.Main) {
+//                                showRedToast("Serial number does not exist. Please enter a valid serial number.")
+//                                promptForSerialNumber(productName, pickId, productId) // Re-prompt
+//                            }
+//                        }
+//                    }
+//                } else {
+//
+//                        showRedToast("Please enter a serial number")
+//                        promptForSerialNumber(productName, pickId, productId) // Re-prompt
+//
+//                }
+//            }
+//
+//            dialog.show()
+//            // Show keyboard
+//            serialNumberInput.requestFocus()
+//            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//            imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
+//        }
+//    private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int) {
+//        // Create the parent layout
+//        val container = LinearLayout(this).apply {
+//            orientation = LinearLayout.VERTICAL
+//            layoutParams = LinearLayout.LayoutParams(
+//                LinearLayout.LayoutParams.MATCH_PARENT,
+//                LinearLayout.LayoutParams.WRAP_CONTENT
+//            )
+//            setPadding(16, 8, 16, 16)
+//        }
+//
+//        // Create the serial number input
+//        val serialNumberInput = EditText(this).apply {
+//            inputType = InputType.TYPE_CLASS_TEXT
+//            hint = "Enter serial number"
+//        }
+//        container.addView(serialNumberInput)
+//
+//        // Add subheading TextView for the "Store to" input
+//        val subheading = TextView(this).apply {
+//            text = "Store To Location"
+//            textSize = 14f
+//            setTypeface(null, Typeface.BOLD)
+//            val topMargin = (8 * resources.displayMetrics.density).toInt()
+//            layoutParams = LinearLayout.LayoutParams(
+//                LinearLayout.LayoutParams.WRAP_CONTENT,
+//                LinearLayout.LayoutParams.WRAP_CONTENT
+//            ).apply {
+//                setMargins(0, topMargin, 0, 0) // Adding top margin for spacing
+//            }
+//        }
+//        container.addView(subheading)
+//
+//        // Create the "Store to" input with destLocationName as default value
+//        val storeToInput = EditText(this).apply {
+//            inputType = InputType.TYPE_CLASS_TEXT
+//            hint = "Store to"
+//            setText(destLocationName) // Assuming destLocationName is defined elsewhere in your code
+//        }
+//        container.addView(storeToInput)
+//
+//        val dialogBuilder = AlertDialog.Builder(this)
+//            .setTitle("Enter Serial Number")
+//            .setMessage("Enter the serial number for $productName.")
+//            .setView(container)
+//            .setNegativeButton("Cancel", null)
+//
+//        val dialog = dialogBuilder.create()
+//
+//        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
+//            val enteredSerialNumber = serialNumberInput.text.toString().trim()
+//            val enteredStoreTo = storeToInput.text.toString().trim()
+//
+//            if (enteredSerialNumber.isNotEmpty()) {
+//                coroutineScope.launch {
+//                    val serialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
+//                        val key = ProductPickKey(productId, pickId)
+//                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+//                    if (serialNumbers?.contains(enteredSerialNumber) == true) {
+//                        // Serial number exists, proceed
+//                        serialList.add(enteredSerialNumber)
+//                        odooXmlRpcClient.updateMoveLinesForPick(pickId, productId, enteredSerialNumber, enteredStoreTo) // Updated to include enteredStoreTo
+//                            updateProductMatchState(productId, pickId, matched = true, serialList)
+//
+//                        withContext(Dispatchers.Main) {
+//                            showGreenToast("Serial number added for $productName.")
+//                        }
+//                    } else {
+//                        // Serial number does not exist, notify and prompt again
+//                        withContext(Dispatchers.Main) {
+//                            showRedToast("Serial number does not exist. Please enter a valid serial number.")
+//                            promptForSerialNumber(productName, pickId, productId) // Re-prompt
+//                        }
+//                    }
+//                }
+//            } else {
+//                showRedToast("Please enter a serial number")
+//                promptForSerialNumber(productName, pickId, productId) // Re-prompt
+//            }
+//        }
+//
+//        dialog.show()
+//        // Show keyboard
+//        serialNumberInput.requestFocus()
+//        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//        imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
 //    }
     private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int) {
-        val editText = EditText(this).apply {
+        // Create the parent layout
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(16, 8, 16, 16)
+        }
+
+        // Create the serial number input
+        val serialNumberInput = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT
             hint = "Enter serial number"
         }
+        container.addView(serialNumberInput)
+
+        // Add subheading TextView for the "Store to" input
+        val subheading = TextView(this).apply {
+            text = "Store To Location"
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            val topMargin = (8 * resources.displayMetrics.density).toInt()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, topMargin, 0, 0) // Adding top margin for spacing
+            }
+        }
+        container.addView(subheading)
+
+        // Create the "Store to" input with destLocationName as default value
+//        val storeToInput = EditText(this).apply {
+//            inputType = InputType.TYPE_CLASS_TEXT
+//            hint = "Store to"
+//            setText(destLocationName) // Assuming destLocationName is defined elsewhere in your code and remains unchanged
+//        }
+
+    val storeToInput = EditText(this).apply {
+        inputType = InputType.TYPE_CLASS_TEXT
+        hint = "Store to"
+        setText(destLocationName) // Set the default text to the EditText
+
+        // Adding a focus change listener instead
+        onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+            // Clear the text when the EditText gains focus if it contains the default location name
+            if (hasFocus && text.toString() == destLocationName) {
+                setText("")
+            }
+        }
+    }
+    container.addView(storeToInput)
 
         val dialogBuilder = AlertDialog.Builder(this)
             .setTitle("Enter Serial Number")
-            .setMessage("Enter the serial number for $productName.")
-            .setView(editText)
+            .setMessage("Enter the Serial number for $productName.")
+            .setView(container)
             .setNegativeButton("Cancel", null)
 
         val dialog = dialogBuilder.create()
 
         dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
-            val enteredSerialNumber = editText.text.toString().trim()
+            val enteredSerialNumber = serialNumberInput.text.toString().trim()
+            val enteredStoreTo = storeToInput.text.toString().trim() // This captures the user input but does not change destLocationName
+
             if (enteredSerialNumber.isNotEmpty()) {
                 coroutineScope.launch {
                     val serialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
+                    val key = ProductPickKey(productId, pickId)
+                    val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
                     if (serialNumbers?.contains(enteredSerialNumber) == true) {
                         // Serial number exists, proceed
-                        val key = ProductPickKey(productId, pickId)
-                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+                        serialList.add(enteredSerialNumber)
+                        odooXmlRpcClient.updateMoveLinesForPick(pickId, productId, enteredSerialNumber, enteredStoreTo) // Updated to include enteredStoreTo
+                        updateProductMatchState(productId, pickId, matched = true, serialList)
 
-                        if (!serialList.contains(enteredSerialNumber)) {
-                            serialList.add(enteredSerialNumber)
-                            odooXmlRpcClient.updateMoveLinesForPick(pickId, productId, enteredSerialNumber)
-
-                            updateProductMatchState(productId, pickId, matched = true, serialList)
-                            withContext(Dispatchers.Main) {
-                                showGreenToast("Serial number added for $productName. ${serialList.size} verified")
-                            }
-                        } else {
-                            withContext(Dispatchers.Main) {
-                                showRedToast("Serial number already entered for $productName")
-                            }
+                        withContext(Dispatchers.Main) {
+                            showGreenToast("Serial number added for $productName.")
                         }
                     } else {
                         // Serial number does not exist, notify and prompt again
                         withContext(Dispatchers.Main) {
                             showRedToast("Serial number does not exist. Please enter a valid serial number.")
-                            promptForSerialNumber(productName, pickId, productId) // Prompt again
+                            promptForSerialNumber(productName, pickId, productId) // Re-prompt
                         }
                     }
                 }
             } else {
-                // No serial number entered, prompt again
                 showRedToast("Please enter a serial number")
-                promptForSerialNumber(productName, pickId, productId)
+                promptForSerialNumber(productName, pickId, productId) // Re-prompt
             }
         }
 
         dialog.show()
-        // Immediately show the keyboard for input
-        editText.requestFocus()
+        // Show keyboard
+        serialNumberInput.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+        imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, pickId: Int, productId: Int, recount: Boolean = false) {
-        val editText = EditText(this).apply {
+//    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, pickId: Int, productId: Int, recount: Boolean = false) {
+//        val editText = EditText(this).apply {
+//            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+//            hint = "Enter product quantity"
+//        }
+//
+//        AlertDialog.Builder(this)
+//            .setTitle(if (recount) "Recount Required" else "Enter Quantity")
+//            .setMessage(if (recount) "Recount for $productName. Enter the exact quantity." else "Enter the exact quantity for $productName.")
+//            .setView(editText)
+//            .setPositiveButton("OK") { _, _ ->
+//                val enteredQuantity = editText.text.toString().toDoubleOrNull()
+//                if (enteredQuantity != null && enteredQuantity == expectedQuantity) {
+////                    Toast.makeText(this, "Quantity entered for $productName", Toast.LENGTH_LONG).show()
+//                    showGreenToast("Quantity updated for $productName")
+//                    updateProductMatchState(productId, pickId, true)
+//                } else if (!recount) {
+//                    promptForProductQuantity(productName, expectedQuantity, pickId, productId, recount = true)
+//                } else {
+//                    val localPickName = pickName // Copy the mutable property to a local variable
+//
+//                    lifecycleScope.launch(Dispatchers.IO) {
+//                        if (localPickName != null) { // Use the local copy for the check
+//                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localPickName)
+//                            if (buyerDetails != null) {
+//                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, localPickName, productName) // Pass the local copy to the function
+//                                withContext(Dispatchers.Main) {
+////                                    Toast.makeText(this@ProductsActivity, "Flagged ${buyerDetails.login}. Email sent.", Toast.LENGTH_LONG).show()
+//                                    showRedToast("Flagged")
+//                                }
+//                            } else {
+//                                withContext(Dispatchers.Main) {
+////                                    Toast.makeText(this@ProductsActivity, "Flagged, but buyer details not found.", Toast.LENGTH_LONG).show()
+//                                    showRedToast("Flagged, but buyer details not found")
+//                                }
+//                            }
+//                        } else {
+//                            withContext(Dispatchers.Main) {
+////                                Toast.makeText(this@ProductsActivity, "Receipt name is null or not found", Toast.LENGTH_LONG).show()
+//                                showRedToast("Pick name is null or not found")
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//            .setNegativeButton("Cancel", null)
+//            .show()
+//    }
+
+    private fun promptForProductQuantity(
+        productName: String,
+        expectedQuantity: Double,
+        pickId: Int,
+        productId: Int,
+        recount: Boolean = false
+    ) {
+        // Parent layout for EditText inputs
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(50, 20, 50, 20) // Adjust padding as necessary
+        }
+
+        // EditText for entering the product quantity
+        val quantityEditText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
             hint = "Enter product quantity"
         }
+        layout.addView(quantityEditText)
+
+        // EditText for "Store To" location input
+        val storeToLocationEditText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "Enter store to location"
+            setText(destLocationName) // Pre-populate with the default location name
+        }
+        layout.addView(storeToLocationEditText)
 
         AlertDialog.Builder(this)
             .setTitle(if (recount) "Recount Required" else "Enter Quantity")
             .setMessage(if (recount) "Recount for $productName. Enter the exact quantity." else "Enter the exact quantity for $productName.")
-            .setView(editText)
+            .setView(layout)
             .setPositiveButton("OK") { _, _ ->
-                val enteredQuantity = editText.text.toString().toDoubleOrNull()
-                if (enteredQuantity != null && enteredQuantity == expectedQuantity) {
-//                    Toast.makeText(this, "Quantity entered for $productName", Toast.LENGTH_LONG).show()
-                    showGreenToast("Quantity updated for $productName")
-                    updateProductMatchState(productId, pickId, true)
+                val enteredQuantity = quantityEditText.text.toString().toDoubleOrNull()
+                val enteredLocation = storeToLocationEditText.text.toString()
+
+                if (enteredQuantity != null) {
+                    // Accumulate entered quantity for the product
+                    val totalQuantity = accumulatedQuantities.getOrDefault(productId, 0.0) + enteredQuantity
+                    accumulatedQuantities[productId] = totalQuantity
+
+                    // Check if total entered quantity matches expected quantity
+                    val matched = totalQuantity == expectedQuantity
+                    // Update match state based on total entered quantity
+                    updateProductMatchState(productId, pickId, matched)
+
+                    if (matched) {
+                        showGreenToast("Quantity matched for $productName")
+                    } else {
+                        showRedToast("Total quantity does not match expected. Please enter more.")
+                        Log.d("match state", "Total quantity: $totalQuantity")
+                    }
+
+                    // Create a stock.move.line for the entered quantity, regardless of match state
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        try {
+                            val result = odooXmlRpcClient.createStockMoveLineForUntrackedProduct(pickId, productId, enteredQuantity, enteredLocation)
+                            withContext(Dispatchers.Main) {
+                                if (result) {
+                                    showGreenToast("Stock move line created for $productName at $enteredLocation")
+                                } else {
+                                    showRedToast("Failed to create stock move line for $productName ID: $productId")
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.e("OdooXmlRpcClient", "Error creating stock move line for untracked product: ${e.message}", e)
+                        }
+                    }
                 } else if (!recount) {
                     promptForProductQuantity(productName, expectedQuantity, pickId, productId, recount = true)
                 } else {
-                    val localPickName = pickName // Copy the mutable property to a local variable
-
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        if (localPickName != null) { // Use the local copy for the check
-                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localPickName)
-                            if (buyerDetails != null) {
-                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, localPickName, productName) // Pass the local copy to the function
-                                withContext(Dispatchers.Main) {
-//                                    Toast.makeText(this@ProductsActivity, "Flagged ${buyerDetails.login}. Email sent.", Toast.LENGTH_LONG).show()
-                                    showRedToast("Flagged")
-                                }
-                            } else {
-                                withContext(Dispatchers.Main) {
-//                                    Toast.makeText(this@ProductsActivity, "Flagged, but buyer details not found.", Toast.LENGTH_LONG).show()
-                                    showRedToast("Flagged, but buyer details not found")
-                                }
-                            }
-                        } else {
-                            withContext(Dispatchers.Main) {
-//                                Toast.makeText(this@ProductsActivity, "Receipt name is null or not found", Toast.LENGTH_LONG).show()
-                                showRedToast("Receipt name is null or not found")
-                            }
-                        }
-                    }
+                    // Handle recount failure
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -505,164 +816,112 @@ class PickProductsActivity : AppCompatActivity() {
     }
 
 
-//    private fun promptForLotNumber(productName: String, pickId: Int, productId: Int) {
-//        val editText = EditText(this).apply {
+
+
+    private fun promptForLotNumber(productName: String, pickId: Int, productId: Int) {
+        // Create the parent layout
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+            setPadding(16, 8, 16, 16)
+        }
+
+        // Create the serial number input
+        val lotNumberInput = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "Enter lot number"
+        }
+        container.addView(lotNumberInput)
+
+        // Add subheading TextView for the "Store to" input
+        val subheading = TextView(this).apply {
+            text = "Store To Location"
+            textSize = 14f
+            setTypeface(null, Typeface.BOLD)
+            val topMargin = (8 * resources.displayMetrics.density).toInt()
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                setMargins(0, topMargin, 0, 0) // Adding top margin for spacing
+            }
+        }
+        container.addView(subheading)
+
+        // Create the "Store to" input with destLocationName as default value
+//        val storeToInput = EditText(this).apply {
 //            inputType = InputType.TYPE_CLASS_TEXT
-//            hint = "Enter lot number"
+//            hint = "Store to"
+//            setText(destLocationName) // Assuming destLocationName is defined elsewhere in your code and remains unchanged
 //        }
-//
-//        var actionExecuted = false
-//
-//        val dialog = AlertDialog.Builder(this)
-//            .setTitle("Enter Lot Number")
-//            .setMessage("Enter the lot number for $productName.")
-//            .setView(editText)
-//            .setPositiveButton("OK") { _, _ ->
-//                if (!actionExecuted) {
-//                    actionExecuted = true
-//                    val enteredLotNumber = editText.text.toString().trim()
-//                    if (enteredLotNumber.isNotEmpty()) {
-//                        coroutineScope.launch {
-//                            val product = pickProductsAdapter.products.find { it.id == productId }
-//                            withContext(Dispatchers.Main) {
-//                                // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
-//                                promptForLotQuantity(productName, pickId, productId, enteredLotNumber)
-//                            }
-//                        }
-//                    } else {
-//                        showRedToast("Please enter a lot number.")
-//                    }
-//                }
-//            }
-//            .setNegativeButton("Cancel", null)
-//            .create()
-//
-//        // Request focus and show the keyboard when the dialog is shown
-//        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-//        dialog.setOnShowListener {
-//            editText.requestFocus()
-//            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-//            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-//        }
-//
-//        editText.setOnEditorActionListener { _, actionId, event ->
-//            if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
-//                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.performClick()
-//                true
-//            } else {
-//                false
-//            }
-//        }
-//
-//        dialog.show()
-//    }
-private fun promptForLotNumber(productName: String, pickId: Int, productId: Int) {
-    val editText = EditText(this).apply {
-        inputType = InputType.TYPE_CLASS_TEXT
-        hint = "Enter lot number"
-    }
 
-    var actionExecuted = false
+        val storeToInput = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "Store to"
+            setText(destLocationName) // Set the default text to the EditText
 
-    val dialog = AlertDialog.Builder(this)
-        .setTitle("Enter Lot Number")
-        .setMessage("Enter the lot number for $productName.")
-        .setView(editText)
-        .setPositiveButton("OK") { _, _ ->
-            if (!actionExecuted) {
-                actionExecuted = true
-                val enteredLotNumber = editText.text.toString().trim()
-                if (enteredLotNumber.isNotEmpty()) {
-                    coroutineScope.launch {
-                        // Here, assume fetchLotNumbersByProductId is a function that fetches lot numbers for a given product ID
-                        val lotNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
-                        if (lotNumbers?.contains(enteredLotNumber) == true) {
-                            // Lot number exists, proceed with quantity prompt
-                            withContext(Dispatchers.Main) {
-                                promptForLotQuantity(productName, pickId, productId, enteredLotNumber)
-                            }
-                        } else {
-                            // Lot number does not exist, notify and prompt again
-                            withContext(Dispatchers.Main) {
-                                showRedToast("Lot number does not exist. Please enter a valid lot number.")
-                                promptForLotNumber(productName, pickId, productId) // Prompt again
-                            }
-                        }
-                    }
-                } else {
-                        // No lot number entered, notify and prompt again
-                        showRedToast("Please enter a lot number.")
-                        promptForLotNumber(productName, pickId, productId)
+            // Adding a focus change listener instead
+            onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+                // Clear the text when the EditText gains focus if it contains the default location name
+                if (hasFocus && text.toString() == destLocationName) {
+                    setText("")
                 }
             }
         }
-        .setNegativeButton("Cancel", null)
-        .create()
+        container.addView(storeToInput)
 
-    // Set up dialog properties related to keyboard input
-    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-    dialog.setOnShowListener {
-        editText.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-    }
+        val dialogBuilder = AlertDialog.Builder(this)
+            .setTitle("Enter lot Number")
+            .setMessage("Enter the lot number for $productName.")
+            .setView(container)
+            .setNegativeButton("Cancel", null)
 
-    editText.setOnEditorActionListener { _, actionId, event ->
-        if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.performClick()
-            true
-        } else false
-    }
+        val dialog = dialogBuilder.create()
 
-    dialog.show()
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
+            val enteredLotNumber = lotNumberInput.text.toString().trim()
+            val enteredStoreTo = storeToInput.text.toString().trim() // This captures the user input but does not change destLocationName
+
+            if (enteredLotNumber.isNotEmpty()) {
+                coroutineScope.launch {
+                    val lotNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
+//                    val key = ProductPickKey(productId, pickId)
+//                    val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+                    if (lotNumbers?.contains(enteredLotNumber) == true) {
+                        coroutineScope.launch {
+                            withContext(Dispatchers.Main) {
+                                // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
+                                promptForLotQuantity(productName, pickId, productId, enteredLotNumber, enteredStoreTo)
+                            }
 }
+                        withContext(Dispatchers.Main) {
+                            showGreenToast("Serial number added for $productName.")
+                        }
+                    } else {
+                        // Serial number does not exist, notify and prompt again
+                        withContext(Dispatchers.Main) {
+                            showRedToast("Serial number does not exist. Please enter a valid serial number.")
+                            promptForSerialNumber(productName, pickId, productId) // Re-prompt
+                        }
+                    }
+                }
+            } else {
+                showRedToast("Please enter a serial number")
+                promptForSerialNumber(productName, pickId, productId) // Re-prompt
+            }
+        }
 
-    //    private fun promptForLotQuantity(productName: String, receiptId: Int, productId: Int, lotNumber: String) {
-//        val editText = EditText(this).apply {
-//            inputType = InputType.TYPE_CLASS_NUMBER
-//            hint = "Enter quantity"
-//        }
-//
-//        val dialog = AlertDialog.Builder(this)
-//            .setTitle("Enter Quantity")
-//            .setMessage("Enter the quantity for the lot of $productName.")
-//            .setView(editText)
-//            .setPositiveButton("OK") { _, _ ->
-//                val enteredQuantity = editText.text.toString().toIntOrNull()
-//                if (enteredQuantity != null) {
-//                    coroutineScope.launch {
-//                        if (requiresExpirationDate) {
-//                            withContext(Dispatchers.Main) {
-//                                // Logic to prompt for lot expiration date
-////                                promptForLotExpirationDate(productName, receiptId, productId, lotNumber, enteredQuantity)
-//                            }
-//                        } else {
-//                            // Logic for handling the quantity update without expiration date
-//                            odooXmlRpcClient.updateMoveLinesWithoutExpirationWithLot(receiptId, productId, lotNumber, enteredQuantity)
-//                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = enteredQuantity)
-//                            withContext(Dispatchers.Main) {
-//                                showGreenToast("Quantity updated for lot.")
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    // Show toast message for invalid quantity
-//                    Toast.makeText(this, "Invalid quantity entered.", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//            .setNegativeButton("Cancel", null)
-//            .create()
-//
-//        // Ensure the keyboard is shown when the EditText gains focus
-//        dialog.setOnShowListener {
-//            editText.requestFocus()
-//            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-//            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-//        }
-//
-//        dialog.show()
-//    }
-    private fun promptForLotQuantity(productName: String, pickId: Int, productId: Int, lotNumber: String) {
+        dialog.show()
+        // Show keyboard
+        lotNumberInput.requestFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(lotNumberInput, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    private fun promptForLotQuantity(productName: String, pickId: Int, productId: Int, lotNumber: String, location: String) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
             hint = "Enter quantity"
@@ -670,17 +929,18 @@ private fun promptForLotNumber(productName: String, pickId: Int, productId: Int)
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Enter Quantity")
-            .setMessage("Enter the quantity for the lot of $productName.")
+            .setMessage("Enter the TOTAL quantity for the lot of $productName.")
             .setView(editText)
             .setPositiveButton("OK") { _, _ ->
                 val enteredQuantity = editText.text.toString().toIntOrNull()
                 if (enteredQuantity != null) {
                     coroutineScope.launch {
                         // Update the quantity for the lot without requiring expiration date
-                        odooXmlRpcClient.updateMoveLinesWithoutExpirationWithLot(pickId, productId, lotNumber, enteredQuantity)
+                        odooXmlRpcClient.updateMoveLinesWithoutExpirationWithLot(pickId, productId, lotNumber, enteredQuantity, location)
                         updateProductMatchState(productId, pickId, matched = false, lotQuantity = enteredQuantity)
                         withContext(Dispatchers.Main) {
                             showGreenToast("Quantity updated for lot.")
+
                         }
                     }
                 } else {
@@ -756,163 +1016,183 @@ private fun promptForLotNumber(productName: String, pickId: Int, productId: Int)
         return super.onOptionsItemSelected(item)
     }
 
-
-
-
-
 //    private fun updateProductMatchState(
 //        productId: Int,
-//        deliveryOrderId: Int,
+//        pickId: Int,
 //        matched: Boolean = false,
 //        serialNumbers: MutableList<String>? = null,
 //        lotQuantity: Int? = null
 //    ) {
-//        val key = ProductPickKey(productId, deliveryOrderId)
+//        val key = ProductPickKey(productId, pickId)
+//        val product = pickProductsAdapter.products.find { it.id == productId }
+//        val expectedQuantity = product?.quantity?.toInt() ?: 0
 //
-//        // Get product and its expected quantity with a fallback to 0 if not found or null
-//        val expectedQuantity = pickProductsAdapter.products.find { it.id == productId }?.quantity?.toInt() ?: 0
-//
-//        // Update match state based on the logic for serialized or lot-tracked products
 //        if (serialNumbers != null) {
-//            // Serialized products logic
 //            quantityMatches[key] = serialNumbers.size == expectedQuantity
+//            // Log to verify match state update
+//            Log.d("MatchState", "Product ID: $productId, Verified: ${serialNumbers.size}/$expectedQuantity")
 //        } else if (lotQuantity != null) {
-//            // Lot products logic
 //            val currentQuantity = lotQuantities.getOrDefault(key, 0) + lotQuantity
 //            lotQuantities[key] = currentQuantity
 //            quantityMatches[key] = currentQuantity >= expectedQuantity
 //        } else {
-//            // For non-serialized and non-lotted products, directly use the matched parameter
 //            quantityMatches[key] = matched
+//
 //        }
 //
-//        // Check if all products are matched after updating the match state
-//        val allProductsMatched = checkAllProductsMatched(deliveryOrderId)
-//
-//        // Save match state to preferences
+//        val allProductsMatched = checkAllProductsMatched(pickId)
 //        saveMatchStateToPreferences(key, quantityMatches[key] == true)
 //
-//        // Update UI accordingly
 //        val position = pickProductsAdapter.findProductPositionById(productId)
 //        if (position != -1) {
 //            runOnUiThread { pickProductsAdapter.notifyItemChanged(position) }
 //        }
+//
 //        if (allProductsMatched) {
 //            coroutineScope.launch {
-//                val validated = odooXmlRpcClient.validateOperation(deliveryOrderId)
+//                val validated = odooXmlRpcClient.validateOperation(pickId)
 //                withContext(Dispatchers.Main) {
 //                    if (validated) {
-////                        Log.d("ProductsActivity", "Receipt validated successfully.")
-//                        showGreenToast("Receipt validated")
-//                        // Redirect to ReceiptsActivity
+//                        showGreenToast("Receipt validated for ${pickId}")
 //                        val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
 //                        startActivity(intent)
-//                        finish() // Optional: if you want to remove the current activity from the stack
+//                        finish()
 //                    } else {
-////                        Log.e("ProductsActivity", "Failed to validate receipt.")
 //                        showRedToast("Failed to validate receipt")
 //                    }
 //                }
 //            }
 //        }
-//
 //    }
+private fun updateProductMatchState(
+    productId: Int,
+    pickId: Int,
+    matched: Boolean = false,
+    serialNumbers: MutableList<String>? = null,
+    lotQuantity: Int? = null,
+    enteredQuantity: Double? = null // Use Double for finer quantity control
+) {
+    val key = ProductPickKey(productId, pickId)
+    val product = pickProductsAdapter.products.find { it.id == productId }
+    val expectedQuantity = product?.quantity?.toDouble() ?: 0.0 // Convert to Double for consistency
 
-    private fun updateProductMatchState(
-        productId: Int,
-        pickId: Int,
-        matched: Boolean = false,
-        serialNumbers: MutableList<String>? = null,
-        lotQuantity: Int? = null
-    ) {
-        val key = ProductPickKey(productId, pickId)
-        val product = pickProductsAdapter.products.find { it.id == productId }
-        val expectedQuantity = product?.quantity?.toInt() ?: 0
-
-        if (serialNumbers != null) {
-            quantityMatches[key] = serialNumbers.size == expectedQuantity
-            // Log to verify match state update
-            Log.d("MatchState", "Product ID: $productId, Verified: ${serialNumbers.size}/$expectedQuantity")
-        } else if (lotQuantity != null) {
+    when {
+        serialNumbers != null -> {
+            // Handling for serial-numbered products
+            quantityMatches[key] = serialNumbers.size.toDouble() == expectedQuantity
+        }
+        lotQuantity != null -> {
+            // Handling for lot-numbered products
             val currentQuantity = lotQuantities.getOrDefault(key, 0) + lotQuantity
             lotQuantities[key] = currentQuantity
-            quantityMatches[key] = currentQuantity >= expectedQuantity
-        } else {
+            quantityMatches[key] = currentQuantity.toDouble() == expectedQuantity
+        }
+        enteredQuantity != null -> {
+            // Handling for untracked products
+            val totalQuantity = accumulatedQuantities.getOrDefault(productId, 0.0) + enteredQuantity
+            accumulatedQuantities[productId] = totalQuantity
+            quantityMatches[key] = totalQuantity == expectedQuantity
+
+
+        }
+        else -> {
             quantityMatches[key] = matched
-
         }
+    }
 
-        val allProductsMatched = checkAllProductsMatched(pickId)
-        saveMatchStateToPreferences(key, quantityMatches[key] == true)
+    val allProductsMatched = checkAllProductsMatched(pickId)
+    saveMatchStateToPreferences(key, quantityMatches[key] == true)
 
-        val position = pickProductsAdapter.findProductPositionById(productId)
-        if (position != -1) {
-            runOnUiThread { pickProductsAdapter.notifyItemChanged(position) }
-        }
+    val position = pickProductsAdapter.findProductPositionById(productId)
+    if (position != -1) {
+        runOnUiThread { pickProductsAdapter.notifyItemChanged(position) }
+    }
 
-        if (allProductsMatched) {
-            coroutineScope.launch {
-                val validated = odooXmlRpcClient.validateOperation(pickId)
-                withContext(Dispatchers.Main) {
-                    if (validated) {
-                        showGreenToast("Receipt validated")
-                        val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
-                        startActivity(intent)
-                        finish()
-                    } else {
-                        showRedToast("Failed to validate receipt")
-                    }
+    if (allProductsMatched) {
+        coroutineScope.launch {
+            val validated = odooXmlRpcClient.validateOperation(pickId)
+            withContext(Dispatchers.Main) {
+                if (validated) {
+                    showGreenToast("Receipt validated for ${pickId}")
+                    val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
+                    startActivity(intent)
+                    finish()
+                } else {
+                    showRedToast("Failed to validate receipt")
                 }
             }
         }
     }
+}
 
 
-    private fun checkAllProductsMatched(deliveryOrderId: Int): Boolean {
+
+    private fun checkAllProductsMatched(pickId: Int): Boolean {
         // Filter the quantityMatches for the current receiptId
-        return quantityMatches.filter { it.key.DeliveryOrderId == deliveryOrderId }.all { it.value }
+        return quantityMatches.filter { it.key.pickId == pickId }.all { it.value }
     }
 
 
     private fun saveMatchStateToPreferences(key: ProductPickKey, matched: Boolean) {
         val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
-            putBoolean("${key.productId}_${key.DeliveryOrderId}", matched)
+            putBoolean("${key.productId}_${key.pickId}", matched)
             apply()
         }
     }
 
-    private fun loadMatchStatesFromPreferences(deliveryOrderId: Int) {
+    private fun loadMatchStatesFromPreferences(pickId: Int) {
         val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
         val tempQuantityMatches = mutableMapOf<ProductPickKey, Boolean>()
 
+//        sharedPref.all.forEach { (prefKey, value) ->
+//            if (value is Boolean) {
+//                val parts = prefKey.split("_").let { if (it.size == 2) it else null }
+//                parts?.let {
+//                    try {
+//                        val productId = it[0].toInt()
+//                        val prefPickId = it[1].toInt()
+//                        if (prefPickId == pickId) {
+//                            val key = ProductPickKey(productId, prefPickId)
+//                            tempQuantityMatches[key] = value
+//                        }
+//                        else{
+//                            Log.e("PickProductsActivity", "Something went wrong.")
+//                        }
+//                    } catch (e: NumberFormatException) {
+//                        Log.e("PickProductsActivity", "Error parsing shared preference key: $prefKey", e)
+//                    }
+//                }
+//            }
         sharedPref.all.forEach { (prefKey, value) ->
             if (value is Boolean) {
-                val parts = prefKey.split("_").let { if (it.size == 2) it else null }
-                parts?.let {
+                val parts = prefKey.split("_")
+                if (parts.size == 2) {
                     try {
-                        val productId = it[0].toInt()
-                        val prefDeliveryOrderId = it[1].toInt()
-                        if (prefDeliveryOrderId == deliveryOrderId) {
-                            val key = ProductPickKey(productId, prefDeliveryOrderId)
+                        val productId = parts[0].toInt()
+                        val prefPickId = parts[1].toInt()
+                        if (prefPickId == pickId) {
+                            val key = ProductPickKey(productId, prefPickId)
                             tempQuantityMatches[key] = value
                         }
-                        else{
-
-                        }
                     } catch (e: NumberFormatException) {
-                        Log.e("ProductsActivity", "Error parsing shared preference key: $prefKey", e)
+                        Log.e("PickProductsActivity", "Error parsing shared preference key: $prefKey", e)
                     }
+                } else {
+                    // This is a better place to log a detailed message about the formatting issue
+                    Log.e("PickProductsActivity", "Incorrectly formatted shared preference key: $prefKey. Expected format: productId_pickId")
                 }
             }
-        }
+
+
+    }
 
         quantityMatches.clear()
         quantityMatches.putAll(tempQuantityMatches)
 
         // Now update the adapter with the loaded match states
         runOnUiThread {
-            pickProductsAdapter.updateProducts(pickProductsAdapter.products, deliveryOrderId, quantityMatches)
+            pickProductsAdapter.updateProducts(pickProductsAdapter.products, pickId, quantityMatches)
         }
     }
 

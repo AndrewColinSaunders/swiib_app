@@ -512,7 +512,7 @@ class ProductsActivity : AppCompatActivity() {
                             }
                         } else {
                             // Logic for handling the quantity update without expiration date
-                            odooXmlRpcClient.updateMoveLinesWithoutExpirationWithLot(receiptId, productId, lotNumber, enteredQuantity)
+//                            odooXmlRpcClient.updateMoveLinesWithoutExpirationWithLot(receiptId, productId, lotNumber, enteredQuantity)
                             updateProductMatchState(productId, receiptId, matched = false, lotQuantity = enteredQuantity)
                             withContext(Dispatchers.Main) {
                                 showGreenToast("Quantity updated for lot without expiration date.")

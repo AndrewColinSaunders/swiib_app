@@ -550,6 +550,8 @@ package com.example.warehousetet
 import IntTransferProducts
 
 import android.util.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 import java.net.URL
@@ -1184,7 +1186,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         }
     }
 //    create_update_move_line_for_pick
-    suspend fun updateMoveLinesForPick(pickingId: Int, productId: Int, serialNumber: String) {
+    suspend fun updateMoveLinesForPick(pickingId: Int, productId: Int, serialNumber: String, location: String) {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesWithoutExpiration.")
@@ -1201,7 +1203,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             password,
             "stock.move.line", // Ensure this matches the model where your method is defined
             "create_update_move_line_for_pick", // Use the adjusted method name that excludes expiration date
-            listOf(pickingId, productId, serialNumber) // Parameters excluding the expiration date
+            listOf(pickingId, productId, serialNumber, location) // Parameters excluding the expiration date
         )
 
         try {
@@ -1250,7 +1252,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         }
     }
 
-    suspend fun updateMoveLinesWithoutExpirationWithLot(pickingId: Int, productId: Int, lotName: String, quantity: Int) {
+    suspend fun updateMoveLinesWithoutExpirationWithLot(pickingId: Int, productId: Int, lotName: String, quantity: Int, location: String) {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesWithoutExpirationWithLot.")
@@ -1267,7 +1269,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             password,
             "stock.move.line",
             "create_update_move_line_lot_without_expiration", // Adjusted method name for lots without expiration
-            listOf(pickingId, productId, lotName, quantity)
+            listOf(pickingId, productId, lotName, quantity, location)
         )
 
         try {
@@ -1282,9 +1284,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         }
     }
 
-
-
-    suspend fun validateOperation(packingId: Int): Boolean {
+    suspend fun validateOperation(pickingId: Int): Boolean {
         return try {
             val username = credentialManager.getUsername()
             val password = credentialManager.getPassword()
@@ -1307,10 +1307,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                 return false
             }
 
-            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(packingId)))
+            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(pickingId)))
 
             client.execute("execute_kw", validateParams).let {
-                Log.d("OdooXmlRpcClient", "Picking validated successfully.")
+                Log.d("OdooXmlRpcClient", "Picking validated successfully. ${pickingId}")
                 return true
             }
         } catch (e: Exception) {
@@ -1635,7 +1635,32 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
 }
 
 
+    suspend fun createStockMoveLineForUntrackedProduct(pickingId: Int, productId: Int, quantity: Double, locationName: String): Boolean {
+        return try {
+            val config = getClientConfig("object")
+            val client = XmlRpcClient().also { it.setConfig(config) }
 
+            // Assuming you have these methods or equivalent ways to get the userID and password
+            val userId = credentialManager.getUserId()
+            val password = credentialManager.getPassword() ?: ""
+
+            val params = listOf(
+                Constants.DATABASE,
+                userId,
+                password,
+                "stock.move.line",
+                "create_move_line_for_untracked",  // Method name in your custom module
+                listOf(pickingId, productId, quantity, locationName)
+            )
+
+            val result = client.execute("execute_kw", params) as? Boolean ?: false
+            Log.d("OdooXmlRpcClient", "Stock move line creation result: $result")
+            result
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error creating stock move line for untracked product: ${e.message}", e)
+            false
+        }
+    }
 
 
 }
