@@ -10,7 +10,8 @@ data class Product(
     val quantity: Double,
     val barcode: String? = null,
     val trackingType: String? = null,
-    val useExpirationDate: Boolean? = null
+    val useExpirationDate: Boolean? = null,
+    val serialNumbers: List<String>? = null // Added field for serial numbers
     // Add other fields as necessary
 ) : Parcelable
 

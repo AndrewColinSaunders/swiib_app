@@ -13,4 +13,5 @@
     <color name="cardGrey">#212d40</color>
     <color name="colorPrimary">#6200EE</color>
     <color name="backgroundGrey">#11151c</color>
+    <color name="toDoBlue">#6495ED</color>
 </resources>
