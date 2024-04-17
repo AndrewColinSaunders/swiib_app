@@ -4,8 +4,10 @@ import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
 import android.view.View
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -24,6 +26,7 @@ class PackProductsActivity : AppCompatActivity() {
     private var currentProductName: String? = null
     private val packagedMoveLines = mutableListOf<PackagedMovedLine>()
     private lateinit var barcodeInput: EditText
+
 
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
 
@@ -55,6 +58,8 @@ class PackProductsActivity : AppCompatActivity() {
         val validateButton = findViewById<Button>(R.id.validateOperationButton)
         barcodeInput = findViewById(R.id.packBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
+
+
 
         packProductsAdapter = PackProductsAdapter(emptyList(), packId, packagedMoveLines)
         findViewById<RecyclerView>(R.id.packProductsRecyclerView).apply {
@@ -163,6 +168,7 @@ class PackProductsActivity : AppCompatActivity() {
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
+        val packageSpinner = dialogView.findViewById<Spinner>(R.id.packageSpinner)
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Package Options")
@@ -201,12 +207,21 @@ class PackProductsActivity : AppCompatActivity() {
             }
         }
 
-        addToPackageButton.apply {
-            text = "Add to Package"
-            setBackgroundColor(ContextCompat.getColor(context, R.color.toDoBlue))
-            setOnClickListener {
-                // Implement add to existing package logic here
-                dialog.dismiss()
+        addToPackageButton.setOnClickListener {
+            lifecycleScope.launch(Dispatchers.IO) {  // Use Dispatchers.IO to enforce background execution
+                try {
+                    val packages = odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
+                    withContext(Dispatchers.Main) {  // Switch back to the main thread to update UI
+                        val adapter = ArrayAdapter(this@PackProductsActivity, android.R.layout.simple_spinner_dropdown_item, packages.map { it.name })
+                        packageSpinner.adapter = adapter
+                        packageSpinner.visibility = View.VISIBLE
+                    }
+                } catch (e: Exception) {
+                    Log.e("PackageDialog", "Error fetching packages: ${e.localizedMessage}")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@PackProductsActivity, "Failed to fetch packages", Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
 
@@ -230,10 +245,6 @@ class PackProductsActivity : AppCompatActivity() {
         val editor = getSharedPreferences("PackPrefs", MODE_PRIVATE).edit()
         val packagedIds = packagedMoveLines.map { it.moveLineId }.joinToString(",")
         editor.putString("packagedIds", packagedIds)
-
-        val validateButtonVisible = findViewById<Button>(R.id.validateOperationButton).visibility == View.VISIBLE
-        editor.putBoolean("validateButtonVisible", validateButtonVisible)
-
         editor.apply()
     }
 
@@ -245,15 +256,10 @@ class PackProductsActivity : AppCompatActivity() {
                 prefs.getString("packagedIds", "") ?: ""
             }
 
-            val validateButtonVisible = prefs.getBoolean("validateButtonVisible", false)
-
             if (packagedIds.isNotEmpty()) {
                 packagedMoveLines.clear()
                 packagedMoveLines.addAll(packagedIds.split(",").map { PackagedMovedLine(it.toInt()) })
                 updateUIForMoveLines(packProductsAdapter.moveLines) // Update the UI once data is loaded
-
-                // Apply the saved visibility state to the validate button
-                findViewById<Button>(R.id.validateOperationButton).visibility = if (validateButtonVisible) View.VISIBLE else View.GONE
             }
         }
     }
@@ -263,6 +269,6 @@ class PackProductsActivity : AppCompatActivity() {
             packagedMoveLines.any { it.moveLineId == moveLine.id }
         }
         findViewById<Button>(R.id.validateOperationButton).visibility = if (allPackaged) View.VISIBLE else View.GONE
-        savePackagedIds()
+        savePackagedIds() // This call can also be removed if no other state needs to be saved when checking all items
     }
 }

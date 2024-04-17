@@ -1885,4 +1885,56 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
             }
         }
     }
+
+    suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchResultPackagesByPickingId.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(listOf("id", "=", pickingId))
+        val fields = listOf("result_packages")  // Fetching result_packages field
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            val resultPackages = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["result_packages"].toString() else ""
+            parseResultPackages(resultPackages)
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching result packages for picking ID: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    private fun parseResultPackages(packages: String): List<PackageInfo> {
+        return packages.split(", ").mapNotNull { packageString ->
+            val parts = packageString.split(":")
+            if (parts.size == 2) {
+                try {
+                    val packageId = parts[0].toInt()
+                    val packageName = parts[1]
+                    PackageInfo(packageId, packageName)
+                } catch (e: Exception) {
+                    Log.e("parseResultPackages", "Error parsing package info: ${e.localizedMessage}")
+                    null
+                }
+            } else {
+                null
+            }
+        }
+    }
+
 }

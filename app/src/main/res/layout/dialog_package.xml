@@ -13,7 +13,6 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
         android:layout_gravity="center_horizontal" />
 
-
     <EditText
         android:id="@+id/packageInput"
         android:layout_width="match_parent"
@@ -49,4 +48,11 @@
             android:backgroundTint="@color/toDoBlue"
             android:layout_marginStart="10dp" />
     </LinearLayout>
+
+
+    <Spinner
+        android:id="@+id/packageSpinner"
+        android:layout_width="match_parent"
+        android:visibility="gone"
+        android:layout_height="wrap_content"/>
 </LinearLayout>
