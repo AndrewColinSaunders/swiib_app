@@ -1,23 +1,36 @@
 package com.example.warehousetet
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.PorterDuff
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
+import android.view.Menu
 import android.view.View
-import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
-import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.print.PrintHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.*
 import org.apache.xmlrpc.XmlRpcException
+import java.io.File
+import java.io.FileOutputStream
+import com.google.zxing.common.BitMatrix
+import com.google.zxing.MultiFormatWriter
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+
 
 class PackProductsActivity : AppCompatActivity() {
     private lateinit var packProductsAdapter: PackProductsAdapter
@@ -45,6 +58,113 @@ class PackProductsActivity : AppCompatActivity() {
         } else {
             Log.e("PackProductsActivity", "Invalid pack ID passed to PackProductsActivity.")
         }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menuInflater.inflate(R.menu.menu_pack_products, menu)
+        menu?.findItem(R.id.action_print)?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, android.R.color.white), PorterDuff.Mode.SRC_ATOP)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        val subMenu = menu?.findItem(R.id.action_print)?.subMenu
+        subMenu?.clear()
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val packages =  odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
+                withContext(Dispatchers.Main) {
+                    packages.forEach { packageInfo ->
+                        subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
+                            printPackage(packageInfo.name)
+                            true
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("PackageMenu", "Error fetching packages: ${e.localizedMessage}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@PackProductsActivity, "Failed to fetch packages", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        return true
+    }
+
+    private fun printPackage(packageName: String) {
+        createAndPrintBarcode(packageName)
+    }
+
+    private fun createAndPrintBarcode(packageName: String) {
+        val barcodeBitmap = createBarcodeImage(packageName)
+        barcodeBitmap?.let {
+            val fileName = "package_barcode.png"
+            saveBitmapToFile(it, fileName)
+            printBarcode(fileName)
+        }
+    }
+
+    private fun createBarcodeImage(packageName: String): Bitmap? {
+        return try {
+            // Define the dimensions of the barcode itself
+            val barcodeWidth = 1000
+            val barcodeHeight = 400
+
+            // Generating the barcode
+            val bitMatrix: BitMatrix = MultiFormatWriter().encode(
+                packageName,
+                BarcodeFormat.CODE_128,
+                barcodeWidth,
+                barcodeHeight,
+                hashMapOf(EncodeHintType.MARGIN to 10)
+            )
+
+            // Creating a larger bitmap to include the text beneath the barcode
+            val totalHeight = barcodeHeight + 100 // Additional space for the text
+            val bitmap = Bitmap.createBitmap(barcodeWidth, totalHeight, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+
+            // Paint for the barcode
+            val paint = Paint().apply {
+                color = Color.BLACK
+            }
+
+            // Draw the barcode pixels on the new bitmap
+            for (x in 0 until bitMatrix.width) {
+                for (y in 0 until bitMatrix.height) {
+                    paint.color = if (bitMatrix[x, y]) Color.BLACK else Color.WHITE
+                    canvas.drawRect(x.toFloat(), y.toFloat(), x + 1.toFloat(), y + 1.toFloat(), paint)
+                }
+            }
+
+            // Adding the text under the barcode
+            paint.color = Color.BLACK
+            paint.textSize = 40f // Set the text size as needed
+            paint.textAlign = Paint.Align.CENTER
+            canvas.drawText(packageName, barcodeWidth / 2f, barcodeHeight + 60f, paint) // Adjust text position as needed
+
+            bitmap
+        } catch (e: Exception) {
+            Log.e("PackProductsActivity", "Error generating barcode: ${e.localizedMessage}")
+            null
+        }
+    }
+
+    private fun saveBitmapToFile(bitmap: Bitmap, fileName: String) {
+        val file = File(filesDir, fileName)
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+    }
+
+    private fun printBarcode(fileName: String) {
+        val filePath = File(filesDir, fileName).absolutePath
+        val bitmap = BitmapFactory.decodeFile(filePath)
+        val printHelper = PrintHelper(this).apply {
+            scaleMode = PrintHelper.SCALE_MODE_FIT
+        }
+        printHelper.printBitmap("Print Job - Package Barcode", bitmap)
     }
 
 
@@ -168,7 +288,6 @@ class PackProductsActivity : AppCompatActivity() {
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
-        val packageSpinner = dialogView.findViewById<Spinner>(R.id.packageSpinner)
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("Package Options")
@@ -210,20 +329,18 @@ class PackProductsActivity : AppCompatActivity() {
         addToPackageButton.setOnClickListener {
             lifecycleScope.launch(Dispatchers.IO) {  // Use Dispatchers.IO to enforce background execution
                 try {
-                    val packages = odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
-                    withContext(Dispatchers.Main) {  // Switch back to the main thread to update UI
-                        val adapter = ArrayAdapter(this@PackProductsActivity, android.R.layout.simple_spinner_dropdown_item, packages.map { it.name })
-                        packageSpinner.adapter = adapter
-                        packageSpinner.visibility = View.VISIBLE
+                    withContext(Dispatchers.Main) {
+                        dialog.dismiss()
                     }
                 } catch (e: Exception) {
-                    Log.e("PackageDialog", "Error fetching packages: ${e.localizedMessage}")
+                    Log.e("PackageDialog", "Error occurred: ${e.localizedMessage}")
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@PackProductsActivity, "Failed to fetch packages", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PackProductsActivity, "An error occurred", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
+
 
         dialog.show()
     }

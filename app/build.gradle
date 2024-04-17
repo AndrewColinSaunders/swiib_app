@@ -114,7 +114,7 @@ dependencies {
 
     implementation 'com.google.android.material:material:1.4.0'
 
-
-
+    // For barcode printer
+    implementation 'com.google.zxing:core:3.4.1'
 
 }
