@@ -1049,7 +1049,7 @@ class ProductsActivity : AppCompatActivity() {
         }
         if (allProductsMatched) {
             coroutineScope.launch {
-                val validated = odooXmlRpcClient.validateOperation(receiptId)
+                val validated = odooXmlRpcClient.validateOperation(receiptId, this@ProductsActivity)
                 withContext(Dispatchers.Main) {
                     if (validated) {
 //                        Log.d("ProductsActivity", "Receipt validated successfully.")

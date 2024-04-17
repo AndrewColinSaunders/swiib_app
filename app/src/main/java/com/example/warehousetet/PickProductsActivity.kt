@@ -852,7 +852,7 @@ private fun promptForLotNumber(productName: String, pickId: Int, productId: Int)
 
         if (allProductsMatched) {
             coroutineScope.launch {
-                val validated = odooXmlRpcClient.validateOperation(pickId)
+                val validated = odooXmlRpcClient.validateOperation(pickId, this@PickProductsActivity)
                 withContext(Dispatchers.Main) {
                     if (validated) {
                         showGreenToast("Receipt validated")
@@ -1004,10 +1004,5 @@ private fun promptForLotNumber(productName: String, pickId: Int, productId: Int)
 //                .setPositiveButton("OK", null)
 //                .show()
 //        }
-
-
-
-
-
 }
 

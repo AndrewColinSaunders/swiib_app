@@ -65,7 +65,7 @@ class PackProductsActivity : AppCompatActivity() {
         validateButton.setOnClickListener {
             Log.d("ValidationAttempt", "Attempting to validate operation for pack ID: $packId")
             lifecycleScope.launch {
-                if (odooXmlRpcClient.validateOperation(packId)) {
+                if (odooXmlRpcClient.validateOperation(packId, this@PackProductsActivity)) {
                     Toast.makeText(this@PackProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
                 } else {
                     Toast.makeText(this@PackProductsActivity, "Failed to validate operation.", Toast.LENGTH_SHORT).show()
@@ -230,19 +230,30 @@ class PackProductsActivity : AppCompatActivity() {
         val editor = getSharedPreferences("PackPrefs", MODE_PRIVATE).edit()
         val packagedIds = packagedMoveLines.map { it.moveLineId }.joinToString(",")
         editor.putString("packagedIds", packagedIds)
+
+        val validateButtonVisible = findViewById<Button>(R.id.validateOperationButton).visibility == View.VISIBLE
+        editor.putBoolean("validateButtonVisible", validateButtonVisible)
+
         editor.apply()
     }
 
     private fun loadPackagedIds() {
         lifecycleScope.launch {
+            val prefs = getSharedPreferences("PackPrefs", MODE_PRIVATE)
             val packagedIds = withContext(Dispatchers.IO) {
                 val prefs = getSharedPreferences("PackPrefs", MODE_PRIVATE)
                 prefs.getString("packagedIds", "") ?: ""
             }
+
+            val validateButtonVisible = prefs.getBoolean("validateButtonVisible", false)
+
             if (packagedIds.isNotEmpty()) {
                 packagedMoveLines.clear()
                 packagedMoveLines.addAll(packagedIds.split(",").map { PackagedMovedLine(it.toInt()) })
                 updateUIForMoveLines(packProductsAdapter.moveLines) // Update the UI once data is loaded
+
+                // Apply the saved visibility state to the validate button
+                findViewById<Button>(R.id.validateOperationButton).visibility = if (validateButtonVisible) View.VISIBLE else View.GONE
             }
         }
     }
@@ -252,5 +263,6 @@ class PackProductsActivity : AppCompatActivity() {
             packagedMoveLines.any { it.moveLineId == moveLine.id }
         }
         findViewById<Button>(R.id.validateOperationButton).visibility = if (allPackaged) View.VISIBLE else View.GONE
+        savePackagedIds()
     }
 }

@@ -1793,6 +1793,7 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
                 client.setConfig(config)
 
                 val userId = login(username, password) // Ensure login also follows correct threading
+                Log.d("UserId", "UserId Before putting item in pacakge. UserId: $userId")
                 if (userId <= 0) {
                     Log.e("OdooXmlRpcClient", "Login failed, cannot execute button.")
                     withContext(Dispatchers.Main) {
@@ -1829,39 +1830,59 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
         }
     }
 
-    suspend fun validateOperation(packingId: Int): Boolean {
-        return try {
-            val username = credentialManager.getUsername()
-            val password = credentialManager.getPassword()
+    suspend fun validateOperation(packingId: Int, context: Context): Boolean {
+        return withContext(Dispatchers.IO) { // Use IO dispatcher for network operations
+            try {
+                val username = credentialManager.getUsername()
+                val password = credentialManager.getPassword()
 
-            if (username == null || password == null) {
-                Log.e("OdooXmlRpcClient", "Credentials are null, aborting actionPutInPack.")
-                return false
+                if (username == null || password == null) {
+                    Log.e("OdooXmlRpcClient", "Credentials are null, aborting validation.")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Validation aborted: User credentials are missing.", Toast.LENGTH_LONG).show()
+                    }
+                    return@withContext false
+                }
+
+                val db = Constants.DATABASE
+                val config = XmlRpcClientConfigImpl().apply {
+                    serverURL = URL("${Constants.URL}xmlrpc/2/object")
+                }
+
+                val client = XmlRpcClient()
+                client.setConfig(config)
+
+                val userId = login(username, password)
+                Log.d("OdooXmlRpcClient", "User ID before trying to validate: $userId")
+                if (userId <= 0) {
+                    Log.e("OdooXmlRpcClient", "Login failed, cannot execute validation.")
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Login failed: Cannot authenticate user.", Toast.LENGTH_LONG).show()
+                    }
+                    return@withContext false
+                }
+
+                val validateParams = listOf(
+                    db, userId, password, "stock.picking", "button_validate", listOf(listOf(packingId))
+                )
+
+                client.execute("execute_kw", validateParams).let {
+                    Log.d("OdooXmlRpcClient", "Picking validated successfully.")
+                    return@withContext true
+                }
+            } catch (e: XmlRpcException) {
+                Log.e("OdooXmlRpcClient", "XML-RPC error during validation: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Error during validation: ${e.localizedMessage}.", Toast.LENGTH_LONG).show()
+                }
+                false
+            } catch (e: Exception) {
+                Log.e("OdooXmlRpcClient", "General error during validation: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(context, "Unexpected error occurred: ${e.localizedMessage}.", Toast.LENGTH_LONG).show()
+                }
+                false
             }
-
-            val db = Constants.DATABASE
-            val config = XmlRpcClientConfigImpl().apply {
-                serverURL = URL("${Constants.URL}xmlrpc/2/object")
-            }
-
-            val client = XmlRpcClient()
-            client.setConfig(config)
-
-            val userId = login(username, password)
-            if (userId <= 0) {
-                Log.e("OdooXmlRpcClient", "Login failed, cannot execute button.")
-                return false
-            }
-
-            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(packingId)))
-
-            client.execute("execute_kw", validateParams).let {
-                Log.d("OdooXmlRpcClient", "Picking validated successfully.")
-                return true
-            }
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error during changePickState: ${e.message}", e)
-            false
         }
     }
 }
