@@ -23,6 +23,7 @@ class PackProductsActivity : AppCompatActivity() {
     private var lastScannedBarcode: String = ""
     private var currentProductName: String? = null
     private val packagedMoveLines = mutableListOf<PackagedMovedLine>()
+    private lateinit var barcodeInput: EditText
 
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
 
@@ -31,6 +32,8 @@ class PackProductsActivity : AppCompatActivity() {
         setContentView(R.layout.pack_activity_products)
 
         loadPackagedIds()
+
+        Log.d("PackProductsActivity", "Activity created with pack ID: $packId")
 
         odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
         initializeUI()
@@ -47,8 +50,11 @@ class PackProductsActivity : AppCompatActivity() {
     private fun initializeUI() {
         val packName = intent.getStringExtra("PACK_NAME") ?: "Pack"
         supportActionBar?.title = packName
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         val validateButton = findViewById<Button>(R.id.validateOperationButton)
+        barcodeInput = findViewById(R.id.packBarcodeInput)
+        val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
 
         packProductsAdapter = PackProductsAdapter(emptyList(), packId, packagedMoveLines)
         findViewById<RecyclerView>(R.id.packProductsRecyclerView).apply {
@@ -67,8 +73,13 @@ class PackProductsActivity : AppCompatActivity() {
             }
         }
 
-
-        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        packConfirmButton.setOnClickListener {
+            val typedBarcode = barcodeInput.text.toString()
+            if (typedBarcode.isNotEmpty()) {
+                verifyProductBarcode(currentProductName, typedBarcode)
+                barcodeInput.text.clear()  // Clear the barcode input after processing
+            }
+        }
     }
 
     private fun fetchMoveLinesForPickingId() = lifecycleScope.launch {
