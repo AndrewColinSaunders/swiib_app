@@ -20,7 +20,7 @@
             android:text="Product Name"
             android:textAppearance="@style/TextAppearance.AppCompat.Large"
             android:textStyle="bold"
-             />
+            />
 
         <TextView
             android:id="@+id/pickProductQuantityTextView"
@@ -29,12 +29,28 @@
             android:text="Quantity"
             android:layout_marginTop="4dp"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-             />
+            />
         <TextView
-            android:id="@+id/pickProductTrackingTypeTextView"
+            android:id="@+id/pickProductLocationTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tracking"
+            android:text="Source Location"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            />
+        <TextView
+            android:id="@+id/pickProductDestLocationView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Destination Location"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+            />
+        <TextView
+            android:id="@+id/pickProductLotView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Lot/serial Number"
             android:layout_marginTop="4dp"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
             />
@@ -45,15 +61,53 @@
 
 
     <!--<?xml version="1.0" encoding="utf-8"?>-->
-<!--<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"-->
+    <!--<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"-->
+    <!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
+    <!--    android:layout_width="match_parent"-->
+    <!--    android:layout_height="wrap_content"-->
+    <!--    android:layout_margin="8dp"-->
+    <!--    app:cardElevation="4dp"-->
+    <!--    app:cardCornerRadius="8dp"-->
+    <!--    android:backgroundTint="#212d40"-->
+    <!--    android:id="@+id/doProductItemCard"> &lt;!&ndash; Adjust card background color &ndash;&gt;-->
+
+    <!--    <LinearLayout-->
+    <!--        android:layout_width="match_parent"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:orientation="vertical"-->
+    <!--        android:padding="16dp">-->
+
+    <!--        <TextView-->
+    <!--            android:id="@+id/doProductNameTextView"-->
+    <!--            android:layout_width="match_parent"-->
+    <!--            android:layout_height="wrap_content"-->
+    <!--            android:text="Product Name"-->
+    <!--            android:textAppearance="@style/TextAppearance.AppCompat.Large"-->
+    <!--            android:textColor="@android:color/white" /> &lt;!&ndash; Set text color &ndash;&gt;-->
+
+    <!--        <TextView-->
+    <!--            android:id="@+id/doProductQuantityTextView"-->
+    <!--            android:layout_width="match_parent"-->
+    <!--            android:layout_height="wrap_content"-->
+    <!--            android:text="Quantity"-->
+    <!--            android:layout_marginTop="4dp"-->
+    <!--            android:textAppearance="@style/TextAppearance.AppCompat.Medium"-->
+    <!--            android:textColor="@android:color/white" /> &lt;!&ndash; Set text color &ndash;&gt;-->
+    <!--    </LinearLayout>-->
+    <!--</com.google.android.material.card.MaterialCardView>-->
+
+
+
+
+
+    <!--<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"-->
 <!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
 <!--    android:layout_width="match_parent"-->
 <!--    android:layout_height="wrap_content"-->
 <!--    android:layout_margin="8dp"-->
 <!--    app:cardElevation="4dp"-->
 <!--    app:cardCornerRadius="8dp"-->
-<!--    android:backgroundTint="#212d40"-->
-<!--    android:id="@+id/doProductItemCard"> &lt;!&ndash; Adjust card background color &ndash;&gt;-->
+<!--    android:id="@+id/doProductItemCard"> &lt;!&ndash; Removed backgroundTint attribute &ndash;&gt;-->
 
 <!--    <LinearLayout-->
 <!--        android:layout_width="match_parent"-->
@@ -62,20 +116,76 @@
 <!--        android:padding="16dp">-->
 
 <!--        <TextView-->
-<!--            android:id="@+id/doProductNameTextView"-->
+<!--            android:id="@+id/pickProductNameTextView"-->
 <!--            android:layout_width="match_parent"-->
 <!--            android:layout_height="wrap_content"-->
 <!--            android:text="Product Name"-->
 <!--            android:textAppearance="@style/TextAppearance.AppCompat.Large"-->
-<!--            android:textColor="@android:color/white" /> &lt;!&ndash; Set text color &ndash;&gt;-->
+<!--            android:textStyle="bold"-->
+<!--             />-->
 
 <!--        <TextView-->
-<!--            android:id="@+id/doProductQuantityTextView"-->
+<!--            android:id="@+id/pickProductQuantityTextView"-->
 <!--            android:layout_width="match_parent"-->
 <!--            android:layout_height="wrap_content"-->
 <!--            android:text="Quantity"-->
 <!--            android:layout_marginTop="4dp"-->
 <!--            android:textAppearance="@style/TextAppearance.AppCompat.Medium"-->
-<!--            android:textColor="@android:color/white" /> &lt;!&ndash; Set text color &ndash;&gt;-->
+<!--             />-->
+<!--        <TextView-->
+<!--            android:id="@+id/pickProductTrackingTypeTextView"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Tracking"-->
+<!--            android:layout_marginTop="4dp"-->
+<!--            android:textAppearance="@style/TextAppearance.AppCompat.Medium"-->
+<!--            />-->
+<!--        <TextView-->
+<!--            android:id="@+id/pickProductLocationView"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Location"-->
+<!--            android:layout_marginTop="4dp"-->
+<!--            android:textAppearance="@style/TextAppearance.AppCompat.Medium"-->
+<!--            />-->
 <!--    </LinearLayout>-->
 <!--</com.google.android.material.card.MaterialCardView>-->
+
+
+
+
+<!--    &lt;!&ndash;<?xml version="1.0" encoding="utf-8"?>&ndash;&gt;-->
+<!--&lt;!&ndash;<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"&ndash;&gt;-->
+<!--&lt;!&ndash;    xmlns:app="http://schemas.android.com/apk/res-auto"&ndash;&gt;-->
+<!--&lt;!&ndash;    android:layout_width="match_parent"&ndash;&gt;-->
+<!--&lt;!&ndash;    android:layout_height="wrap_content"&ndash;&gt;-->
+<!--&lt;!&ndash;    android:layout_margin="8dp"&ndash;&gt;-->
+<!--&lt;!&ndash;    app:cardElevation="4dp"&ndash;&gt;-->
+<!--&lt;!&ndash;    app:cardCornerRadius="8dp"&ndash;&gt;-->
+<!--&lt;!&ndash;    android:backgroundTint="#212d40"&ndash;&gt;-->
+<!--&lt;!&ndash;    android:id="@+id/doProductItemCard"> &lt;!&ndash; Adjust card background color &ndash;&gt;&ndash;&gt;-->
+
+<!--&lt;!&ndash;    <LinearLayout&ndash;&gt;-->
+<!--&lt;!&ndash;        android:layout_width="match_parent"&ndash;&gt;-->
+<!--&lt;!&ndash;        android:layout_height="wrap_content"&ndash;&gt;-->
+<!--&lt;!&ndash;        android:orientation="vertical"&ndash;&gt;-->
+<!--&lt;!&ndash;        android:padding="16dp">&ndash;&gt;-->
+
+<!--&lt;!&ndash;        <TextView&ndash;&gt;-->
+<!--&lt;!&ndash;            android:id="@+id/doProductNameTextView"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:layout_width="match_parent"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:layout_height="wrap_content"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:text="Product Name"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:textAppearance="@style/TextAppearance.AppCompat.Large"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:textColor="@android:color/white" /> &lt;!&ndash; Set text color &ndash;&gt;&ndash;&gt;-->
+
+<!--&lt;!&ndash;        <TextView&ndash;&gt;-->
+<!--&lt;!&ndash;            android:id="@+id/doProductQuantityTextView"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:layout_width="match_parent"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:layout_height="wrap_content"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:text="Quantity"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:layout_marginTop="4dp"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:textAppearance="@style/TextAppearance.AppCompat.Medium"&ndash;&gt;-->
+<!--&lt;!&ndash;            android:textColor="@android:color/white" /> &lt;!&ndash; Set text color &ndash;&gt;&ndash;&gt;-->
+<!--&lt;!&ndash;    </LinearLayout>&ndash;&gt;-->
+<!--&lt;!&ndash;</com.google.android.material.card.MaterialCardView>&ndash;&gt;-->

@@ -550,48 +550,94 @@ package com.example.warehousetet
 import IntTransferProducts
 
 import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
+import java.net.MalformedURLException
 import java.net.URL
 
 
 
 class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 
-    fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
-        return try {
-            val fullUrl = "${Constants.URL}/xmlrpc/2/$endpoint"
-            Log.d("OdooXmlRpcClient", "Connecting to: $fullUrl")
-            XmlRpcClientConfigImpl().apply {
-                serverURL = URL(fullUrl)
-            }.also {
-                Log.d("OdooXmlRpcClient", "Config set with URL: ${it.serverURL}")
-            }
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error setting up client config: ${e.localizedMessage}")
-            null
+//    private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
+//        return try {
+//            val fullUrl = "${Constants.URL}/xmlrpc/2/$endpoint"
+//            Log.d("OdooXmlRpcClient", "Connecting to: $fullUrl")
+//            XmlRpcClientConfigImpl().apply {
+//                serverURL = URL(fullUrl)
+//            }.also {
+//                Log.d("OdooXmlRpcClient", "Config set with URL: ${it.serverURL}")
+//            }
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error setting up client config: ${e.localizedMessage}")
+//            null
+//        }
+//    }
+private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
+    try {
+        val fullUrl = "${Constants.URL}/xmlrpc/2/$endpoint"
+        Log.d("OdooXmlRpcClient", "Connecting to: $fullUrl")
+        return XmlRpcClientConfigImpl().apply {
+            serverURL = URL(fullUrl)
+            Log.d("OdooXmlRpcClient", "Config set with URL: $serverURL")
         }
+    } catch (e: MalformedURLException) {
+        Log.e("OdooXmlRpcClient", "Malformed URL Exception: ${e.localizedMessage}")
+    } catch (e: Exception) {
+        Log.e("OdooXmlRpcClient", "Error setting up client config: ${e.localizedMessage}")
     }
+    return null
+}
 
+
+    //    suspend fun login(username: String, password: String): Int {
+//        return try {
+//            val config = getClientConfig("common")
+//            if (config == null) {
+//                Log.e("OdooXmlRpcClient", "Client configuration is null, aborting login.")
+//                return -1
+//            }
+//            val client = XmlRpcClient().also { it.setConfig(config) }
+//            val params = listOf(Constants.DATABASE, username, password, emptyMap<String, Any>())
+//            val result = client.execute("authenticate", params) as Int
+//            Log.d("OdooXmlRpcClient", "Raw server response for login: $result")
+//            if (result > 0) credentialManager.storeUserCredentials(username, password, result)
+//            result
+//            Log.d("OdooXmlRpcClient", "UserId: $result")
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error during login: ${e.localizedMessage}")
+//            -1
+//        }
+//    }
     suspend fun login(username: String, password: String): Int {
-        return try {
+        try {
             val config = getClientConfig("common")
             if (config == null) {
                 Log.e("OdooXmlRpcClient", "Client configuration is null, aborting login.")
                 return -1
             }
+
             val client = XmlRpcClient().also { it.setConfig(config) }
-            val params = listOf(Constants.DATABASE, username, password, emptyMap<String, Any>())
-            val result = client.execute("authenticate", params) as Int
-            if (result > 0) credentialManager.storeUserCredentials(username, password, result)
-            result
+            val params = arrayOf(Constants.DATABASE, username, password, emptyMap<String, Any>())
+
+            // Execute the authenticate method and expect an Integer result for userId
+            val result = client.execute("authenticate", params) as? Int ?: -1
+            Log.d("OdooXmlRpcClient", "Received UserID from login attempt: $result")
+
+            if (result > 0) {
+                credentialManager.storeUserCredentials(username, password, result)
+                Log.d("OdooXmlRpcClient", "Login successful with UserID: $result before storing in prefs")
+            } else {
+                Log.e("OdooXmlRpcClient", "Login failed with UserID: $result")
+            }
+
+            return result
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error during login: ${e.localizedMessage}")
-            -1
+            Log.e("OdooXmlRpcClient", "Error during login: ${e.localizedMessage}", e)
+            return -1
         }
     }
+
 
     suspend fun fetchReceipts(): List<Receipt> {
         val config = getClientConfig("object")
@@ -611,7 +657,14 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             listOf("user_id", "=", false), // No responsible user
             listOf("user_id", "=", userId) // Or the current user is the responsible user
         )
-        val fields = listOf("id", "name", "date", "user_id", "state","origin") // Include 'state' if you want to verify it in the result
+        val fields = listOf(
+            "id",
+            "name",
+            "date",
+            "user_id",
+            "state",
+            "origin"
+        ) // Include 'state' if you want to verify it in the result
 
         val params = listOf(
             Constants.DATABASE,
@@ -650,7 +703,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     suspend fun fetchProductsForReceipt(receiptId: Int): List<Product> {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForReceipt.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting fetchProductsForReceipt."
+            )
             return emptyList()
         }
         val client = XmlRpcClient().also { it.setConfig(config) }
@@ -671,10 +727,15 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            val productsSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["product_summary"].toString() else ""
+            val productsSummary =
+                if (result.isNotEmpty()) (result[0] as Map<String, Any>)["product_summary"].toString() else ""
             parseProductSummary(productsSummary)
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching products for receipt: ${e.localizedMessage}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching products for receipt: ${e.localizedMessage}",
+                e
+            )
             emptyList()
         }
     }
@@ -760,7 +821,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<String?, Boolean?>? {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductTrackingAndExpirationByName.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting fetchProductTrackingAndExpirationByName."
+            )
             return null
         }
         val client = XmlRpcClient().also { it.setConfig(config) }
@@ -792,12 +856,16 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                 null
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching product tracking and expiration date: ${e.localizedMessage}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching product tracking and expiration date: ${e.localizedMessage}",
+                e
+            )
             null
         }
     }
 
-//    suspend fun fetchSerialNumbersByProductName(productName: String): List<String>? {
+    //    suspend fun fetchSerialNumbersByProductName(productName: String): List<String>? {
 //        val config = getClientConfig("object") ?: return null
 //        val client = XmlRpcClient().also { it.setConfig(config) }
 //
@@ -863,7 +931,11 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             val serialResults = client.execute("execute_kw", serialParams) as? Array<Any>
             return serialResults?.mapNotNull { (it as? Map<*, *>)?.get("name") as? String }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching serial numbers for product ID $productId: ${e.localizedMessage}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching serial numbers for product ID $productId: ${e.localizedMessage}",
+                e
+            )
             return null
         }
     }
@@ -872,7 +944,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     suspend fun fetchInternalTransfersWithProductDetails(): List<InternalTransfers> {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchInternalTransfers.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting fetchInternalTransfers."
+            )
             return emptyList()
         }
         val client = XmlRpcClient().also { it.setConfig(config) }
@@ -924,7 +999,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                         productDetails = intTransferProductsList
                     )
                 }.also {
-                    Log.d("OdooXmlRpcClient", "Fetched ${it.size} internal transfers with product details.")
+                    Log.d(
+                        "OdooXmlRpcClient",
+                        "Fetched ${it.size} internal transfers with product details."
+                    )
                 }
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error fetching internal transfers: ${e.localizedMessage}", e)
@@ -935,7 +1013,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     private suspend fun fetchProductsForInternalTransfer(transferId: Int): List<Product> {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForInternalTransfer.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting fetchProductsForInternalTransfer."
+            )
             return emptyList()
         }
         val client = XmlRpcClient().also { it.setConfig(config) }
@@ -946,7 +1027,8 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         // The following assumes internal transfers are distinguished within your setup and
         // the `internal_transfer_summary` field exists and is computed for these records.
         val domain = listOf(listOf("id", "=", transferId))
-        val fields = listOf("internal_transfer_summary")  // Use the custom computed field for internal transfers
+        val fields =
+            listOf("internal_transfer_summary")  // Use the custom computed field for internal transfers
 
         val params = listOf(
             Constants.DATABASE,
@@ -961,10 +1043,15 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
             // Extract the internal_transfer_summary for the specified transfer
-            val internalTransferSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["internal_transfer_summary"].toString() else ""
+            val internalTransferSummary =
+                if (result.isNotEmpty()) (result[0] as Map<String, Any>)["internal_transfer_summary"].toString() else ""
             parseInternalTransferSummary(internalTransferSummary)  // You may need to implement or adjust this method
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching products for internal transfer: ${e.localizedMessage}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching products for internal transfer: ${e.localizedMessage}",
+                e
+            )
             emptyList()
         }
     }
@@ -981,7 +1068,11 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                 val productName = parts[1]
                 val productQuantity = parts[2].toDoubleOrNull()  // Convert quantity to Double
                 if (productId != null && productQuantity != null) {
-                    Product(id = productId, name = productName, quantity = productQuantity)  // Including ID in the constructor
+                    Product(
+                        id = productId,
+                        name = productName,
+                        quantity = productQuantity
+                    )  // Including ID in the constructor
                 } else {
                     null  // If conversion fails, exclude this product from the list
                 }
@@ -1012,10 +1103,15 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         )
 
         return try {
-            val result = client.execute("execute_kw", params) as? Array<Map<String, Any>> ?: arrayOf()
+            val result =
+                client.execute("execute_kw", params) as? Array<Map<String, Any>> ?: arrayOf()
             if (result.isNotEmpty()) result[0]["id"] as? Int else null
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching transfer ID for reference $transferReference: ${e.localizedMessage}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching transfer ID for reference $transferReference: ${e.localizedMessage}",
+                e
+            )
             null
         }
     }
@@ -1024,7 +1120,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         Log.d("OdooXmlRpcClient", "Starting fetchAndLogBuyerDetails for pickingName: $pickingName")
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchBuyerDetailsForReceipt.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting fetchBuyerDetailsForReceipt."
+            )
             return null
         }
         Log.d("OdooXmlRpcClient", "Configuration loaded successfully.")
@@ -1066,10 +1165,15 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                 null
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching buyer details for receipt: ${e.localizedMessage}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching buyer details for receipt: ${e.localizedMessage}",
+                e
+            )
             null
         }
     }
+
     private suspend fun fetchUserDetails(userId: Int): BuyerDetails? {
         Log.d("OdooXmlRpcClient", "Starting fetchUserDetails for userId: $userId")
         val config = getClientConfig("object")
@@ -1101,7 +1205,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 
             if (result.isNotEmpty()) {
                 val userDetails = result[0] as Map<String, Any>
-                Log.d("OdooXmlRpcClient", "User details found: ${userDetails["login"]},${userDetails["name"]} ")
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "User details found: ${userDetails["login"]},${userDetails["name"]} "
+                )
 
                 BuyerDetails(
                     id = userId,
@@ -1119,10 +1226,18 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     }
 
 
-    suspend fun updateMoveLinesByPicking(pickingId: Int, productId: Int, serialNumber: String, expirationDate: String?) {
+    suspend fun updateMoveLinesByPicking(
+        pickingId: Int,
+        productId: Int,
+        serialNumber: String,
+        expirationDate: String?
+    ) {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesByPicking.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting updateMoveLinesByPicking."
+            )
             return
         }
 
@@ -1139,7 +1254,12 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             password,
             "stock.move.line", // Assuming this is the model where your custom method is defined
             "create_update_move_line", // The name of your custom method
-            listOf(pickingId, productId, serialNumber, formattedExpirationDate) // Parameters for your custom method
+            listOf(
+                pickingId,
+                productId,
+                serialNumber,
+                formattedExpirationDate
+            ) // Parameters for your custom method
         )
 
         try {
@@ -1150,14 +1270,24 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                 Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record.")
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesByPicking: ${e.localizedMessage}")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error executing updateMoveLinesByPicking: ${e.localizedMessage}"
+            )
         }
     }
 
-    suspend fun updateMoveLinesWithoutExpiration(pickingId: Int, productId: Int, serialNumber: String) {
+    suspend fun updateMoveLinesWithoutExpiration(
+        pickingId: Int,
+        productId: Int,
+        serialNumber: String
+    ) {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesWithoutExpiration.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting updateMoveLinesWithoutExpiration."
+            )
             return
         }
 
@@ -1177,19 +1307,38 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         try {
             val result = client.execute("execute_kw", params) as? Boolean
             if (result == true) {
-                Log.d("OdooXmlRpcClient", "Successfully updated/created stock.move.line record without expiration date.")
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "Successfully updated/created stock.move.line record without expiration date."
+                )
             } else {
-                Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record without expiration date.")
+                Log.e(
+                    "OdooXmlRpcClient",
+                    "Failed to update/create stock.move.line record without expiration date."
+                )
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}"
+            )
         }
     }
-//    create_update_move_line_for_pick
-    suspend fun updateMoveLinesForPick(pickingId: Int, productId: Int, serialNumber: String, location: String) {
+
+    //    create_update_move_line_for_pick
+    suspend fun updateMoveLinesForPick(
+        pickingId: Int,
+        productId: Int,
+        serialNumber: String,
+        destLocation: String,
+        locationId: Int
+    ) {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesWithoutExpiration.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting updateMoveLinesWithoutExpiration."
+            )
             return
         }
 
@@ -1203,24 +1352,49 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             password,
             "stock.move.line", // Ensure this matches the model where your method is defined
             "create_update_move_line_for_pick", // Use the adjusted method name that excludes expiration date
-            listOf(pickingId, productId, serialNumber, location) // Parameters excluding the expiration date
+            listOf(
+                pickingId,
+                productId,
+                serialNumber,
+                destLocation,
+                locationId
+            ) // Parameters excluding the expiration date
         )
 
         try {
             val result = client.execute("execute_kw", params) as? Boolean
             if (result == true) {
-                Log.d("OdooXmlRpcClient", "Successfully updated/created stock.move.line record without expiration date.")
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "Successfully updated/created stock.move.line record without expiration date."
+                )
             } else {
-                Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record without expiration date.")
+                Log.e(
+                    "OdooXmlRpcClient",
+                    "Failed to update/create stock.move.line record without expiration date."
+                )
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}"
+            )
         }
     }
-    suspend fun updateMoveLinesByPickingWithLot(pickingId: Int, productId: Int, lotName: String, quantity: Int, expirationDate: String?) {
+
+    suspend fun updateMoveLinesByPickingWithLot(
+        pickingId: Int,
+        productId: Int,
+        lotName: String,
+        quantity: Int,
+        expirationDate: String?
+    ) {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesByPickingWithLot.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting updateMoveLinesByPickingWithLot."
+            )
             return
         }
 
@@ -1243,19 +1417,37 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         try {
             val result = client.execute("execute_kw", params) as? Boolean
             if (result == true) {
-                Log.d("OdooXmlRpcClient", "Successfully updated/created stock.move.line record with lot.")
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "Successfully updated/created stock.move.line record with lot."
+                )
             } else {
-                Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record with lot.")
+                Log.e(
+                    "OdooXmlRpcClient",
+                    "Failed to update/create stock.move.line record with lot."
+                )
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesByPickingWithLot: ${e.localizedMessage}")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error executing updateMoveLinesByPickingWithLot: ${e.localizedMessage}"
+            )
         }
     }
 
-    suspend fun updateMoveLinesWithoutExpirationWithLot(pickingId: Int, productId: Int, lotName: String, quantity: Int, location: String) {
+    suspend fun updateMoveLinesWithoutExpirationWithLot(
+        pickingId: Int,
+        productId: Int,
+        lotName: String,
+        quantity: Int,
+        location: String
+    ) {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLinesWithoutExpirationWithLot.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting updateMoveLinesWithoutExpirationWithLot."
+            )
             return
         }
 
@@ -1268,19 +1460,28 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             userId,
             password,
             "stock.move.line",
-            "create_update_move_line_lot_without_expiration", // Adjusted method name for lots without expiration
+            "create_update_move_line_lot_without_expiration",
             listOf(pickingId, productId, lotName, quantity, location)
         )
 
         try {
             val result = client.execute("execute_kw", params) as? Boolean
             if (result == true) {
-                Log.d("OdooXmlRpcClient", "Successfully updated/created stock.move.line record without expiration date for lot.")
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "Successfully updated/created stock.move.line record without expiration date for lot."
+                )
             } else {
-                Log.e("OdooXmlRpcClient", "Failed to update/create stock.move.line record without expiration date for lot.")
+                Log.e(
+                    "OdooXmlRpcClient",
+                    "Failed to update/create stock.move.line record without expiration date for lot."
+                )
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error executing updateMoveLinesWithoutExpirationWithLot: ${e.localizedMessage}")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error executing updateMoveLinesWithoutExpirationWithLot: ${e.localizedMessage}"
+            )
         }
     }
 
@@ -1307,7 +1508,14 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                 return false
             }
 
-            val validateParams = listOf(db, userId, password, "stock.picking", "button_validate", listOf(listOf(pickingId)))
+            val validateParams = listOf(
+                db,
+                userId,
+                password,
+                "stock.picking",
+                "button_validate",
+                listOf(listOf(pickingId))
+            )
 
             client.execute("execute_kw", validateParams).let {
                 Log.d("OdooXmlRpcClient", "Picking validated successfully. ${pickingId}")
@@ -1318,6 +1526,53 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             false
         }
     }
+
+
+//    suspend fun validateOperation(pickingId: Int): Boolean {
+//        return try {
+//            val username = credentialManager.getUsername()
+//            val password = credentialManager.getPassword()
+//
+//            if (username == null || password == null) {
+//                Log.e("OdooXmlRpcClient", "Credentials are null, aborting changePickState.")
+//                return false
+//            }
+//
+//            val db = Constants.DATABASE
+//            val config = XmlRpcClientConfigImpl().apply {
+//                serverURL = URL("${Constants.URL}xmlrpc/2/object")
+//            }
+//            val client = XmlRpcClient()
+//            client.setConfig(config)
+//
+//            val userId = login(username, password)
+//            if (userId <= 0) {
+//                Log.e("OdooXmlRpcClient", "Login failed, cannot change pick state.")
+//                return false
+//            }
+//
+//            val validateParams = listOf(
+//                db,
+//                userId,
+//                password,
+//                "stock.picking",
+//                "button_validate",
+//                listOf(listOf(pickingId))
+//            )
+//
+//            client.execute("execute_kw", validateParams).let {
+//                Log.d("OdooXmlRpcClient", "Picking validated successfully. Picking ID: $pickingId")
+//                return true
+//            }
+//        } catch (e: XmlRpcException) {
+//            Log.e("OdooXmlRpcClient", "Odoo returned an error: ${e.message}", e)
+//            false
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error during changePickState: ${e.message}", e)
+//            false
+//        }
+//    }
+
 
 //    suspend fun fetchPicks(): List<Pick> {
 //        val config = getClientConfig("object")
@@ -1368,7 +1623,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 //        }
 //    }
 
-//suspend fun fetchPicks(): List<Pick> {
+    //suspend fun fetchPicks(): List<Pick> {
 //    val config = getClientConfig("object")
 //    if (config == null) {
 //        Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchPicks.")
@@ -1471,6 +1726,8 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         )
 
         return try {
+            Log.d("OdooXmlRpcClient", "Making XML-RPC call with UserID: ${credentialManager.getUserId()}")
+
             val picksResult = client.execute("execute_kw", params) as Array<Any>
             val picks = picksResult.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
                 Pick(
@@ -1496,23 +1753,27 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                     "stock.move.line",
                     "search_read",
                     listOf(moveLineDomain),
-                    mapOf("fields" to moveLineFields, "limit" to 1) // Assuming one move line per pick for simplification
+                    mapOf(
+                        "fields" to moveLineFields,
+                        "limit" to 1
+                    ) // Assuming one move line per pick for simplification
                 )
 
                 val moveLineResult = client.execute("execute_kw", moveLineParams) as Array<Any>
                 val moveLine = moveLineResult.mapNotNull { it as? Map<String, Any> }.firstOrNull()
 
                 pick.locationId = (moveLine?.get("location_id") as? Array<Any>)?.get(1)?.toString()
-                pick.locationDestId = (moveLine?.get("location_dest_id") as? Array<Any>)?.get(1)?.toString()
+                pick.locationDestId =
+                    (moveLine?.get("location_dest_id") as? Array<Any>)?.get(1)?.toString()
             }
 
             // Log the picks with location names
-            picks.forEach { pick ->
-                Log.d(
-                    "OdooXmlRpcClient",
-                    "Pick ID: ${pick.id}, Name: ${pick.name}, Location: ${pick.locationId}, Destination Location: ${pick.locationDestId}"
-                )
-            }
+//            picks.forEach { pick ->
+//                Log.d(
+//                    "fetchPicks OXPC",
+//                    "Pick ID: ${pick.id}, Name: ${pick.name}, Location: ${pick.locationId}, Destination Location: ${pick.locationDestId}"
+//                )
+//            }
 
             picks
         } catch (e: Exception) {
@@ -1524,7 +1785,10 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     suspend fun fetchProductsForDeliveryOrder(deliveryOrderId: Int): List<Product> {
         val config = getClientConfig("object")
         if (config == null) {
-            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchProductsForDeliveryOrder.")
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting fetchProductsForDeliveryOrder."
+            )
             return emptyList()
         }
         val client = XmlRpcClient().also { it.setConfig(config) }
@@ -1545,10 +1809,15 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            val deliveryOrderSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["delivery_order_product_summary"].toString() else ""
+            val deliveryOrderSummary =
+                if (result.isNotEmpty()) (result[0] as Map<String, Any>)["delivery_order_product_summary"].toString() else ""
             parseDelivProductSummary(deliveryOrderSummary)
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error fetching products for delivery order: ${e.localizedMessage}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching products for delivery order: ${e.localizedMessage}",
+                e
+            )
             emptyList()
         }
     }
@@ -1574,7 +1843,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     }
 
 
-//    suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Int? {
+    //    suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Int? {
 //        val config = getClientConfig("object") ?: return null
 //        val client = XmlRpcClient().also { it.setConfig(config) }
 //
@@ -1603,39 +1872,46 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 //            null
 //        }
 //    }
-suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Double?>? {
-    val config = getClientConfig("object") ?: return null
-    val client = XmlRpcClient().also { it.setConfig(config) }
+    suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Double?>? {
+        val config = getClientConfig("object") ?: return null
+        val client = XmlRpcClient().also { it.setConfig(config) }
 
-    val domain = listOf(listOf("barcode", "=", barcode))
-    val fields = listOf("product_id", "qty")
-    val params = listOf(
-        Constants.DATABASE,
-        credentialManager.getUserId(),
-        credentialManager.getPassword() ?: "",
-        "product.packaging",
-        "search_read",
-        listOf(domain),
-        mapOf("fields" to fields)
-    )
+        val domain = listOf(listOf("barcode", "=", barcode))
+        val fields = listOf("product_id", "qty")
+        val params = listOf(
+            Constants.DATABASE,
+            credentialManager.getUserId(),
+            credentialManager.getPassword() ?: "",
+            "product.packaging",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
 
-    return try {
-        val results = client.execute("execute_kw", params) as? Array<Any>
-        if (!results.isNullOrEmpty()) {
-            val packagingData = results[0] as Map<String, Any>
-            // Assuming product_id is stored as an Array[Any] (common in Odoo for many2one fields)
-            val productId = (packagingData["product_id"] as? Array<Any>)?.firstOrNull() as? Int
-            val quantity = packagingData["qty"] as? Double
-            Pair(productId, quantity)
-        } else null
-    } catch (e: Exception) {
-        Log.e("OdooXmlRpcClient", "Error fetching product ID and quantity from packaging barcode: ${e.localizedMessage}")
-        null
+        return try {
+            val results = client.execute("execute_kw", params) as? Array<Any>
+            if (!results.isNullOrEmpty()) {
+                val packagingData = results[0] as Map<String, Any>
+                // Assuming product_id is stored as an Array[Any] (common in Odoo for many2one fields)
+                val productId = (packagingData["product_id"] as? Array<Any>)?.firstOrNull() as? Int
+                val quantity = packagingData["qty"] as? Double
+                Pair(productId, quantity)
+            } else null
+        } catch (e: Exception) {
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error fetching product ID and quantity from packaging barcode: ${e.localizedMessage}"
+            )
+            null
+        }
     }
-}
 
-
-    suspend fun createStockMoveLineForUntrackedProduct(pickingId: Int, productId: Int, quantity: Double, locationName: String): Boolean {
+    suspend fun createStockMoveLineForUntrackedProduct(
+        pickingId: Int,
+        productId: Int,
+        quantity: Double,
+        locationName: String
+    ): Boolean {
         return try {
             val config = getClientConfig("object")
             val client = XmlRpcClient().also { it.setConfig(config) }
@@ -1657,10 +1933,206 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
             Log.d("OdooXmlRpcClient", "Stock move line creation result: $result")
             result
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error creating stock move line for untracked product: ${e.message}", e)
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error creating stock move line for untracked product: ${e.message}",
+                e
+            )
             false
         }
     }
 
+    suspend fun fetchMoveLinesByPickingId(pickingId: Int): List<MoveLine> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchMoveLinesByPickingId.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(listOf("id", "=", pickingId))
+        val fields = listOf("move_lines_summary")  // Assuming this field contains the move lines summary
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            val moveLinesSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["move_lines_summary"].toString() else ""
+            val moveLines = parseMoveLinesSummary(moveLinesSummary)
+
+            // Log each MoveLine
+            moveLines.forEach { moveLine ->
+                Log.d("MoveLineData", "ID: ${moveLine.id}, Product ID: ${moveLine.productId}, Product Name: ${moveLine.productName}, Lot ID: ${moveLine.lotId}, Lot Name: ${moveLine.lotName}, Quantity: ${moveLine.quantity}, LocationId: ${moveLine.locationId}, Location Name:${moveLine.locationName}" +
+                        "Location dest: ${moveLine.locationDestName}")
+            }
+//            Log.d("OdooXmlRpcClient", "Raw server response: ${result.toList()}")
+
+
+            moveLines
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching move lines for picking ID: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
+    private fun parseMoveLinesSummary(summary: String): List<MoveLine> {
+        return summary.split(", ").mapNotNull { lineString ->
+            val parts = lineString.split(":")
+            if (parts.size >= 8) {  // Make sure there are at least 6 parts
+                try {
+                    val productId = parts[0].toInt()
+                    val productName = parts[1]
+                    val lotId = parts[2].takeIf { it.isNotEmpty() && it != "None" }?.toIntOrNull()
+                    val lotName = parts[3].takeIf { it != "None" } ?: ""
+                    val quantity = parts[4].toDouble()
+                    val id = parts[5].toInt()
+                    val locationId = parts.getOrNull(6)?.toIntOrNull() ?: -1  // Optional: Default to -1 if not present
+                    val locationName = parts.getOrNull(7) ?: "Unknown" // Optional: Default to "Unknown" if not present
+                    val locationDestId = parts.getOrNull(8)?.toIntOrNull() ?: -1
+                    val locationDestName = parts.getOrNull(9) ?: "Unknown"
+
+                    MoveLine(
+                        id = id,
+                        productId = productId,
+                        productName = productName,
+                        lotId = lotId,
+                        lotName = lotName,
+                        quantity = quantity,
+                        locationId = locationId,
+                        locationName = locationName,
+                        locationDestId = locationDestId,
+                        locationDestName = locationDestName,
+
+                    )
+                } catch (e: Exception) {
+                    Log.e("parseMoveLinesSummary", "Error parsing move lines summary: ${e.localizedMessage}")
+                    null
+                }
+            } else {
+                null
+            }
+        }
+    }
+
+
+//    suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
+//        val config = getClientConfig("object")
+//        if (config == null) {
+//            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchResultPackagesByPickingId.")
+//            return emptyList()
+//        }
+//        val client = XmlRpcClient().also { it.setConfig(config) }
+//        val userId = credentialManager.getUserId()
+//        val password = credentialManager.getPassword() ?: ""
+//
+//        val domain = listOf(listOf("id", "=", pickingId))
+//        val fields = listOf("result_packages")  // Fetching result_packages field
+//
+//        val params = listOf(
+//            Constants.DATABASE,
+//            userId,
+//            password,
+//            "stock.picking",
+//            "search_read",
+//            listOf(domain),
+//            mapOf("fields" to fields)
+//        )
+//
+//        return try {
+//            val result = client.execute("execute_kw", params) as Array<Any>
+//            val resultPackages = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["result_packages"].toString() else ""
+//            parseResultPackages(resultPackages)
+//
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error fetching result packages for picking ID: ${e.localizedMessage}", e)
+//            emptyList()
+//        }
+//
+//    }
+suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
+    val config = getClientConfig("object")
+    if (config == null) {
+        Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchResultPackagesByPickingId.")
+        return emptyList()
+    }
+    val client = XmlRpcClient().also { it.setConfig(config) }
+    val userId = credentialManager.getUserId()
+    val password = credentialManager.getPassword() ?: ""
+
+    val domain = listOf(listOf("id", "=", pickingId))
+    val fields = listOf("result_packages")  // Fetching result_packages field
+
+    val params = listOf(
+        Constants.DATABASE,
+        userId,
+        password,
+        "stock.picking",
+        "search_read",
+        listOf(domain),
+        mapOf("fields" to fields)
+    )
+
+    Log.d("OdooXmlRpcClient", "Fetching result packages for picking ID: $pickingId with params: $params")
+
+    return try {
+        val result = client.execute("execute_kw", params) as Array<Any>
+        Log.d("OdooXmlRpcClient", "Raw server response for result packages: ${result.toList()}")
+
+        val resultPackages = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["result_packages"].toString() else ""
+        val parsedPackages = parseResultPackages(resultPackages)
+
+        Log.d("OdooXmlRpcClient", "Parsed result packages: $parsedPackages")
+        parsedPackages
+    } catch (e: Exception) {
+        Log.e("OdooXmlRpcClient", "Error fetching result packages for picking ID: ${e.localizedMessage}", e)
+        emptyList()
+    }
+}
+
+    private fun parseResultPackages(packages: String): List<PackageInfo> {
+        return packages.split(", ").mapNotNull { packageString ->
+            val parts = packageString.split(":")
+            if (parts.size == 2) {
+                try {
+                    val packageId = parts[0].toInt()
+                    val packageName = parts[1]
+                    PackageInfo(packageId, packageName)
+                } catch (e: Exception) {
+                    Log.e("parseResultPackages", "Error parsing package info: ${e.localizedMessage}")
+                    null
+                }
+            } else {
+                null
+            }
+        }
+    }
+
+
+
+
+
+
 
 }
+
+
+
+
+
+
+
+
+
+
+
+

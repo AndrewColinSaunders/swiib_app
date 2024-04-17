@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.os.Bundle
+import android.util.Log
 import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
@@ -54,22 +55,39 @@ class LoginActivity : AppCompatActivity() {
             val username = usernameEditText.text.toString()
             val password = passwordEditText.text.toString()
 
+//            coroutineScope.launch {
+//                val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
+//                val userId = odooXmlRpcClient.login(username, password)
+//
+//                withContext(Dispatchers.Main) {
+//                    if (userId > 0) {
+//                        handleLoginSuccess(username, password, userId)
+//                    } else {
+//                        handleLoginFailure("Invalid username or password.")
+//                    }
+//                }
+//            }
             coroutineScope.launch {
                 val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
                 val userId = odooXmlRpcClient.login(username, password)
+                Log.d("OdooXmlRpcClient", "Received UserID from login attempt: $userId")
 
                 withContext(Dispatchers.Main) {
                     if (userId > 0) {
+                        Log.d("OdooXmlRpcClient", "Login successful with UserID: $userId before storing in prefs")
                         handleLoginSuccess(username, password, userId)
+                        Log.d("OdooXmlRpcClient", "Stored UserId: ${credentialManager.getUserId()} after login")
                     } else {
                         handleLoginFailure("Invalid username or password.")
                     }
                 }
             }
+
         }
     }
 
     private fun handleLoginSuccess(username: String, password: String, userId: Int) {
+        Log.d("LoginActivity", "Login success with UserId: $userId")
         val credentialManager = CredentialManager(this)
         credentialManager.storeUserCredentials(username, password, userId)
         showGreenToast("Login successful")

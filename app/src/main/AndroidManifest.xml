@@ -52,6 +52,7 @@
             android:name=".PickProductsActivity"
             android:exported="false"
             android:label="Products"
+            android:windowSoftInputMode="adjustPan"
             android:theme="@style/Theme.WarehouseTet" />
         <activity
             android:name=".HomePageActivity"

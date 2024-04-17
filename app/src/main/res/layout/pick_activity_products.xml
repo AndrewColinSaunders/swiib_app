@@ -6,129 +6,13 @@
     android:padding="16dp"
     android:background="#11151c">
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/locationLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:paddingBottom="15dp">
-
-        <TextView
-            android:id="@+id/fromTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="From:"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
-
-        <TextView
-            android:id="@+id/sourceLocationId"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="From Location"
-            android:textSize="18sp"
-            android:textColor="@color/white"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/fromTitle"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
-        <ImageView
-            android:id="@+id/locationSeparatorIcon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:src="@drawable/arrow_right_long_solid"
-            app:layout_constraintStart_toEndOf="@+id/sourceLocationId"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/destinationLocationId"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"/>
-
-        <TextView
-            android:id="@+id/toTitle"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="To:"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:textColor="@color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"/>
-
-        <TextView
-            android:id="@+id/destinationLocationId"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="To Location"
-            android:textSize="18sp"
-            android:textColor="@color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/toTitle"
-            app:layout_constraintBottom_toBottomOf="parent"/>
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-<!--    <androidx.constraintlayout.widget.ConstraintLayout-->
-<!--        android:id="@+id/locationLayout"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"-->
-<!--        android:paddingTop="15dp"-->
-<!--        android:paddingBottom="20dp">-->
-
-<!--    <TextView-->
-<!--        android:id="@+id/sourceLocationId"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="From Location"-->
-<!--        android:textSize="18sp"-->
-<!--        android:textStyle="bold"-->
-<!--        android:textColor="@color/white"-->
-<!--        app:layout_constraintStart_toStartOf="parent"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        app:layout_constraintEnd_toStartOf="@+id/locationSeparator"/>-->
-<!--        -->
-<!--        <ImageView-->
-<!--            android:id="@+id/locationSeparatorIcon"-->
-<!--            android:layout_width="wrap_content"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:src="@drawable/arrow_right_solid"-->
-<!--            app:layout_constraintStart_toEndOf="@+id/sourceLocationId"-->
-<!--            app:layout_constraintTop_toTopOf="parent"-->
-<!--            app:layout_constraintBottom_toBottomOf="parent"-->
-<!--            app:layout_constraintEnd_toStartOf="@+id/destinationLocationId"-->
-<!--            android:layout_marginStart="8dp"-->
-<!--            android:layout_marginEnd="8dp"/>-->
-<!--    <TextView-->
-<!--        android:id="@+id/destinationLocationId"-->
-<!--        android:layout_width="wrap_content"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="To Location"-->
-<!--        android:textSize="18sp"-->
-<!--        android:textStyle="bold"-->
-<!--        android:textColor="@color/white"-->
-<!--        app:layout_constraintStart_toEndOf="@+id/locationSeparator"-->
-<!--        app:layout_constraintTop_toTopOf="parent"-->
-<!--        app:layout_constraintBottom_toBottomOf="parent"-->
-<!--        app:layout_constraintEnd_toEndOf="parent"/>-->
-
-<!--</androidx.constraintlayout.widget.ConstraintLayout>-->
-
-
     <EditText
         android:id="@+id/pickBarcodeInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Enter barcode"
         android:inputType="text"
-        app:layout_constraintTop_toBottomOf="@id/locationLayout"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="0dp"
@@ -170,4 +54,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="10dp"/>
+
+    <Button
+        android:id="@+id/pickValidateButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Validate Pick"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:backgroundTint="?attr/colorSecondaryVariant"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"/>
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>
