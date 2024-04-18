@@ -39,6 +39,7 @@ class PackProductsActivity : AppCompatActivity() {
     private var currentProductName: String? = null
     private val packagedMoveLines = mutableListOf<PackagedMovedLine>()
     private lateinit var barcodeInput: EditText
+    private var shouldShowPrinterIcon = false
 
 
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
@@ -62,13 +63,22 @@ class PackProductsActivity : AppCompatActivity() {
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_pack_products, menu)
-        menu?.findItem(R.id.action_print)?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, android.R.color.white), PorterDuff.Mode.SRC_ATOP)
+        val printItem = menu?.findItem(R.id.action_print)
+        printItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, android.R.color.white), PorterDuff.Mode.SRC_ATOP)
+        printItem?.isVisible = false  // Ensure it starts as invisible
         return true
+    }
+
+    fun togglePrinterIconVisibility(show: Boolean) {
+        shouldShowPrinterIcon = show
+        invalidateOptionsMenu()  // This will trigger onPrepareOptionsMenu
     }
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         super.onPrepareOptionsMenu(menu)
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
+        val printItem = menu?.findItem(R.id.action_print)
+        printItem?.isVisible = shouldShowPrinterIcon
         subMenu?.clear()
 
         lifecycleScope.launch(Dispatchers.IO) {
@@ -309,7 +319,9 @@ class PackProductsActivity : AppCompatActivity() {
                             val index = packProductsAdapter.moveLines.indexOf(moveLine)
                             savePackagedIds()
                             packProductsAdapter.notifyItemChanged(index)
+                            togglePrinterIconVisibility(true)
                             checkAllItemsPackaged()// Notify adapter to update this item
+                            refreshMenu()
                         } else {
                             Toast.makeText(context, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
                         }
@@ -387,5 +399,9 @@ class PackProductsActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.validateOperationButton).visibility = if (allPackaged) View.VISIBLE else View.GONE
         savePackagedIds() // This call can also be removed if no other state needs to be saved when checking all items
+    }
+
+    private fun refreshMenu() {
+        invalidateOptionsMenu()
     }
 }
