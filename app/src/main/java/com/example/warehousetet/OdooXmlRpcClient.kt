@@ -550,6 +550,7 @@ package com.example.warehousetet
 import IntTransferProducts
 
 import android.util.Log
+import org.apache.xmlrpc.XmlRpcException
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 import java.net.MalformedURLException
@@ -560,18 +561,19 @@ import java.net.URL
 class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 
 //    private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
-//        return try {
+//        try {
 //            val fullUrl = "${Constants.URL}/xmlrpc/2/$endpoint"
 //            Log.d("OdooXmlRpcClient", "Connecting to: $fullUrl")
-//            XmlRpcClientConfigImpl().apply {
+//            return XmlRpcClientConfigImpl().apply {
 //                serverURL = URL(fullUrl)
-//            }.also {
-//                Log.d("OdooXmlRpcClient", "Config set with URL: ${it.serverURL}")
+//                Log.d("OdooXmlRpcClient", "Config set with URL: $serverURL")
 //            }
+//        } catch (e: MalformedURLException) {
+//            Log.e("OdooXmlRpcClient", "Malformed URL Exception: ${e.localizedMessage}")
 //        } catch (e: Exception) {
 //            Log.e("OdooXmlRpcClient", "Error setting up client config: ${e.localizedMessage}")
-//            null
 //        }
+//        return null
 //    }
 private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
     try {
@@ -579,6 +581,8 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         Log.d("OdooXmlRpcClient", "Connecting to: $fullUrl")
         return XmlRpcClientConfigImpl().apply {
             serverURL = URL(fullUrl)
+            isEnabledForExtensions = true  // Enable extensions if needed
+            // This setting is for Python's XMLRPC library. For Java, we need to ensure we are not sending null values as Java's XMLRPC does not have a direct equivalent setting.
             Log.d("OdooXmlRpcClient", "Config set with URL: $serverURL")
         }
     } catch (e: MalformedURLException) {
@@ -588,7 +592,6 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
     }
     return null
 }
-
 
     //    suspend fun login(username: String, password: String): Int {
 //        return try {
@@ -1485,47 +1488,97 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         }
     }
 
+//    suspend fun validateOperation(pickingId: Int): Boolean {
+//        return try {
+//            val username = credentialManager.getUsername()
+//            val password = credentialManager.getPassword()
+//
+//            if (username == null || password == null) {
+//                Log.e("OdooXmlRpcClient", "Credentials are null, aborting changePickState.")
+//                return false
+//            }
+//
+//            val db = Constants.DATABASE
+//            val config = XmlRpcClientConfigImpl().apply {
+//                serverURL = URL("${Constants.URL}xmlrpc/2/object")
+//            }
+//            val client = XmlRpcClient()
+//            client.setConfig(config)
+//
+//            val userId = login(username, password)
+//            if (userId <= 0) {
+//                Log.e("OdooXmlRpcClient", "Login failed, cannot change pick state.")
+//                return false
+//            }
+//
+//            val validateParams = listOf(
+//                db,
+//                userId,
+//                password,
+//                "stock.picking",
+//                "button_validate",
+//                listOf(listOf(pickingId))
+//            )
+//
+//            client.execute("execute_kw", validateParams).let {
+//                Log.d("OdooXmlRpcClient", "Picking validated successfully. ${pickingId}")
+//                return true
+//            }
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error during changePickState: ${e.message}", e)
+//            false
+//        }
+//    }
     suspend fun validateOperation(pickingId: Int): Boolean {
+        val username = credentialManager.getUsername()
+        val password = credentialManager.getPassword()
+
+        if (username == null || password == null) {
+            Log.e("OdooXmlRpcClient", "Credentials are null, aborting changePickState.")
+            return false
+        }
+
+        val db = Constants.DATABASE
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "XML RPC Client configuration is null.")
+            return false
+        }
+
+        val client = XmlRpcClient().apply {
+            setConfig(config)
+        }
+
+        val userId = login(username, password)
+        if (userId <= 0) {
+            Log.e("OdooXmlRpcClient", "Login failed, cannot change pick state.")
+            return false
+        }
+
+        val validateParams = listOf(
+            db,
+            userId,
+            password,
+            "stock.picking",
+            "button_validate",
+            listOf(pickingId)  // Ensure this is correctly populated and not null
+        )
+
+        validateParams.forEach {
+            if (it == null) Log.e("OdooXmlRpcClient", "Null found in validateParams: $validateParams")
+        }
+
         return try {
-            val username = credentialManager.getUsername()
-            val password = credentialManager.getPassword()
-
-            if (username == null || password == null) {
-                Log.e("OdooXmlRpcClient", "Credentials are null, aborting changePickState.")
-                return false
-            }
-
-            val db = Constants.DATABASE
-            val config = XmlRpcClientConfigImpl().apply {
-                serverURL = URL("${Constants.URL}xmlrpc/2/object")
-            }
-            val client = XmlRpcClient()
-            client.setConfig(config)
-
-            val userId = login(username, password)
-            if (userId <= 0) {
-                Log.e("OdooXmlRpcClient", "Login failed, cannot change pick state.")
-                return false
-            }
-
-            val validateParams = listOf(
-                db,
-                userId,
-                password,
-                "stock.picking",
-                "button_validate",
-                listOf(listOf(pickingId))
-            )
-
-            client.execute("execute_kw", validateParams).let {
-                Log.d("OdooXmlRpcClient", "Picking validated successfully. ${pickingId}")
-                return true
-            }
+            val result = client.execute("execute_kw", validateParams) as? Boolean
+            result ?: false  // Default to false if null or non-Boolean was returned
         } catch (e: Exception) {
             Log.e("OdooXmlRpcClient", "Error during changePickState: ${e.message}", e)
             false
         }
     }
+
+
+
 
 
 //    suspend fun validateOperation(pickingId: Int): Boolean {
@@ -2059,45 +2112,45 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
 //        }
 //
 //    }
-suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
-    val config = getClientConfig("object")
-    if (config == null) {
-        Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchResultPackagesByPickingId.")
-        return emptyList()
+    suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchResultPackagesByPickingId.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(listOf("id", "=", pickingId))
+        val fields = listOf("result_packages")  // Fetching result_packages field
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        Log.d("OdooXmlRpcClient", "Fetching result packages for picking ID: $pickingId with params: $params")
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            Log.d("OdooXmlRpcClient", "Raw server response for result packages: ${result.toList()}")
+
+            val resultPackages = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["result_packages"].toString() else ""
+            val parsedPackages = parseResultPackages(resultPackages)
+
+            Log.d("OdooXmlRpcClient", "Parsed result packages: $parsedPackages")
+            parsedPackages
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching result packages for picking ID: ${e.localizedMessage}", e)
+            emptyList()
+        }
     }
-    val client = XmlRpcClient().also { it.setConfig(config) }
-    val userId = credentialManager.getUserId()
-    val password = credentialManager.getPassword() ?: ""
-
-    val domain = listOf(listOf("id", "=", pickingId))
-    val fields = listOf("result_packages")  // Fetching result_packages field
-
-    val params = listOf(
-        Constants.DATABASE,
-        userId,
-        password,
-        "stock.picking",
-        "search_read",
-        listOf(domain),
-        mapOf("fields" to fields)
-    )
-
-    Log.d("OdooXmlRpcClient", "Fetching result packages for picking ID: $pickingId with params: $params")
-
-    return try {
-        val result = client.execute("execute_kw", params) as Array<Any>
-        Log.d("OdooXmlRpcClient", "Raw server response for result packages: ${result.toList()}")
-
-        val resultPackages = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["result_packages"].toString() else ""
-        val parsedPackages = parseResultPackages(resultPackages)
-
-        Log.d("OdooXmlRpcClient", "Parsed result packages: $parsedPackages")
-        parsedPackages
-    } catch (e: Exception) {
-        Log.e("OdooXmlRpcClient", "Error fetching result packages for picking ID: ${e.localizedMessage}", e)
-        emptyList()
-    }
-}
 
     private fun parseResultPackages(packages: String): List<PackageInfo> {
         return packages.split(", ").mapNotNull { packageString ->
@@ -2118,6 +2171,41 @@ suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
     }
 
 
+    suspend fun setPackageForMoveLine(pickingId: Int, moveLineId: Int, packageName: String): Boolean {
+        return try {
+            val config = getClientConfig("object")
+            if (config == null) {
+                Log.e("OdooXmlRpcClient", "XML RPC Client configuration is null, aborting setPackageForMoveLine.")
+                return false
+            }
+
+            val client = XmlRpcClient().also { it.setConfig(config) }
+
+            val userId = credentialManager.getUserId()
+            val password = credentialManager.getPassword() ?: ""
+
+            val params = listOf(
+                Constants.DATABASE,
+                userId,
+                password,
+                "stock.move.line",
+                "set_package_for_move_line",
+                listOf(pickingId, moveLineId, packageName)
+            )
+
+            val result = client.execute("execute_kw", params) as? HashMap<*, *>
+            if (result?.get("success") as? Boolean == true) {
+                Log.d("OdooXmlRpcClient", "Package set successfully for move line: $result")
+                true
+            } else {
+                Log.e("OdooXmlRpcClient", "Failed to set package for move line: ${result?.get("error")}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error setting package for move line: ${e.message}", e)
+            false
+        }
+    }
 
 
 

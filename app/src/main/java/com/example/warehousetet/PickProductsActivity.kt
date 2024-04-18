@@ -1260,6 +1260,7 @@
 package com.example.warehousetet
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
@@ -1317,7 +1318,7 @@ class PickProductsActivity : AppCompatActivity() {
     // Assuming this is declared at the class level
     private val accumulatedQuantities: MutableMap<Int, Double> = mutableMapOf()
     private val confirmedLines = mutableSetOf<Int>()
-
+    private var pickId: Int = -1
 
     private var pickName: String? = null
     private var destLocationName: String? = null
@@ -1330,7 +1331,8 @@ class PickProductsActivity : AppCompatActivity() {
         barcodeInput = findViewById(R.id.pickBarcodeInput)
         confirmButton = findViewById(R.id.pickConfirmButton)
 
-        val pickId = intent.getIntExtra("PICK_ID", -1)
+//        val pickId = intent.getIntExtra("PICK_ID", -1)
+         pickId = intent.getIntExtra("PICK_ID", -1)
         val pickName = intent.getStringExtra("PICK_NAME") ?: "Pick"
 //        val titleTextView: TextView = findViewById(R.id.pickProductsTitleTextView)
 //        titleTextView.text = pickName
@@ -1840,6 +1842,7 @@ class PickProductsActivity : AppCompatActivity() {
                 coroutineScope.launch {
                     val serialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
                     val serialList = productSerialNumbers.getOrPut(ProductPickKey(productId, pickId)) { mutableListOf() }
+
                     if (serialNumbers?.contains(enteredSerialNumber) == true) {
                         serialList.add(enteredSerialNumber)
                         odooXmlRpcClient.updateMoveLinesForPick(pickId, productId, enteredSerialNumber, destLocation, locationId)
@@ -1847,7 +1850,8 @@ class PickProductsActivity : AppCompatActivity() {
                             updateProductMatchState(lineId, pickId)
                             confirmedLines.add(lineId)
                             showGreenToast("Serial number added for $productName.")
-                            dialog.dismiss()  // Dismiss dialog after successful entry
+                            dialog.dismiss()
+                            fetchProductsForPick(pickId)
                         }
                     } else {
                         withContext(Dispatchers.Main) {
@@ -2166,36 +2170,62 @@ class PickProductsActivity : AppCompatActivity() {
 //
 //        saveMatchStateToPreferences(key, quantityMatches[key] == true)
 //    }
-private fun updateProductMatchState(
-    lineId: Int,
-    pickId: Int,
-    matched: Boolean = true,
-    serialNumbers: MutableList<String>? = null,
-) {
-    val key = ProductPickKey(lineId, pickId)
-    val productLine = pickProductsAdapter.lines.find { it.id == lineId }
+    private fun updateProductMatchState(
+        lineId: Int,
+        pickId: Int,
+        matched: Boolean = true,
+        serialNumbers: MutableList<String>? = null,
+    ) {
+        val key = ProductPickKey(lineId, pickId)
+        val productLine = pickProductsAdapter.lines.find { it.id == lineId }
 
-    if (productLine != null) {
-        quantityMatches[key] = matched
+        if (productLine != null) {
+            quantityMatches[key] = matched
 
-        // Refresh the UI to reflect the updated state
-        runOnUiThread {
-            val position = pickProductsAdapter.findProductPositionById(lineId)
-            if (position != -1) {
-                pickProductsAdapter.notifyItemChanged(position)
+            // Refresh the UI to reflect the updated state
+            runOnUiThread {
+                val position = pickProductsAdapter.findProductPositionById(lineId)
+                if (position != -1) {
+                    pickProductsAdapter.notifyItemChanged(position)
+                }
+                checkAndToggleValidateButton(pickId)
             }
-            checkAndToggleValidateButton(pickId)
+        } else {
+            Log.e("updateProductMatchState", "No line found for ID $lineId")
         }
-    } else {
-        Log.e("updateProductMatchState", "No line found for ID $lineId")
+
+        saveMatchStateToPreferences(key, quantityMatches[key] == true)
     }
 
-    saveMatchStateToPreferences(key, quantityMatches[key] == true)
-}
 
+    private fun checkAndToggleValidateButton(pickId: Int) {
+        val allMatched = quantityMatches.filterKeys { it.pickId == pickId }.all { it.value }
+        val validateButton = findViewById<Button>(R.id.pickValidateButton)
 
+        validateButton.visibility = if (allMatched) View.VISIBLE else View.GONE
+        saveButtonVisibilityState(pickId, allMatched)
+
+        if (allMatched) {
+            validateButton.setOnClickListener {
+                coroutineScope.launch {
+                    val validationSuccessful = odooXmlRpcClient.validateOperation(pickId)
+                    runOnUiThread {
+                        if (validationSuccessful) {
+                            Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                            // Redirect to PickActivity upon successful validation
+                            val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
+                            startActivity(intent)
+                            finish()  // Optionally call finish() if you want to remove this activity from the back stack
+                        } else {
+                            Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
 //    private fun checkAndToggleValidateButton(pickId: Int) {
-//        val allMatched = quantityMatches.values.all { it }
+//        val allMatched = quantityMatches.filterKeys { it.pickId == pickId }.all { it.value }
 //        val validateButton = findViewById<Button>(R.id.pickValidateButton)
 //
 //        validateButton.visibility = if (allMatched) View.VISIBLE else View.GONE
@@ -2204,44 +2234,18 @@ private fun updateProductMatchState(
 //        if (allMatched) {
 //            validateButton.setOnClickListener {
 //                coroutineScope.launch {
-//                    val validationSuccessful = odooXmlRpcClient.validateOperation(pickId)
-//                    if (validationSuccessful) {
-//                        runOnUiThread {
-//                            Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
-//                        }
-//                    } else {
-//                        runOnUiThread {
-//                            Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
-//                        }
+//                    odooXmlRpcClient.validateOperation(pickId)  // Call validateOperation but ignore its return value
+//                    runOnUiThread {
+//                        Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+//                        val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
+//                        startActivity(intent)
+//                        finish()  // Remove this activity from the back stack
 //                    }
 //                }
 //            }
 //        }
 //    }
-private fun checkAndToggleValidateButton(pickId: Int) {
-    val allMatched = quantityMatches.filterKeys { it.pickId == pickId }.all { it.value }
-    val validateButton = findViewById<Button>(R.id.pickValidateButton)
 
-    validateButton.visibility = if (allMatched) View.VISIBLE else View.GONE
-    saveButtonVisibilityState(pickId, allMatched)
-
-    if (allMatched) {
-        validateButton.setOnClickListener {
-            coroutineScope.launch {
-                val validationSuccessful = odooXmlRpcClient.validateOperation(pickId)
-                if (validationSuccessful) {
-                    runOnUiThread {
-                        Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
-                    }
-                } else {
-                    runOnUiThread {
-                        Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-    }
-}
 
     private fun saveButtonVisibilityState(pickId: Int, visible: Boolean) {
         val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
@@ -2251,21 +2255,17 @@ private fun checkAndToggleValidateButton(pickId: Int) {
         }
     }
 
-//    private fun restoreButtonVisibility(pickId: Int) {
-//        val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
-//        val isVisible = sharedPref.getBoolean("ValidateButtonVisible_$pickId", false)
-//        findViewById<Button>(R.id.pickValidateButton).visibility = if (isVisible) View.VISIBLE else View.GONE
-//    }
-private fun restoreButtonVisibility(pickId: Int) {
-    val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
-    val isVisible = sharedPref.getBoolean("ValidateButtonVisible_$pickId", false)
-    val validateButton = findViewById<Button>(R.id.pickValidateButton)
-    validateButton.visibility = if (isVisible) View.VISIBLE else View.GONE
+    private fun restoreButtonVisibility(pickId: Int) {
+        val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
+        val isVisible = sharedPref.getBoolean("ValidateButtonVisible_$pickId", false)
+        val validateButton = findViewById<Button>(R.id.pickValidateButton)
+        validateButton.visibility = if (isVisible) View.VISIBLE else View.GONE
 
-    if (isVisible) {
-        setupValidateButtonListener(pickId)
+        if (isVisible) {
+            setupValidateButtonListener(pickId)
+        }
     }
-}
+
     private fun setupValidateButtonListener(pickId: Int) {
         val validateButton = findViewById<Button>(R.id.pickValidateButton)
         validateButton.setOnClickListener {
@@ -2274,6 +2274,9 @@ private fun restoreButtonVisibility(pickId: Int) {
                 runOnUiThread {
                     if (validationSuccessful) {
                         Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
+                        startActivity(intent)
+                        finish()  // Optionally call finish() if you want to remove this activity from the back stack
                     } else {
                         Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
                     }
@@ -2281,8 +2284,6 @@ private fun restoreButtonVisibility(pickId: Int) {
             }
         }
     }
-
-
 
     private fun checkAllProductsMatched(pickId: Int): Boolean {
         // Filter the quantityMatches for the current receiptId
@@ -2331,52 +2332,50 @@ private fun restoreButtonVisibility(pickId: Int) {
 //            pickProductsAdapter.updateProducts(pickProductsAdapter.lines, pickId, quantityMatches)
 //        }
 //    }
-private fun loadMatchStatesFromPreferences(pickId: Int) {
-    val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
-    val tempQuantityMatches = mutableMapOf<ProductPickKey, Boolean>()
+    private fun loadMatchStatesFromPreferences(pickId: Int) {
+        val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
+        val tempQuantityMatches = mutableMapOf<ProductPickKey, Boolean>()
 
-    sharedPref.all.forEach { (prefKey, value) ->
-        if (value is Boolean) {
-            if (prefKey.startsWith("ValidateButtonVisible")) {
-                // Correct handling of the ValidateButtonVisible key
-                val parts = prefKey.split("_")
-                if (parts.size == 2) {
-                    val storedPickId = parts[1].toIntOrNull()
-                    if (storedPickId == pickId) {
-                        findViewById<Button>(R.id.pickValidateButton).visibility = if (value) View.VISIBLE else View.GONE
-                    }
-                }
-            } else {
-                // Handling standard product match keys
-                val parts = prefKey.split("_")
-                if (parts.size == 2) {
-                    try {
-                        val moveLineId = parts[0].toInt()
-                        val prefPickId = parts[1].toInt()
-                        if (prefPickId == pickId) {
-                            val key = ProductPickKey(moveLineId, prefPickId)
-                            tempQuantityMatches[key] = value
+        sharedPref.all.forEach { (prefKey, value) ->
+            if (value is Boolean) {
+                if (prefKey.startsWith("ValidateButtonVisible")) {
+                    // Correct handling of the ValidateButtonVisible key
+                    val parts = prefKey.split("_")
+                    if (parts.size == 2) {
+                        val storedPickId = parts[1].toIntOrNull()
+                        if (storedPickId == pickId) {
+                            findViewById<Button>(R.id.pickValidateButton).visibility = if (value) View.VISIBLE else View.GONE
                         }
-                    } catch (e: NumberFormatException) {
-                        Log.e("PickProductsActivity", "Error parsing shared preference key: $prefKey", e)
                     }
                 } else {
-                    Log.e("PickProductsActivity", "Incorrectly formatted shared preference key: $prefKey. Expected format: productId_pickId")
+                    // Handling standard product match keys
+                    val parts = prefKey.split("_")
+                    if (parts.size == 2) {
+                        try {
+                            val moveLineId = parts[0].toInt()
+                            val prefPickId = parts[1].toInt()
+                            if (prefPickId == pickId) {
+                                val key = ProductPickKey(moveLineId, prefPickId)
+                                tempQuantityMatches[key] = value
+                            }
+                        } catch (e: NumberFormatException) {
+                            Log.e("PickProductsActivity", "Error parsing shared preference key: $prefKey", e)
+                        }
+                    } else {
+                        Log.e("PickProductsActivity", "Incorrectly formatted shared preference key: $prefKey. Expected format: productId_pickId")
+                    }
                 }
             }
         }
+
+        quantityMatches.clear()
+        quantityMatches.putAll(tempQuantityMatches)
+
+        // Now update the adapter with the loaded match states
+        runOnUiThread {
+            pickProductsAdapter.updateProducts(pickProductsAdapter.lines, pickId, quantityMatches)
+        }
     }
-
-    quantityMatches.clear()
-    quantityMatches.putAll(tempQuantityMatches)
-
-    // Now update the adapter with the loaded match states
-    runOnUiThread {
-        pickProductsAdapter.updateProducts(pickProductsAdapter.lines, pickId, quantityMatches)
-    }
-}
-
-
 
     private fun resetMatchStates(pickId: Int) {
         // Reset all in-memory data structures
@@ -2404,11 +2403,6 @@ private fun loadMatchStatesFromPreferences(pickId: Int) {
         // Optionally, show a toast message
         showRedToast("All data reset for pick ID $pickId")
     }
-
-
-
-
-
 
 
 }
