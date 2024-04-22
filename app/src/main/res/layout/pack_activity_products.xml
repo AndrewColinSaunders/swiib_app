@@ -7,17 +7,16 @@
     android:padding="16dp"
     android:background="#11151c">
 
-
     <EditText
         android:id="@+id/packBarcodeInput"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:hint="Enter Barcode"
         android:background="@drawable/edittext_border"
-        android:hint="Enter barcode"
         android:inputType="text"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"/>
 
     <LinearLayout
         android:id="@+id/packButtonWrapper"

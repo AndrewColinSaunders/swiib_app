@@ -32,14 +32,17 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 
 
+
 class PackProductsActivity : AppCompatActivity() {
     private lateinit var packProductsAdapter: PackProductsAdapter
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private var lastScannedBarcode: String = ""
     private var currentProductName: String? = null
     private val packagedMoveLines = mutableListOf<PackagedMovedLine>()
     private lateinit var barcodeInput: EditText
     private var shouldShowPrinterIcon = false
+    private var lastScannedBarcode = StringBuilder()
+    private var lastKeyTime: Long = 0
+    private var isScannerInput = false
 
 
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
@@ -61,6 +64,8 @@ class PackProductsActivity : AppCompatActivity() {
         }
     }
 
+
+    //Nothing changing here=============================================================================================================================
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_pack_products, menu)
         val printItem = menu?.findItem(R.id.action_print)
@@ -69,9 +74,9 @@ class PackProductsActivity : AppCompatActivity() {
         return true
     }
 
-    fun togglePrinterIconVisibility(show: Boolean) {
+    private fun togglePrinterIconVisibility(show: Boolean) {
         shouldShowPrinterIcon = show
-        invalidateOptionsMenu()  // This will trigger onPrepareOptionsMenu
+        invalidateOptionsMenu() // This will call onPrepareOptionsMenu again to refresh the menu
     }
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
@@ -211,8 +216,27 @@ class PackProductsActivity : AppCompatActivity() {
         packConfirmButton.setOnClickListener {
             val typedBarcode = barcodeInput.text.toString()
             if (typedBarcode.isNotEmpty()) {
-                verifyProductBarcode(currentProductName, typedBarcode)
-                barcodeInput.text.clear()  // Clear the barcode input after processing
+                // Logging the barcode to Logcat
+                Log.d("PackProductsActivity", "Scanned barcode: $typedBarcode")
+
+                verifyProductBarcode(typedBarcode)  // Process the scanned barcode
+                barcodeInput.text.clear()
+            } else {
+                Toast.makeText(this, "Please enter or scan a barcode first.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+
+
+
+    }
+
+        //=================================================================================================================================================
+
+    private fun fetchProductBarcodes(productNames: List<String>): Map<String, String?> = runBlocking {
+        productNames.associateWith { productName ->
+            withContext(Dispatchers.IO) {
+                odooXmlRpcClient.fetchProductBarcodeByName(productName)
             }
         }
     }
@@ -225,15 +249,21 @@ class PackProductsActivity : AppCompatActivity() {
             }
             Log.d("PackProductsActivity", "Fetched move lines: $fetchedMoveLines")
             updateUIForMoveLines(fetchedMoveLines)
-            fetchedMoveLines.forEach { moveLine ->
-                Log.d("MoveLineLog", "MoveLine ID: ${moveLine.id}")
-                currentProductName = moveLine.productName
-                checkProductTracking(moveLine.productName)
-            }
+
+            // Extract unique product names
+            val uniqueProductNames = fetchedMoveLines.map { it.productName }.distinct()
+
+            // Fetch barcodes for all unique products
+            val barcodes = fetchProductBarcodes(uniqueProductNames)
+
+            // Log fetched barcodes for all products
+            Log.d("PackProductsActivity", "Fetched barcodes for all products: ${barcodes.map { "${it.key}: ${it.value}" }.joinToString(", ")}")
+
         } catch (e: Exception) {
             Log.e("PackProductsActivity", "Error fetching move lines for pack: ${e.localizedMessage}")
         }
     }
+
 
     private fun updateUIForMoveLines(moveLines: List<MoveLine>) {
         runOnUiThread {
@@ -243,38 +273,60 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN && event.keyCode == KeyEvent.KEYCODE_ENTER) {
-            if (lastScannedBarcode.isNotEmpty()) {
-                verifyProductBarcode(currentProductName, lastScannedBarcode)
-                lastScannedBarcode = ""  // Reset the barcode after verification
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
+                if (isScannerInput) {
+                    barcodeInput.setText(lastScannedBarcode.toString())
+                    verifyProductBarcode(lastScannedBarcode.toString())
+                    lastScannedBarcode.clear()
+                    isScannerInput = false
+                }
                 return true
+            } else {
+                val char = event.unicodeChar.toChar()
+                if (!Character.isISOControl(char)) {
+                    val currentTime = System.currentTimeMillis()
+                    isScannerInput = lastKeyTime != 0L && (currentTime - lastKeyTime) < 50
+                    lastScannedBarcode.append(char)
+                    lastKeyTime = currentTime
+                }
             }
-        } else if (event.action == KeyEvent.ACTION_DOWN && Character.isDigit(event.unicodeChar.toChar())) {
-            lastScannedBarcode += event.unicodeChar.toChar()
-            return true
         }
         return super.dispatchKeyEvent(event)
     }
 
-    private fun verifyProductBarcode(productName: String?, scannedBarcode: String) = lifecycleScope.launch {
-        if (productName != null) {
+    private fun verifyProductBarcode(scannedBarcode: String) = lifecycleScope.launch {
+        val matchingMoveLine = packProductsAdapter.moveLines.find { moveLine ->
             val expectedBarcode = withContext(Dispatchers.IO) {
-                odooXmlRpcClient.fetchProductBarcodeByName(productName)
+                odooXmlRpcClient.fetchProductBarcodeByName(moveLine.productName)
             }
-            if (expectedBarcode != null && expectedBarcode == scannedBarcode) {
-                Log.d("PackProductsActivity", "Barcode verification successful for product: $productName")
-                val moveLine = packProductsAdapter.moveLines.find { it.productName == productName }
-                if (moveLine != null) {
-                    val quantity = moveLine.quantity
-                    showInformationDialog(quantity, moveLine)  // Pass the moveLine to the dialog
-                }
-            } else {
-                Log.e("PackProductsActivity", "Barcode verification failed for product: $productName. Expected: $expectedBarcode, Scanned: $scannedBarcode")
-            }
+            expectedBarcode == scannedBarcode
+        }
+
+        if (matchingMoveLine != null) {
+            Log.d("PackProductsActivity", "Barcode verification successful for product: ${matchingMoveLine.productName}")
+            checkProductTrackingAndHandle(matchingMoveLine)
+            barcodeInput.text.clear()
+        } else {
+            Toast.makeText(this@PackProductsActivity, "Barcode does not match any product.", Toast.LENGTH_SHORT).show()
+            Log.e("PackProductsActivity", "Barcode verification failed. No matching product found.")
+            barcodeInput.selectAll()
         }
     }
 
-    private fun checkProductTracking(productName: String) = lifecycleScope.launch {
+
+
+
+
+
+    private fun handleVerificationFailure(productName: String?, scannedBarcode: String, expectedBarcode: String?) {
+        Toast.makeText(this, "Barcode mismatch for $productName. Expected: $expectedBarcode, Found: $scannedBarcode", Toast.LENGTH_LONG).show()
+        barcodeInput.selectAll() // Select all text in EditText to facilitate correction
+    }
+
+
+    private fun checkProductTrackingAndHandle(moveLine: MoveLine) = lifecycleScope.launch {
+        val productName = moveLine.productName
         try {
             val trackingInfo = withContext(Dispatchers.IO) {
                 odooXmlRpcClient.fetchProductTrackingAndExpirationByName(productName)
@@ -282,10 +334,10 @@ class PackProductsActivity : AppCompatActivity() {
 
             trackingInfo?.let {
                 when (it.first) {
-                    "no tracking" -> Log.d("PackProductsActivity", "Product has no tracking.")
-                    "Serialised" -> Log.d("PackProductsActivity", "Product is tracked by serial number.")
-                    "By lot" -> Log.d("PackProductsActivity", "Product is tracked by lot.")
-                    else -> Log.d("PackProductsActivity", "Product tracking type: ${it.first}")
+                    "none" -> handleNoTracking(moveLine)
+                    "serial" -> handleSerialTracking(moveLine)
+                    "lot" -> handleLotTracking(moveLine)
+                    else -> Log.e("PackProductsActivity", "Unhandled tracking type: ${it.first}")
                 }
             } ?: Log.e("PackProductsActivity", "No tracking info found for product: $productName")
         } catch (e: Exception) {
@@ -293,8 +345,29 @@ class PackProductsActivity : AppCompatActivity() {
         }
     }
 
-    private fun showPackageDialog(moveLine: MoveLine) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_package, null)
+    private fun handleNoTracking(moveLine: MoveLine) {
+        // Log the handling action
+        Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}.")
+
+        // Call the showInformationDialog to display the packing instructions
+        showInformationDialog(moveLine.quantity, moveLine)
+    }
+
+
+    private fun handleSerialTracking(moveLine: MoveLine) {
+        // Implement logic for products tracked by serial number
+        Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLine.productName}.")
+        showPackageDialogSerial(moveLine)
+    }
+
+    private fun handleLotTracking(moveLine: MoveLine) {
+        // Implement logic for products tracked by lot
+        Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
+    }
+
+
+    private fun showPackageDialogNoTracking(moveLine: MoveLine) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_package_no_tracking, null)
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
@@ -311,6 +384,7 @@ class PackProductsActivity : AppCompatActivity() {
                 Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLine.id}")
                 lifecycleScope.launch {
                     try {
+                        Log.d("Check what moveline is being parsed", "moveLine ID: $moveLine")
                         val result = odooXmlRpcClient.actionPutInPack(moveLine.id, this@PackProductsActivity)
                         if (result) {
                             Log.d("PackageDialog", "Successfully put item in new package.")
@@ -320,6 +394,7 @@ class PackProductsActivity : AppCompatActivity() {
                             savePackagedIds()
                             packProductsAdapter.notifyItemChanged(index)
                             togglePrinterIconVisibility(true)
+                            checkPrinterIconVisibility()
                             checkAllItemsPackaged()// Notify adapter to update this item
                             refreshMenu()
                         } else {
@@ -339,20 +414,84 @@ class PackProductsActivity : AppCompatActivity() {
         }
 
         addToPackageButton.setOnClickListener {
-            lifecycleScope.launch(Dispatchers.IO) {  // Use Dispatchers.IO to enforce background execution
+            val packageName = packageInput.text.toString()
+            if (packageName.isNotEmpty()) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val result = odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.id, packageName)
+                        withContext(Dispatchers.Main) {
+                            if (result) {
+                                Log.d("PackageDialog", "Successfully set package for move line.")
+                                Toast.makeText(this@PackProductsActivity, "Package set successfully.", Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(this@PackProductsActivity, "Failed to set package for move line.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PackageDialog", "Error occurred: ${e.localizedMessage}")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@PackProductsActivity, "An error occurred", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            } else {
+                Toast.makeText(this@PackProductsActivity, "Please enter a package name.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun showPackageDialogSerial(moveLine: MoveLine) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_package_serial, null)
+        val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)  // Ensure correct ID
+
+        val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
+        val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Package Options")
+            .setView(dialogView)
+            .create()
+
+        createNewButton.setOnClickListener {
+            val enteredSerial = serialInput.text.toString().trim()
+            lifecycleScope.launch(Dispatchers.IO) {
                 try {
+                    val validSerialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(moveLine.productId) ?: listOf()
                     withContext(Dispatchers.Main) {
-                        dialog.dismiss()
+                        if (enteredSerial == moveLine.lotName) {  // Directly compare entered serial with lotName from moveLine
+                            val result = odooXmlRpcClient.actionPutInPack(moveLine.id, this@PackProductsActivity)
+                            if (result) {
+                                Toast.makeText(this@PackProductsActivity, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
+                                packagedMoveLines.add(PackagedMovedLine(moveLine.id))
+                                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                                packProductsAdapter.notifyItemChanged(index)  // Notify the adapter to refresh this item
+                                togglePrinterIconVisibility(true)  // Additional UI updates as needed
+                                checkAllItemsPackaged()  // Check if all items are now packaged
+                                checkPrinterIconVisibility()
+                                refreshMenu()
+                                dialog.dismiss()  // Only dismiss if successful
+                            } else {
+                                Toast.makeText(this@PackProductsActivity, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(this@PackProductsActivity, "Invalid serial number entered.", Toast.LENGTH_LONG).show()
+                            serialInput.requestFocus()
+                        }
                     }
                 } catch (e: Exception) {
-                    Log.e("PackageDialog", "Error occurred: ${e.localizedMessage}")
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(this@PackProductsActivity, "An error occurred", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PackProductsActivity, "Error during packaging: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                     }
                 }
             }
         }
 
+        addToPackageButton.setOnClickListener {
+            dialog.dismiss()
+        }
 
         dialog.show()
     }
@@ -363,12 +502,11 @@ class PackProductsActivity : AppCompatActivity() {
             .setTitle("Product Packing")
             .setMessage("Please pack $quantity units of the selected product as instructed.")
             .setPositiveButton("OK") { dialog, which ->
-                showPackageDialog(moveLine)  // Pass the moveLine here
+                showPackageDialogNoTracking(moveLine)  // Pass the moveLine here
             }
             .create()
             .show()
     }
-
 
     private fun savePackagedIds() {
         val editor = getSharedPreferences("PackPrefs", MODE_PRIVATE).edit()
@@ -389,6 +527,7 @@ class PackProductsActivity : AppCompatActivity() {
                 packagedMoveLines.clear()
                 packagedMoveLines.addAll(packagedIds.split(",").map { PackagedMovedLine(it.toInt()) })
                 updateUIForMoveLines(packProductsAdapter.moveLines) // Update the UI once data is loaded
+                checkPrinterIconVisibility()
             }
         }
     }
@@ -400,6 +539,12 @@ class PackProductsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.validateOperationButton).visibility = if (allPackaged) View.VISIBLE else View.GONE
         savePackagedIds() // This call can also be removed if no other state needs to be saved when checking all items
     }
+
+    private fun checkPrinterIconVisibility() {
+        val hasPackagedItems = packagedMoveLines.isNotEmpty()
+        togglePrinterIconVisibility(hasPackagedItems)
+    }
+
 
     private fun refreshMenu() {
         invalidateOptionsMenu()

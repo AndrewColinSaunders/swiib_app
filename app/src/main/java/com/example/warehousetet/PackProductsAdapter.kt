@@ -15,6 +15,8 @@ class PackProductsAdapter(
     private val packagedMoveLines: List<PackagedMovedLine>
 ) : RecyclerView.Adapter<PackProductsAdapter.MoveLineViewHolder>() {
 
+    var selectedMoveLineId: Int? = null
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MoveLineViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.pack_product_item, parent, false)
         return MoveLineViewHolder(view)
@@ -23,6 +25,10 @@ class PackProductsAdapter(
     override fun onBindViewHolder(holder: MoveLineViewHolder, position: Int) {
         val moveLine = moveLines[position]
         val isPackaged = packagedMoveLines.any { it.moveLineId == moveLine.id }
+        holder.itemView.setOnClickListener {
+            selectedMoveLineId = moveLine.id  // Set the selected line ID when an item is clicked
+            Log.d("PackProductsAdapter", "Product line selected: ID = ${moveLine.id}, Product = ${moveLine.productName}")
+        }
         holder.bind(moveLine, isPackaged)
     }
 

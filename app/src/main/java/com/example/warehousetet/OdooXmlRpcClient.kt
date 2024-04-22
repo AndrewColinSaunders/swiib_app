@@ -1830,6 +1830,43 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
         }
     }
 
+    suspend fun setPackageForMoveLine(pickingId: Int, moveLineId: Int, packageName: String): Boolean {
+        return try {
+            val config = getClientConfig("object")
+            if (config == null) {
+                Log.e("OdooXmlRpcClient", "XML RPC Client configuration is null, aborting setPackageForMoveLine.")
+                return false
+            }
+
+            val client = XmlRpcClient().also { it.setConfig(config) }
+
+            val userId = credentialManager.getUserId()
+            val password = credentialManager.getPassword() ?: ""
+
+            val params = listOf(
+                Constants.DATABASE,
+                userId,
+                password,
+                "stock.move.line",
+                "set_package_for_move_line",
+                listOf(pickingId, moveLineId, packageName)
+            )
+
+            val result = client.execute("execute_kw", params) as? HashMap<*, *>
+            if (result?.get("success") as? Boolean == true) {
+                Log.d("OdooXmlRpcClient", "Package set successfully for move line: $result")
+                true
+            } else {
+                Log.e("OdooXmlRpcClient", "Failed to set package for move line: ${result?.get("error")}")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error setting package for move line: ${e.message}", e)
+            false
+        }
+    }
+
+
     suspend fun validateOperation(packingId: Int, context: Context): Boolean {
         return withContext(Dispatchers.IO) { // Use IO dispatcher for network operations
             try {
@@ -1936,5 +1973,4 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
             }
         }
     }
-
 }
