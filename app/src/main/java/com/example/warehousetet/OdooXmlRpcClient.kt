@@ -1770,65 +1770,123 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
         }
     }
 
-    suspend fun actionPutInPack(movelineId: Int, context: Context): Boolean {
-        return withContext(Dispatchers.IO) { // This ensures the entire block runs on an IO-optimized thread
-            try {
-                val username = credentialManager.getUsername()
-                val password = credentialManager.getPassword()
+//    suspend fun actionPutInPack(movelineId: Int, context: Context): Boolean {
+//        return withContext(Dispatchers.IO) { // This ensures the entire block runs on an IO-optimized thread
+//            try {
+//                val username = credentialManager.getUsername()
+//                val password = credentialManager.getPassword()
+//
+//                if (username == null || password == null) {
+//                    Log.e("OdooXmlRpcClient", "Credentials are null, aborting actionPutInPack.")
+//                    withContext(Dispatchers.Main) {
+//                        Toast.makeText(context, "Operation aborted: User credentials are missing.", Toast.LENGTH_LONG).show()
+//                    }
+//                    return@withContext false
+//                }
+//
+//                val db = Constants.DATABASE
+//                val config = XmlRpcClientConfigImpl().apply {
+//                    serverURL = URL("${Constants.URL}xmlrpc/2/object")
+//                }
+//
+//                val client = XmlRpcClient()
+//                client.setConfig(config)
+//
+//                val userId = login(username, password) // Ensure login also follows correct threading
+//                Log.d("UserId", "UserId Before putting item in pacakge. UserId: $userId")
+//                if (userId <= 0) {
+//                    Log.e("OdooXmlRpcClient", "Login failed, cannot execute button.")
+//                    withContext(Dispatchers.Main) {
+//                        Toast.makeText(context, "Login failed: Cannot authenticate user.", Toast.LENGTH_LONG).show()
+//                    }
+//                    return@withContext false
+//                }
+//
+//                val actionParams = listOf(
+//                    db, userId, password, "stock.move.line", "action_put_in_pack", listOf(listOf(movelineId))
+//                )
+//                client.execute("execute_kw", actionParams).let {
+//                    Log.d("OdooXmlRpcClient", "Products put in pack successfully.")
+//                    return@withContext true
+//                }
+//            } catch (e: XmlRpcException) {
+//                Log.e("OdooXmlRpcClient", "XML-RPC error during actionPutInPack: ${e.message}", e)
+//                withContext(Dispatchers.Main) {
+//                    val userFriendlyMessage = if (e.message?.contains("There is nothing eligible to put in a pack") == true) {
+//                        "Operation failed: No items are eligible to be packed."
+//                    } else {
+//                        "An unexpected error occurred: ${e.message}"
+//                    }
+//                    Toast.makeText(context, userFriendlyMessage, Toast.LENGTH_LONG).show()
+//                }
+//                false
+//            } catch (e: Exception) {
+//                Log.e("OdooXmlRpcClient", "General error during actionPutInPack: ${e.message}", e)
+//                withContext(Dispatchers.Main) {
+//                    Toast.makeText(context, "Unexpected error occurred: ${e.localizedMessage}.", Toast.LENGTH_LONG).show()
+//                }
+//                false
+//            }
+//        }
+//    }
 
-                if (username == null || password == null) {
-                    Log.e("OdooXmlRpcClient", "Credentials are null, aborting actionPutInPack.")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Operation aborted: User credentials are missing.", Toast.LENGTH_LONG).show()
-                    }
-                    return@withContext false
-                }
-
-                val db = Constants.DATABASE
-                val config = XmlRpcClientConfigImpl().apply {
-                    serverURL = URL("${Constants.URL}xmlrpc/2/object")
-                }
-
-                val client = XmlRpcClient()
-                client.setConfig(config)
-
-                val userId = login(username, password) // Ensure login also follows correct threading
-                Log.d("UserId", "UserId Before putting item in pacakge. UserId: $userId")
-                if (userId <= 0) {
-                    Log.e("OdooXmlRpcClient", "Login failed, cannot execute button.")
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(context, "Login failed: Cannot authenticate user.", Toast.LENGTH_LONG).show()
-                    }
-                    return@withContext false
-                }
-
-                val actionParams = listOf(
-                    db, userId, password, "stock.move.line", "action_put_in_pack", listOf(listOf(movelineId))
-                )
-                client.execute("execute_kw", actionParams).let {
-                    Log.d("OdooXmlRpcClient", "Products put in pack successfully.")
-                    return@withContext true
-                }
-            } catch (e: XmlRpcException) {
-                Log.e("OdooXmlRpcClient", "XML-RPC error during actionPutInPack: ${e.message}", e)
-                withContext(Dispatchers.Main) {
-                    val userFriendlyMessage = if (e.message?.contains("There is nothing eligible to put in a pack") == true) {
-                        "Operation failed: No items are eligible to be packed."
-                    } else {
-                        "An unexpected error occurred: ${e.message}"
-                    }
-                    Toast.makeText(context, userFriendlyMessage, Toast.LENGTH_LONG).show()
-                }
-                false
-            } catch (e: Exception) {
-                Log.e("OdooXmlRpcClient", "General error during actionPutInPack: ${e.message}", e)
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(context, "Unexpected error occurred: ${e.localizedMessage}.", Toast.LENGTH_LONG).show()
-                }
-                false
+    suspend fun putMoveLineInNewPack(moveLineId: Int, context: Context): Boolean {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting putMoveLineInPack.")
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Operation aborted: Client configuration is missing.", Toast.LENGTH_LONG).show()
             }
+            return false
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        if (userId == null || password.isEmpty()) {
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Operation aborted: User credentials are missing.", Toast.LENGTH_LONG).show()
+            }
+            return false
+        }
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line",
+            "put_in_pack",
+            listOf(moveLineId)
+        )
+
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                client.execute("execute_kw", params)
+            } as? Map<*, *>
+
+            withContext(Dispatchers.Main) {
+                if (result?.get("success") == true) {
+                    Log.d("OdooXmlRpcClient", "Successfully executed put_in_pack for move line ID: $moveLineId, package created: ${result["package_name"]}")
+                    Toast.makeText(context, "Package created: ${result["package_name"]}", Toast.LENGTH_LONG).show()
+                    true
+                } else {
+                    Log.e("OdooXmlRpcClient", "Failed to execute put_in_pack for move line ID: $moveLineId, result was unexpected: $result")
+                    Toast.makeText(context, "Failed to put move line in pack. Please try again.", Toast.LENGTH_LONG).show()
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error executing putMoveLineInPack: ${e.localizedMessage}", e)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(context, "Unexpected error occurred: ${e.localizedMessage}.", Toast.LENGTH_LONG).show()
+            }
+            false
         }
     }
+
+
+
 
     suspend fun setPackageForMoveLine(pickingId: Int, moveLineId: Int, packageName: String): Boolean {
         return try {
@@ -1865,6 +1923,10 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
             false
         }
     }
+
+
+
+
 
 
     suspend fun validateOperation(packingId: Int, context: Context): Boolean {

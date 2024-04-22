@@ -385,7 +385,7 @@ class PackProductsActivity : AppCompatActivity() {
                 lifecycleScope.launch {
                     try {
                         Log.d("Check what moveline is being parsed", "moveLine ID: $moveLine")
-                        val result = odooXmlRpcClient.actionPutInPack(moveLine.id, this@PackProductsActivity)
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.id, this@PackProductsActivity)
                         if (result) {
                             Log.d("PackageDialog", "Successfully put item in new package.")
                             Toast.makeText(context, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
@@ -421,7 +421,16 @@ class PackProductsActivity : AppCompatActivity() {
                         val result = odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.id, packageName)
                         withContext(Dispatchers.Main) {
                             if (result) {
-                                Log.d("PackageDialog", "Successfully set package for move line.")
+                                // Add this line to the list of packaged move lines if not already present
+                                if (!packagedMoveLines.any { it.moveLineId == moveLine.id }) {
+                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.id))
+                                }
+                                // Find the index and notify the adapter
+                                val index = packProductsAdapter.moveLines.indexOfFirst { it.id == moveLine.id }
+                                if (index != -1) {
+                                    packProductsAdapter.notifyItemChanged(index)  // Notify adapter to update this item
+                                }
+                                addToPackageButton.setBackgroundColor(ContextCompat.getColor(this@PackProductsActivity, R.color.success_green))
                                 Toast.makeText(this@PackProductsActivity, "Package set successfully.", Toast.LENGTH_SHORT).show()
                                 dialog.dismiss()
                             } else {
@@ -446,7 +455,7 @@ class PackProductsActivity : AppCompatActivity() {
     private fun showPackageDialogSerial(moveLine: MoveLine) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_package_serial, null)
         val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)  // Ensure correct ID
-
+        val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
 
@@ -462,7 +471,7 @@ class PackProductsActivity : AppCompatActivity() {
                     val validSerialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(moveLine.productId) ?: listOf()
                     withContext(Dispatchers.Main) {
                         if (enteredSerial == moveLine.lotName) {  // Directly compare entered serial with lotName from moveLine
-                            val result = odooXmlRpcClient.actionPutInPack(moveLine.id, this@PackProductsActivity)
+                            val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.id, this@PackProductsActivity)
                             if (result) {
                                 Toast.makeText(this@PackProductsActivity, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
                                 packagedMoveLines.add(PackagedMovedLine(moveLine.id))
@@ -490,9 +499,50 @@ class PackProductsActivity : AppCompatActivity() {
         }
 
         addToPackageButton.setOnClickListener {
-            dialog.dismiss()
-        }
+            val packageName = packageInput.text.toString()
+            val enteredSerial = serialInput.text.toString().trim()
 
+            if (packageName.isNotEmpty() && enteredSerial.isNotEmpty()) {
+                lifecycleScope.launch(Dispatchers.Main) {
+                    try {
+                        val isValidSerial = withContext(Dispatchers.IO) {
+                            // Replace this with your actual method to validate the serial
+                            odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(moveLine.productId)?.contains(enteredSerial) ?: false
+                        }
+
+                        if (isValidSerial) {
+                            val result = withContext(Dispatchers.IO) {
+                                odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.id, packageName)
+                            }
+                            if (result) {
+                                // Add this line to the list of packaged move lines if not already present
+                                if (!packagedMoveLines.any { it.moveLineId == moveLine.id }) {
+                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.id))
+                                }
+                                // Find the index and notify the adapter
+                                val index = packProductsAdapter.moveLines.indexOfFirst { it.id == moveLine.id }
+                                if (index != -1) {
+                                    packProductsAdapter.notifyItemChanged(index)  // Notify adapter to update this item
+                                }
+                                addToPackageButton.setBackgroundColor(ContextCompat.getColor(this@PackProductsActivity, R.color.success_green))
+                                Toast.makeText(this@PackProductsActivity, "Package set successfully.", Toast.LENGTH_SHORT).show()
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(this@PackProductsActivity, "Failed to set package for move line.", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            Toast.makeText(this@PackProductsActivity, "Invalid serial number entered.", Toast.LENGTH_LONG).show()
+                            serialInput.requestFocus()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PackageDialog", "Error occurred: ${e.localizedMessage}")
+                        Toast.makeText(this@PackProductsActivity, "An error occurred", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } else {
+                Toast.makeText(this@PackProductsActivity, "Please enter a package name and serial number.", Toast.LENGTH_SHORT).show()
+            }
+        }
         dialog.show()
     }
 
