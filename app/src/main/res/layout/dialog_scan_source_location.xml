@@ -4,64 +4,51 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="24dp"
-    android:background="#212d40"> <!-- Set the background color here -->
+    android:background="#212d40">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Pick"
-        android:textSize="20sp"
-        android:textStyle="bold"
+        android:text="Scan source location"
+        android:textAppearance="?attr/textAppearanceHeadline6"
+        android:textColor="@android:color/white"
+        android:gravity="center"/>
+
+    <TextView
+        android:id="@+id/locationNameTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textAppearance="?attr/textAppearanceSubtitle1"
         android:textColor="@android:color/white"
         android:gravity="center"
-        android:layout_marginBottom="16dp"/>
+        android:layout_marginTop="8dp"/>
 
-    <TextView
-        android:id="@+id/textProductInfo"
+    <EditText
+        android:id="@+id/sourceLocationInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="18sp"
+        android:hint="Enter source location"
+        android:inputType="text"
+        android:layout_marginTop="16dp"
         android:textColor="@android:color/white"
-        android:layout_marginBottom="8dp"/>
+        android:backgroundTint="@android:color/white"
+        android:textCursorDrawable="@drawable/cursor_white"/>
 
-    <TextView
-        android:id="@+id/textQuantityInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textColor="@android:color/white"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:id="@+id/textLotInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textColor="@android:color/white"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:id="@+id/textSourceLocationInfo"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="18sp"
-        android:textColor="@android:color/white"
-        android:layout_marginBottom="16dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:gravity="center">
+        android:gravity="center"
+        android:layout_marginTop="16dp">
 
         <Button
-            android:id="@+id/buttonCancel"
+            android:id="@+id/cancelButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Cancel"
-            android:textAllCaps="false"
-            android:textSize="18sp"
+            android:textColor="@android:color/white"
             android:backgroundTint="@color/danger_red"
             android:layout_marginEnd="8dp"/>
 
@@ -71,8 +58,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="Confirm"
-            android:textAllCaps="false"
-            android:textSize="18sp"
+            android:textColor="@android:color/white"
             android:backgroundTint="?attr/colorSecondaryVariant"
             android:layout_marginStart="8dp"/>
 

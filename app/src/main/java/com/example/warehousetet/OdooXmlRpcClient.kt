@@ -550,7 +550,8 @@ package com.example.warehousetet
 import IntTransferProducts
 
 import android.util.Log
-import org.apache.xmlrpc.XmlRpcException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.xmlrpc.client.XmlRpcClient
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl
 import java.net.MalformedURLException
@@ -1330,11 +1331,10 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
 
     //    create_update_move_line_for_pick
     suspend fun updateMoveLinesForPick(
+        lineId: Int,
         pickingId: Int,
-        productId: Int,
         serialNumber: String,
-        destLocation: String,
-        locationId: Int
+        productId: Int,
     ) {
         val config = getClientConfig("object")
         if (config == null) {
@@ -1354,13 +1354,12 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
             userId,
             password,
             "stock.move.line", // Ensure this matches the model where your method is defined
-            "create_update_move_line_for_pick", // Use the adjusted method name that excludes expiration date
+            "update_move_line_with_serial_number", // Use the adjusted method name that excludes expiration date
             listOf(
+                lineId,
                 pickingId,
-                productId,
                 serialNumber,
-                destLocation,
-                locationId
+                productId,
             ) // Parameters excluding the expiration date
         )
 
@@ -2171,45 +2170,40 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
     }
 
 
-    suspend fun setPackageForMoveLine(pickingId: Int, moveLineId: Int, packageName: String): Boolean {
-        return try {
-            val config = getClientConfig("object")
-            if (config == null) {
-                Log.e("OdooXmlRpcClient", "XML RPC Client configuration is null, aborting setPackageForMoveLine.")
-                return false
-            }
+    suspend fun putMoveLineInNewPack(moveLineId: Int) {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting putMoveLineInPack.")
+            return
+        }
 
-            val client = XmlRpcClient().also { it.setConfig(config) }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
 
-            val userId = credentialManager.getUserId()
-            val password = credentialManager.getPassword() ?: ""
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line", // This should match the model where the 'put_in_pack' method is defined
+            "put_in_pack", // The name of the method defined in the Odoo model
+            listOf(moveLineId) // Parameter for the method
+        )
 
-            val params = listOf(
-                Constants.DATABASE,
-                userId,
-                password,
-                "stock.move.line",
-                "set_package_for_move_line",
-                listOf(pickingId, moveLineId, packageName)
-            )
+        try {
+            val result = withContext(Dispatchers.IO) {
+                client.execute("execute_kw", params)
+            } as? Map<*, *> // Cast the result to a Map if possible
 
-            val result = client.execute("execute_kw", params) as? HashMap<*, *>
-            if (result?.get("success") as? Boolean == true) {
-                Log.d("OdooXmlRpcClient", "Package set successfully for move line: $result")
-                true
+            if (result?.get("success") == true) {
+                Log.d("OdooXmlRpcClient", "Successfully executed put_in_pack for move line ID: $moveLineId, package created: ${result["package_name"]}")
             } else {
-                Log.e("OdooXmlRpcClient", "Failed to set package for move line: ${result?.get("error")}")
-                false
+                Log.e("OdooXmlRpcClient", "Failed to execute put_in_pack for move line ID: $moveLineId, result was unexpected: $result")
             }
         } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error setting package for move line: ${e.message}", e)
-            false
+            Log.e("OdooXmlRpcClient", "Error executing putMoveLineInPack: ${e.localizedMessage}", e)
         }
     }
-
-
-
-
 
 }
 

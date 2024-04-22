@@ -7,4 +7,6 @@
     <string name="title_activity_receipts">ReceiptsActivity</string>
     <string name="title_activity_products">ProductsActivity</string>
     <string name="title_activity_product_detail">ProductDetailActivity</string>
+    <string name="edit_lot_number">Edit Lot/Serial Number</string>
+    <string name="lot_serial_number">Edit lot/serial number</string>
 </resources>

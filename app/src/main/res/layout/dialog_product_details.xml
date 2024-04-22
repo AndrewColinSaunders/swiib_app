@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:background="#212d40">
+
+        <TextView
+            android:id="@+id/textProductName"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Product Name"
+            android:textStyle="bold"
+            android:textAppearance="@style/TextAppearance.AppCompat.Large"
+            android:textSize="20sp"
+            android:textColor="@android:color/white"
+            android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:id="@+id/textProductQuantity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Quantity"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginTop="16dp"
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/textProductFromLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="From Location"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/textProductToLocation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="To Location"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/white" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:id="@+id/lotNumberLayout"
+        android:layout_marginBottom="16dp">
+
+        <!-- First line for Lot/Serial Number label and edit button -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/textLotNumber"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Lot/Serial Number:"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:textColor="@android:color/white"/>
+
+            <ImageButton
+                android:id="@+id/buttonEditLotNumber"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@android:drawable/ic_menu_edit"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/edit_lot_number"
+                android:padding="4dp"/>
+
+        </LinearLayout>
+
+        <!-- Second line for Lot/Serial Number value -->
+        <TextView
+            android:id="@+id/textProductLotNumber"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Lot/Serial Number"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:layout_marginTop="4dp"/>
+
+    </LinearLayout>
+
+
+
+    <EditText
+        android:id="@+id/editTextProductLotNumber"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/lot_serial_number"
+        android:inputType="text"
+        android:visibility="gone"
+        android:textSize="18sp"
+        android:layout_marginTop="8dp"
+        android:importantForAutofill="yes"
+        android:autofillHints="@string/lot_serial_number"
+        android:textColor="@android:color/white"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+    <Button
+        android:id="@+id/buttonCancel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Cancel"
+        android:textAllCaps="false"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@color/danger_red"
+        android:layout_marginEnd="8dp"/>
+
+    <Button
+        android:id="@+id/buttonConfirmSN"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Confirm"
+        android:textAllCaps="false"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
+        android:backgroundTint="?attr/colorSecondaryVariant"
+        android:layout_marginStart="8dp"/>
+    </LinearLayout>
+        </LinearLayout>
+
+
+
+    <!--<?xml version="1.0" encoding="utf-8"?>-->
+<!--<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    android:layout_width="match_parent"-->
+<!--    android:layout_height="wrap_content"-->
+<!--    android:orientation="vertical"-->
+<!--    android:padding="16dp"-->
+<!--    android:background="#212d40">-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/textProductName"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Product Name"-->
+<!--        android:textStyle="bold"-->
+<!--        android:textAppearance="@style/TextAppearance.AppCompat.Large"-->
+<!--        android:textColor="@android:color/white" />-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/textProductQuantity"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Quantity"-->
+<!--        android:textStyle="bold"-->
+<!--        android:layout_marginTop="8dp"-->
+<!--        android:textColor="@android:color/white" />-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/textProductFromLocation"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="From Location"-->
+<!--        android:textStyle="bold"-->
+<!--        android:layout_marginTop="8dp"-->
+<!--        android:textColor="@android:color/white" />-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/textProductToLocation"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="To Location"-->
+<!--        android:layout_marginTop="8dp"-->
+<!--        android:textStyle="bold"-->
+<!--        android:textColor="@android:color/white" />-->
+
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="horizontal"-->
+<!--        android:gravity="center_vertical"-->
+<!--        android:id="@+id/lotNumberLayout">-->
+<!--        <TextView-->
+<!--            android:id="@+id/textLotNumber"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:text="Lot/Serial Number:"-->
+<!--            android:textStyle="bold"-->
+<!--            android:layout_marginTop="8dp"-->
+<!--            android:layout_marginBottom="8dp"-->
+<!--            android:textColor="@android:color/white"/>-->
+<!--        <TextView-->
+<!--            android:id="@+id/textProductLotNumber"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:text="Lot/Serial Number"-->
+<!--            android:layout_marginTop="8dp"-->
+<!--            android:layout_marginBottom="8dp"-->
+<!--            android:textColor="@android:color/white"/>-->
+
+<!--        <ImageButton-->
+<!--            android:id="@+id/buttonEditLotNumber"-->
+<!--            android:layout_width="24dp"-->
+<!--            android:layout_height="24dp"-->
+<!--            android:src="@android:drawable/ic_menu_edit"-->
+<!--            android:background="?attr/selectableItemBackgroundBorderless"-->
+<!--            android:contentDescription="@string/edit_lot_number"-->
+<!--            android:padding="4dp"-->
+<!--            android:layout_margin="4dp"/>-->
+<!--    </LinearLayout>-->
+
+<!--    <EditText-->
+<!--        android:id="@+id/editTextProductLotNumber"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:hint="@string/lot_serial_number"-->
+<!--        android:inputType="text"-->
+<!--        android:visibility="gone"-->
+<!--        android:layout_marginTop="8dp"-->
+<!--        android:importantForAutofill="yes"-->
+<!--        android:autofillHints="@string/lot_serial_number"-->
+<!--        android:textColor="@android:color/white"/>-->
+
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="horizontal"-->
+<!--        android:gravity="center">-->
+
+<!--        <Button-->
+<!--            android:id="@+id/buttonCancel"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:text="Cancel"-->
+<!--            android:textAllCaps="false"-->
+<!--            android:textSize="18sp"-->
+<!--            android:textColor="@android:color/white"-->
+<!--            android:backgroundTint="@color/danger_red"-->
+<!--            android:layout_marginEnd="8dp"/>-->
+
+<!--        <Button-->
+<!--            android:id="@+id/buttonConfirmSN"-->
+<!--            android:layout_width="0dp"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_weight="1"-->
+<!--            android:text="Confirm"-->
+<!--            android:textAllCaps="false"-->
+<!--            android:textSize="18sp"-->
+<!--            android:textColor="@android:color/white"-->
+<!--            android:backgroundTint="?attr/colorSecondaryVariant"-->
+<!--            android:layout_marginStart="8dp"/>-->
+<!--    </LinearLayout>-->
+<!--</LinearLayout>-->
