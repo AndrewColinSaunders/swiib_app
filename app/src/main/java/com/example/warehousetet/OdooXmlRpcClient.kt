@@ -1178,6 +1178,8 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         }
     }
 
+
+
     private suspend fun fetchUserDetails(userId: Int): BuyerDetails? {
         Log.d("OdooXmlRpcClient", "Starting fetchUserDetails for userId: $userId")
         val config = getClientConfig("object")
@@ -2204,6 +2206,42 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
             Log.e("OdooXmlRpcClient", "Error executing putMoveLineInPack: ${e.localizedMessage}", e)
         }
     }
+
+    suspend fun updatePickingImage(pickingId: Int, imageBase64: String) {
+        val config = getClientConfig("object") ?: run {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updatePickingImage.")
+            return
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val methodName = "update_picking_image"
+        val model = "stock.picking"
+        val args = listOf(pickingId, imageBase64)  // Ensure this is a list
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            model,
+            methodName,
+            args
+        )
+
+        try {
+            val result = client.execute("execute_kw", params) as Map<String, Any>
+            Log.d("OdooXmlRpcClient", "Image update result for picking ID $pickingId: $result")
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error updating image for picking ID $pickingId: ${e.localizedMessage}", e)
+        }
+    }
+
+
+
+
+
+
 
 }
 

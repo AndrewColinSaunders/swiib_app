@@ -1006,7 +1006,6 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.InputType
@@ -1019,13 +1018,11 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -1760,13 +1757,13 @@ class ProductsActivity : AppCompatActivity() {
                 } else if (!recount) {
                     promptForProductQuantity(productName, expectedQuantity, receiptId, productId, recount = true)
                 } else {
-                    val localReceiptName = receiptName // Copy the mutable property to a local variable
+                    val localReceiptId = receiptName // Copy the mutable property to a local variable
 
                     lifecycleScope.launch(Dispatchers.IO) {
-                        if (localReceiptName != null) { // Use the local copy for the check
-                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localReceiptName)
+                        if (localReceiptId != null) { // Use the local copy for the check
+                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localReceiptId)
                             if (buyerDetails != null) {
-                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, localReceiptName, productName) // Pass the local copy to the function
+                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, receiptName, productName) // Pass the local copy to the function
                                 withContext(Dispatchers.Main) {
 //                                    Toast.makeText(this@ProductsActivity, "Flagged ${buyerDetails.login}. Email sent.", Toast.LENGTH_LONG).show()
                                     showRedToast("Flagged")

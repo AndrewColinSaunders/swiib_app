@@ -55,6 +55,9 @@ class PickActivity : AppCompatActivity() {
                 intent.putExtra("DEST_LOCATION", pick.locationDestId)
                 startActivity(intent)
             }
+            coroutineScope.launch {
+                odooXmlRpcClient.fetchAndLogBuyerDetails(pick.name)
+            }
         }
         recyclerView.adapter = pickAdapter
     }
