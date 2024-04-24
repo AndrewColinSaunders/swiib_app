@@ -2079,40 +2079,7 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
     }
 
 
-//    suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
-//        val config = getClientConfig("object")
-//        if (config == null) {
-//            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchResultPackagesByPickingId.")
-//            return emptyList()
-//        }
-//        val client = XmlRpcClient().also { it.setConfig(config) }
-//        val userId = credentialManager.getUserId()
-//        val password = credentialManager.getPassword() ?: ""
-//
-//        val domain = listOf(listOf("id", "=", pickingId))
-//        val fields = listOf("result_packages")  // Fetching result_packages field
-//
-//        val params = listOf(
-//            Constants.DATABASE,
-//            userId,
-//            password,
-//            "stock.picking",
-//            "search_read",
-//            listOf(domain),
-//            mapOf("fields" to fields)
-//        )
-//
-//        return try {
-//            val result = client.execute("execute_kw", params) as Array<Any>
-//            val resultPackages = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["result_packages"].toString() else ""
-//            parseResultPackages(resultPackages)
-//
-//        } catch (e: Exception) {
-//            Log.e("OdooXmlRpcClient", "Error fetching result packages for picking ID: ${e.localizedMessage}", e)
-//            emptyList()
-//        }
-//
-//    }
+
     suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
         val config = getClientConfig("object")
         if (config == null) {
@@ -2237,6 +2204,175 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         }
     }
 
+//    suspend fun fetchReceiptMoveLinesByPickingId(pickingId: Int): List<ReceiptMoveLine> {
+//        val config = getClientConfig("object")
+//        if (config == null) {
+//            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchReceiptMoveLinesByPickingId.")
+//            return emptyList()
+//        }
+//        val client = XmlRpcClient().also { it.setConfig(config) }
+//        val userId = credentialManager.getUserId()
+//        val password = credentialManager.getPassword() ?: ""
+//
+//        val domain = listOf(listOf("id", "=", pickingId))
+//        val fields = listOf("receipt_move_lines")  // Request the computed field
+//
+//        val params = listOf(
+//            Constants.DATABASE,
+//            userId,
+//            password,
+//            "stock.picking",
+//            "search_read",
+//            listOf(domain),
+//            mapOf("fields" to fields)
+//        )
+//
+//        return try {
+//            val result = client.execute("execute_kw", params) as Array<Any>
+//            val moveLinesSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["receipt_move_lines"].toString() else ""
+//            parseReceiptMoveLinesSummary(moveLinesSummary)
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error fetching receipt move lines for picking ID: ${e.localizedMessage}", e)
+//            emptyList()
+//        }
+//    }
+//
+//    private fun parseReceiptMoveLinesSummary(summary: String): List<ReceiptMoveLine> {
+//        return summary.split(", ").mapNotNull { lineString ->
+//            val parts = lineString.split(":")
+//            if (parts.size >= 8) {  // Ensure there are enough parts to extract all fields
+//                try {
+//                    val productId = parts[0].toInt()
+//                    val productName = parts[1]
+//                    val lotName = parts[2].takeIf { it != "None" } ?: ""
+//                    val quantity = parts[3].toDouble()
+//                    val id = parts[4].toInt()
+//                    val locationDestId = parts[5].toInt()
+//                    val locationDestName = parts[6]
+//                    val expirationDate = parts[7].takeIf { it != "None" } ?: ""
+//
+//                    ReceiptMoveLine(
+//                        id = id,
+//                        productId = productId,
+//                        productName = productName,
+//                        lotName = lotName,
+//                        quantity = quantity,
+//                        locationDestId = locationDestId,
+//                        locationDestName = locationDestName,
+//                        expirationDate = expirationDate
+//                    )
+//                } catch (e: Exception) {
+//                    Log.e("parseReceiptMoveLinesSummary", "Error parsing receipt move lines summary: ${e.localizedMessage}")
+//                    null
+//                }
+//            } else {
+//                null
+//            }
+//        }
+//    }
+
+    suspend fun fetchReceiptMoveLinesByPickingId(pickingId: Int): List<ReceiptMoveLine> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchReceiptMoveLinesByPickingId.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(listOf("id", "=", pickingId))
+        val fields = listOf("receipt_move_lines")  // Request the computed field
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val result = client.execute("execute_kw", params) as Array<Any>
+            val moveLinesSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["receipt_move_lines"].toString() else ""
+            parseReceiptMoveLinesSummary(moveLinesSummary)
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching receipt move lines for picking ID: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+    private fun parseReceiptMoveLinesSummary(summary: String): List<ReceiptMoveLine> {
+        return summary.split(", ").mapNotNull { lineString ->
+            val parts = lineString.split(":")
+            if (parts.size >= 10) {  // Ensure there are enough parts to extract all fields
+                try {
+                    val productId = parts[0].toInt()
+                    val productName = parts[1]
+                    val lotName = parts[2].takeIf { it != "None" } ?: ""
+                    val quantity = parts[3].toDouble()
+                    val productUomQty = parts[4].toDouble()
+                    val moveLineId = parts[5].toInt()
+                    val locationDestId = parts[6].toInt()
+                    val locationDestName = parts[7]
+                    val expirationDate = parts[8].takeIf { it != "None" } ?: ""
+                    val totalQuantity = parts[9].toDouble()
+                    ReceiptMoveLine(
+                        id = moveLineId,
+                        productId = productId,
+                        productName = productName,
+                        lotName = lotName,
+                        quantity = quantity,
+                        locationDestId = locationDestId,
+                        locationDestName = locationDestName,
+                        expirationDate = expirationDate,
+                        expectedQuantity = productUomQty,
+                        totalQuantity = totalQuantity
+                    )
+                } catch (e: Exception) {
+                    Log.e("parseReceiptMoveLinesSummary", "Error parsing receipt move lines summary: ${e.localizedMessage}")
+                    null
+                }
+            } else {
+                null
+            }
+        }
+    }
+
+    suspend fun updateMoveLineQuantityUntracked(moveLineId: Int, pickingId: Int, productId: Int, quantity: Double) {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLineQuantity.")
+            return
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val methodName = "update_move_line_quantity"
+        val model = "stock.move.line"
+        val args = listOf(moveLineId, pickingId, productId, quantity)  // Arguments to pass to the method
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            model,
+            methodName,
+            args
+        )
+
+        try {
+            val result = withContext(Dispatchers.IO) {
+                client.execute("execute_kw", params) as Boolean  // Assuming the method returns a boolean
+            }
+            Log.d("OdooXmlRpcClient", "Update quantity result for move line ID $moveLineId: $result")
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error updating quantity for move line ID $moveLineId: ${e.localizedMessage}", e)
+        }
+    }
 
 
 

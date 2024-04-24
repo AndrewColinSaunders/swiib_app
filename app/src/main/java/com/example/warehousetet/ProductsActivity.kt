@@ -6,7 +6,6 @@
 //import android.graphics.Color
 //import android.graphics.PorterDuff
 //import android.graphics.Typeface
-//import android.graphics.drawable.ColorDrawable
 //import android.os.Bundle
 //import android.text.Editable
 //import android.text.InputType
@@ -19,13 +18,11 @@
 //import android.view.KeyEvent
 //import android.view.Menu
 //import android.view.MenuItem
-//import android.view.View
 //import android.view.WindowManager
 //import android.view.inputmethod.EditorInfo
 //import android.view.inputmethod.InputMethodManager
 //import android.widget.Button
 //import android.widget.EditText
-//import android.widget.ImageButton
 //import android.widget.TextView
 //import android.widget.Toast
 //import androidx.appcompat.app.AlertDialog
@@ -54,7 +51,7 @@
 //    private lateinit var barcodeInput: EditText
 //    private lateinit var confirmButton: Button
 //
-////    private var productBarcodes = hashMapOf<String, String>()
+//    //    private var productBarcodes = hashMapOf<String, String>()
 //    private var productSerialNumbers = hashMapOf<ProductReceiptKey, MutableList<String>>()
 //    val lotQuantities: MutableMap<ProductReceiptKey, Int> = mutableMapOf()
 //    private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
@@ -65,12 +62,6 @@
 //    override fun onCreate(savedInstanceState: Bundle?) {
 //        super.onCreate(savedInstanceState)
 //        setContentView(R.layout.activity_products)
-//
-//    //    // Set ActionBar background color
-//    //    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
-//
-//    //    // Change the status bar color to match the ActionBar
-//    //    window.statusBarColor = ContextCompat.getColor(this, R.color.cardGrey) // Use the color defined as cardGrey
 //
 //        odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
 //        barcodeInput = findViewById(R.id.barcodeInput)
@@ -116,41 +107,41 @@
 //        return true
 //    }
 //    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-//    return when (item.itemId) {
-//        R.id.action_flag_receipt -> {
-//            AlertDialog.Builder(this).apply {
-//                setTitle("Flag Receipt")
-//                setMessage("Are you sure you want to flag this receipt?")
-//                setPositiveButton("Flag Receipt") { _, _ ->
-//                    flagReceipt()
-//                }
-//                setNegativeButton(android.R.string.cancel, null)
-//            }.show()
-//            true
+//        return when (item.itemId) {
+//            R.id.action_flag_receipt -> {
+//                AlertDialog.Builder(this).apply {
+//                    setTitle("Flag Receipt")
+//                    setMessage("Are you sure you want to flag this receipt?")
+//                    setPositiveButton("Flag Receipt") { _, _ ->
+//                        flagReceipt()
+//                    }
+//                    setNegativeButton(android.R.string.cancel, null)
+//                }.show()
+//                true
+//            }
+//            android.R.id.home -> {
+//                onBackPressed()
+//                true
+//            }
+//            else -> super.onOptionsItemSelected(item)
 //        }
-//        android.R.id.home -> {
-//            onBackPressed()
-//            true
-//        }
-//        else -> super.onOptionsItemSelected(item)
 //    }
-//}
 //
 //    private fun showRedToast(message: String) {
-//    val toast = Toast.makeText(this@ProductsActivity, message, Toast.LENGTH_SHORT)
-//    val view = toast.view
+//        val toast = Toast.makeText(this@ProductsActivity, message, Toast.LENGTH_SHORT)
+//        val view = toast.view
 //
-//    // Get the TextView of the default Toast view
-//    val text = view?.findViewById<TextView>(android.R.id.message)
+//        // Get the TextView of the default Toast view
+//        val text = view?.findViewById<TextView>(android.R.id.message)
 //
-//    // Set the background color of the Toast view
-//    view?.background?.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
+//        // Set the background color of the Toast view
+//        view?.background?.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
 //
-//    // Set the text color to be more visible on the red background, if needed
-//    text?.setTextColor(Color.WHITE)
+//        // Set the text color to be more visible on the red background, if needed
+//        text?.setTextColor(Color.WHITE)
 //
-//    toast.show()
-//}
+//        toast.show()
+//    }
 //    private fun showGreenToast(message: String) {
 //        val toast = Toast.makeText(this@ProductsActivity, message, Toast.LENGTH_SHORT)
 //        val view = toast.view
@@ -171,29 +162,29 @@
 //    }
 //
 //    private fun flagReceipt() {
-//    val receiptId = intent.getIntExtra("RECEIPT_ID", -1) // Assuming you have receiptId
-//    if (receiptId == -1) {
-//        Log.e("ProductsActivity", "Invalid receipt ID")
-//        return
-//    }
+//        val receiptId = intent.getIntExtra("RECEIPT_ID", -1) // Assuming you have receiptId
+//        if (receiptId == -1) {
+//            Log.e("ProductsActivity", "Invalid receipt ID")
+//            return
+//        }
 //
-//    coroutineScope.launch {
-//        val receiptName = this@ProductsActivity.receiptName ?: return@launch
-//        odooXmlRpcClient.fetchAndLogBuyerDetails(receiptName)?.let { buyerDetails ->
-//            sendEmailFlaggingReceipt(buyerDetails.login, buyerDetails.name, receiptName)
-//            withContext(Dispatchers.Main) {
-//                Log.d("ProductsActivity", "Receipt flagged and buyer notified via email.")
-//                showRedToast("Receipt flagged")
-//            }
-//        } ?: run {
-//            withContext(Dispatchers.Main) {
-//                Log.e("ProductsActivity", "Failed to fetch buyer details or flag the receipt.")
+//        coroutineScope.launch {
+//            val receiptName = this@ProductsActivity.receiptName ?: return@launch
+//            odooXmlRpcClient.fetchAndLogBuyerDetails(receiptName)?.let { buyerDetails ->
+//                sendEmailFlaggingReceipt(buyerDetails.login, buyerDetails.name, receiptName)
+//                withContext(Dispatchers.Main) {
+//                    Log.d("ProductsActivity", "Receipt flagged and buyer notified via email.")
+//                    showRedToast("Receipt flagged")
+//                }
+//            } ?: run {
+//                withContext(Dispatchers.Main) {
+//                    Log.e("ProductsActivity", "Failed to fetch buyer details or flag the receipt.")
 ////                Toast.makeText(this@ProductsActivity, "Failed to flag receipt", Toast.LENGTH_SHORT).show()
-//                  showRedToast("Failed to flag receipt")
+//                    showRedToast("Failed to flag receipt")
+//                }
 //            }
 //        }
 //    }
-//}
 //
 //    private fun sendEmailFlaggingReceipt(buyerEmail: String, buyerName: String, receiptName: String) {
 //        val props = Properties().apply {
@@ -356,8 +347,8 @@
 //                }
 //            } else {
 //                withContext(Dispatchers.Main) {
-//    //                Toast.makeText(this@ProductsActivity, "Barcode not found.", Toast.LENGTH_SHORT).show()
-//                      showRedToast("Barcode not found")
+//                    //                Toast.makeText(this@ProductsActivity, "Barcode not found.", Toast.LENGTH_SHORT).show()
+//                    showRedToast("Barcode not found")
 //                }
 //            }
 //        }
@@ -493,13 +484,13 @@
 //                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = quantity) // Update match state with new lot quantity
 //                            withContext(Dispatchers.Main) {
 ////                                Toast.makeText(this@ProductsActivity, "Lot expiration date updated successfully.", Toast.LENGTH_SHORT).show()
-//                                  showGreenToast("Lot expiration date updated")
+//                                showGreenToast("Lot expiration date updated")
 //                            }
 //                        }
 //                    }
 //                } else {
 ////                    Toast.makeText(this, "Invalid expiration date entered. Please use the format dd/MM/yyyy.", Toast.LENGTH_SHORT).show()
-//                      showRedToast("Invalid expiration date entered. Please use the format DD/MM/YY")
+//                    showRedToast("Invalid expiration date entered. Please use the format DD/MM/YY")
 //                }
 //            }
 //            .setNegativeButton("Cancel", null)
@@ -578,8 +569,8 @@
 //            }
 //        }
 //
-//    dialog.show()
-//}
+//        dialog.show()
+//    }
 //
 //    private fun setupDateInputField(editText: EditText) {
 //        editText.addTextChangedListener(object : TextWatcher {
@@ -616,56 +607,7 @@
 //            }
 //        })
 //    }
-////    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String) {
-////        val editText = EditText(this).apply {
-////            inputType = InputType.TYPE_CLASS_NUMBER // Use TEXT to allow slashes in date input
-////            hint = "Enter expiration date (dd/MM/yyyy)" // Updated hint for clarity
-////        }
-////
-////        setupDateInputField(editText) // This function should setup a date input, possibly with a DatePicker dialog
-////
-////        AlertDialog.Builder(this)
-////            .setTitle("Enter Expiration Date")
-////            .setMessage("Enter the expiration date for $productName.")
-////            .setView(editText)
-////            .setPositiveButton("OK") { _, _ ->
-////                val enteredExpirationDate = editText.text.toString().trim()
-////                // Use your existing function to convert date to the expected format
-////                val convertedDate = convertToFullDateTime(enteredExpirationDate) // Assuming this outputs "dd/MM/yyyy"
-////                if (isValidDateFormat(convertedDate)) { // Adjust this function call if needed
-////                    coroutineScope.launch {
-////                        // First, update serial numbers and match state
-////                        val key = ProductReceiptKey(productId, receiptId)
-////                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
-////                        if (!serialList.contains(serialNumber)) {
-////                            serialList.add(serialNumber)
-////                            // Here, determine if the match state needs to be updated based on your logic
-////                            val isMatched = serialList.size == productsAdapter.products.find { it.id == productId }?.quantity?.toInt()
-////                            updateProductMatchState(productId, receiptId, isMatched, serialList)
-////
-////                            // Now, proceed to update the move lines in Odoo
-////                            odooXmlRpcClient.updateMoveLinesByPicking(receiptId, productId, serialNumber, convertedDate)
-////
-////                            // Inform the user of success
-////                            withContext(Dispatchers.Main) {
-//////                                Toast.makeText(this@ProductsActivity, "Serial number added for $productName. ${serialList.size}/${productsAdapter.products.find { it.id == productId }?.quantity?.toInt()} verified", Toast.LENGTH_LONG).show()
-////                                  showGreenToast("Serial number added for $productName. ${serialList.size}/${productsAdapter.products.find { it.id == productId }?.quantity?.toInt()} verified")
-////                            }
-////                        } else {
-////                            withContext(Dispatchers.Main) {
-//////                                Toast.makeText(this@ProductsActivity, "Serial number already entered for $productName", Toast.LENGTH_LONG).show()
-////                                showRedToast("Serial number already entered for $productName")
-////                            }
-////                        }
-////                    }
-////                } else {
-//////                    Toast.makeText(this@ProductsActivity, "Invalid expiration date entered. Please use the format dd/MM/yyyy.", Toast.LENGTH_LONG).show()
-////                    showRedToast("Invalid expiration date entered. Please use the format DD/MM/YY")
-////                }
-////            }
-////            .setNegativeButton("Cancel", null)
-////            .show()
-////    }
+//
 //    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String) {
 //        val editText = EditText(this).apply {
 //            inputType = InputType.TYPE_CLASS_NUMBER // Adjusted for numeric input, setupDateInputField will handle formatting
@@ -755,18 +697,18 @@
 //                val enteredQuantity = editText.text.toString().toDoubleOrNull()
 //                if (enteredQuantity != null && enteredQuantity == expectedQuantity) {
 ////                    Toast.makeText(this, "Quantity entered for $productName", Toast.LENGTH_LONG).show()
-//                      showGreenToast("Quantity updated for $productName")
+//                    showGreenToast("Quantity updated for $productName")
 //                    updateProductMatchState(productId, receiptId, true)
 //                } else if (!recount) {
 //                    promptForProductQuantity(productName, expectedQuantity, receiptId, productId, recount = true)
 //                } else {
-//                    val localReceiptName = receiptName // Copy the mutable property to a local variable
+//                    val localReceiptId = receiptName // Copy the mutable property to a local variable
 //
 //                    lifecycleScope.launch(Dispatchers.IO) {
-//                        if (localReceiptName != null) { // Use the local copy for the check
-//                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localReceiptName)
+//                        if (localReceiptId != null) { // Use the local copy for the check
+//                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localReceiptId)
 //                            if (buyerDetails != null) {
-//                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, localReceiptName, productName) // Pass the local copy to the function
+//                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, receiptName, productName) // Pass the local copy to the function
 //                                withContext(Dispatchers.Main) {
 ////                                    Toast.makeText(this@ProductsActivity, "Flagged ${buyerDetails.login}. Email sent.", Toast.LENGTH_LONG).show()
 //                                    showRedToast("Flagged")
@@ -835,52 +777,6 @@
 //        }
 //    }
 //
-////private fun updateProductMatchState(
-////    productId: Int,
-////    receiptId: Int,
-////    matched: Boolean = false,
-////    serialNumbers: MutableList<String>? = null,
-////    lotQuantity: Int? = null
-////) {
-////    val key = ProductReceiptKey(productId, receiptId)
-////
-////    // Get product and its expected quantity
-////    val product = productsAdapter.products.find { it.id == productId }
-////    val expectedQuantity = product?.quantity?.toInt() ?: 0
-////
-////    // Determine the match state based on tracking type and quantities
-////    val isMatched = when {
-////        // For serialized products, check if the list size matches the product quantity.
-////        serialNumbers != null && product?.trackingType == "serial" -> serialNumbers.size == expectedQuantity
-////        // For lot products, check if the entered lot quantity matches or exceeds the product quantity.
-////        lotQuantity != null && product?.trackingType == "lot" -> {
-////            val currentTotalQuantity = lotQuantities.getOrDefault(key, 0) + lotQuantity
-////            lotQuantities[key] = currentTotalQuantity
-////            currentTotalQuantity >= expectedQuantity
-////        }
-////        // For non-serialized and non-lotted products, use the matched parameter.
-////        else -> matched
-////    }
-////
-////    // Update and save the match state
-////    quantityMatches[key] = isMatched
-////    saveMatchStateToPreferences(key, isMatched)
-////
-////    // Update the UI
-////    val position = productsAdapter.findProductPositionById(productId)
-////    if (position != -1) {
-////        runOnUiThread { productsAdapter.notifyItemChanged(position) }
-////    }
-////
-////    // Provide feedback based on the match state
-////    val message = when {
-////        serialNumbers != null && !isMatched -> "Partial quantity matched for $productId. ${serialNumbers.size}/$expectedQuantity verified."
-////        lotQuantity != null && !isMatched -> "Partial quantity matched for $productId. ${lotQuantities[key]}/$expectedQuantity verified."
-////        isMatched -> "Verification complete for product ID: $productId."
-////        else -> "Please verify the product details."
-////    }
-////    runOnUiThread { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
-////}
 //
 //    private fun updateProductMatchState(
 //        productId: Int,
@@ -925,7 +821,7 @@
 //                withContext(Dispatchers.Main) {
 //                    if (validated) {
 ////                        Log.d("ProductsActivity", "Receipt validated successfully.")
-//                           showGreenToast("Receipt validated")
+//                        showGreenToast("Receipt validated")
 //                        // Redirect to ReceiptsActivity
 //                        val intent = Intent(this@ProductsActivity, ReceiptsActivity::class.java)
 //                        startActivity(intent)
@@ -1003,6 +899,7 @@ package com.example.warehousetet
 
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
@@ -1016,6 +913,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.util.Log
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.WindowManager
@@ -1054,8 +952,8 @@ class ProductsActivity : AppCompatActivity() {
     //    private var productBarcodes = hashMapOf<String, String>()
     private var productSerialNumbers = hashMapOf<ProductReceiptKey, MutableList<String>>()
     val lotQuantities: MutableMap<ProductReceiptKey, Int> = mutableMapOf()
-    private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
     private var barcodeToProductIdMap = mutableMapOf<String, Int>()
+    private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
 
     private var receiptName: String? = null
 
@@ -1063,20 +961,13 @@ class ProductsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_products)
 
-        //    // Set ActionBar background color
-        //    supportActionBar?.setBackgroundDrawable(ColorDrawable(Color.parseColor("#212d40"))) // Use the color #212d40
-
-        //    // Change the status bar color to match the ActionBar
-        //    window.statusBarColor = ContextCompat.getColor(this, R.color.cardGrey) // Use the color defined as cardGrey
-
         odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
         barcodeInput = findViewById(R.id.barcodeInput)
         confirmButton = findViewById(R.id.confirmButton)
         val receiptId = intent.getIntExtra("RECEIPT_ID", -1)
         receiptName = intent.getStringExtra("RECEIPT_NAME")
         Log.d("ProductsActivity", "Received receipt name: $receiptName")
-        val titleTextView: TextView = findViewById(R.id.productsTitleTextView)
-        titleTextView.text = receiptName
+
 
         productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId)
 
@@ -1262,8 +1153,8 @@ class ProductsActivity : AppCompatActivity() {
             Log.d("fetchProductsForReceipt", "Fetching products for receipt ID: $receiptId")
 
             // Fetch basic product information first.
-            val fetchedProducts: List<Product> = try {
-                odooXmlRpcClient.fetchProductsForReceipt(receiptId)
+            val fetchedProducts: List<ReceiptMoveLine> = try {
+                odooXmlRpcClient.fetchReceiptMoveLinesByPickingId(receiptId)
             } catch (e: Exception) {
                 Log.e("fetchProductsForReceipt", "Error fetching products: ${e.localizedMessage}")
                 emptyList()
@@ -1273,17 +1164,17 @@ class ProductsActivity : AppCompatActivity() {
             fetchBarcodesForProducts(fetchedProducts)
 
             // Initialize a list to store the updated products with additional details
-            val updatedProductsWithDetails = mutableListOf<Product>()
+            val updatedProductsWithDetails = mutableListOf<ReceiptMoveLine>()
 
             fetchedProducts.forEach { product ->
                 coroutineScope.launch(Dispatchers.IO) {
-                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(product.name) ?: Pair("none", false)
-                    Log.d("ProductExpiration", "Product: ${product.name}, Uses Expiration Date: ${trackingAndExpiration.second}")
+                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(product.productName) ?: Pair("none", false)
+                    Log.d("ProductExpiration", "Product: ${product.productName}, Uses Expiration Date: ${trackingAndExpiration.second}")
                     val barcode = barcodeToProductIdMap.filterValues { it == product.id }.keys.firstOrNull()
 
                     // Update each product with its tracking type, useExpirationDate, and barcode, without expanding them
                     val updatedProduct = product.copy(
-                        trackingType = trackingAndExpiration.first,
+                        trackingType = trackingAndExpiration?.first ?: "none",
                         useExpirationDate = trackingAndExpiration.second,
                         barcode = barcode
                     )
@@ -1298,10 +1189,10 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-    private fun fetchBarcodesForProducts(products: List<Product>) {
+    private fun fetchBarcodesForProducts(products: List<ReceiptMoveLine>) {
         products.forEach { product ->
             coroutineScope.launch {
-                val barcode = odooXmlRpcClient.fetchProductBarcodeByName(product.name)
+                val barcode = odooXmlRpcClient.fetchProductBarcodeByName(product.productName)
                 barcode?.let {
                     // Assuming barcodeToProductIdMap should map barcode to product ID
                     synchronized(this@ProductsActivity) {
@@ -1312,7 +1203,7 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateUIForProducts(products: List<Product>, receiptId: Int) {
+    private fun updateUIForProducts(products: List<ReceiptMoveLine>, receiptId: Int) {
         // Assuming barcodeToProductIdMap and productSerialNumbers are already populated or handled within the fetched products loop
         val newQuantityMatches = products.associate {
             ProductReceiptKey(it.id, receiptId) to (quantityMatches[ProductReceiptKey(it.id, receiptId)] ?: false)
@@ -1328,23 +1219,24 @@ class ProductsActivity : AppCompatActivity() {
         coroutineScope.launch {
             val productId = barcodeToProductIdMap[scannedBarcode]
             if (productId != null) {
-                val product = productsAdapter.products.find { it.id == productId }
+                val product = productsAdapter.moveLines.find { it.id == productId }
                 product?.let {
-                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(it.name)
+                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(it.productName)
                     val trackingType = trackingAndExpiration?.first ?: "none"
 
                     when (trackingType) {
                         "serial" -> withContext(Dispatchers.Main) {
                             // Prompt for a serial number for serialized products
-                            promptForSerialNumber(it.name, receiptId, it.id)
+                            promptForSerialNumber(it.productName, receiptId, it.id)
                         }
                         "lot" -> withContext(Dispatchers.Main) {
                             // Prompt for a lot number for lot-tracked products
-                            promptForLotNumber(it.name, receiptId, it.id)
+                            promptForLotNumber(it.productName, receiptId, it.id)
                         }
                         "none" -> withContext(Dispatchers.Main) {
-                            // Prompt for product quantity for non-serialized products
-                            promptForProductQuantity(it.name, it.quantity, receiptId, it.id, false)
+//                            (lineId: Int, pickingId: Int, productId: Int, productName: String, expectedQuantity: Double, totalQuantity: Double)
+//                            promptForProductQuantity(it.id, receiptId, it.productId, it.productName, it.expectedQuantity )
+                            promptForProductQuantity(it.productName, it.expectedQuantity, receiptId,it.productId, it.id, false)
                         }
                         else -> {
                             // Handle other cases as needed
@@ -1379,7 +1271,7 @@ class ProductsActivity : AppCompatActivity() {
                     val enteredLotNumber = editText.text.toString().trim()
                     if (enteredLotNumber.isNotEmpty()) {
                         coroutineScope.launch {
-                            val product = productsAdapter.products.find { it.id == productId }
+                            val product = productsAdapter.moveLines.find { it.id == productId }
                             if (product?.useExpirationDate == true) {
                                 withContext(Dispatchers.Main) {
                                     // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
@@ -1443,7 +1335,7 @@ class ProductsActivity : AppCompatActivity() {
                         } else {
                             // Logic for handling the quantity update without expiration date
 //                            odooXmlRpcClient.updateMoveLinesWithoutExpirationWithLot(receiptId, productId, lotNumber, enteredQuantity)
-                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = enteredQuantity)
+//                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = enteredQuantity)
                             withContext(Dispatchers.Main) {
                                 showGreenToast("Quantity updated for lot without expiration date.")
                             }
@@ -1487,7 +1379,7 @@ class ProductsActivity : AppCompatActivity() {
                     coroutineScope.launch {
                         odooXmlRpcClient.updateMoveLinesByPickingWithLot(receiptId, productId, lotNumber, quantity, convertedDate).also {
                             // Assume this method successfully updates the lot with expiration date
-                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = quantity) // Update match state with new lot quantity
+//                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = quantity) // Update match state with new lot quantity
                             withContext(Dispatchers.Main) {
 //                                Toast.makeText(this@ProductsActivity, "Lot expiration date updated successfully.", Toast.LENGTH_SHORT).show()
                                 showGreenToast("Lot expiration date updated")
@@ -1528,7 +1420,7 @@ class ProductsActivity : AppCompatActivity() {
                 val enteredSerialNumber = editText.text.toString().trim()
                 if (enteredSerialNumber.isNotEmpty()) {
                     coroutineScope.launch {
-                        val product = productsAdapter.products.find { it.id == productId }
+                        val product = productsAdapter.moveLines.find { it.id == productId }
                         val key = ProductReceiptKey(productId, receiptId)
                         val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
 
@@ -1613,56 +1505,7 @@ class ProductsActivity : AppCompatActivity() {
             }
         })
     }
-    //    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String) {
-//        val editText = EditText(this).apply {
-//            inputType = InputType.TYPE_CLASS_NUMBER // Use TEXT to allow slashes in date input
-//            hint = "Enter expiration date (dd/MM/yyyy)" // Updated hint for clarity
-//        }
-//
-//        setupDateInputField(editText) // This function should setup a date input, possibly with a DatePicker dialog
-//
-//        AlertDialog.Builder(this)
-//            .setTitle("Enter Expiration Date")
-//            .setMessage("Enter the expiration date for $productName.")
-//            .setView(editText)
-//            .setPositiveButton("OK") { _, _ ->
-//                val enteredExpirationDate = editText.text.toString().trim()
-//                // Use your existing function to convert date to the expected format
-//                val convertedDate = convertToFullDateTime(enteredExpirationDate) // Assuming this outputs "dd/MM/yyyy"
-//                if (isValidDateFormat(convertedDate)) { // Adjust this function call if needed
-//                    coroutineScope.launch {
-//                        // First, update serial numbers and match state
-//                        val key = ProductReceiptKey(productId, receiptId)
-//                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
-//                        if (!serialList.contains(serialNumber)) {
-//                            serialList.add(serialNumber)
-//                            // Here, determine if the match state needs to be updated based on your logic
-//                            val isMatched = serialList.size == productsAdapter.products.find { it.id == productId }?.quantity?.toInt()
-//                            updateProductMatchState(productId, receiptId, isMatched, serialList)
-//
-//                            // Now, proceed to update the move lines in Odoo
-//                            odooXmlRpcClient.updateMoveLinesByPicking(receiptId, productId, serialNumber, convertedDate)
-//
-//                            // Inform the user of success
-//                            withContext(Dispatchers.Main) {
-////                                Toast.makeText(this@ProductsActivity, "Serial number added for $productName. ${serialList.size}/${productsAdapter.products.find { it.id == productId }?.quantity?.toInt()} verified", Toast.LENGTH_LONG).show()
-//                                  showGreenToast("Serial number added for $productName. ${serialList.size}/${productsAdapter.products.find { it.id == productId }?.quantity?.toInt()} verified")
-//                            }
-//                        } else {
-//                            withContext(Dispatchers.Main) {
-////                                Toast.makeText(this@ProductsActivity, "Serial number already entered for $productName", Toast.LENGTH_LONG).show()
-//                                showRedToast("Serial number already entered for $productName")
-//                            }
-//                        }
-//                    }
-//                } else {
-////                    Toast.makeText(this@ProductsActivity, "Invalid expiration date entered. Please use the format dd/MM/yyyy.", Toast.LENGTH_LONG).show()
-//                    showRedToast("Invalid expiration date entered. Please use the format DD/MM/YY")
-//                }
-//            }
-//            .setNegativeButton("Cancel", null)
-//            .show()
-//    }
+
     private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER // Adjusted for numeric input, setupDateInputField will handle formatting
@@ -1688,10 +1531,10 @@ class ProductsActivity : AppCompatActivity() {
                             // Proceed to update the backend as required, using the serial number and converted date
                             odooXmlRpcClient.updateMoveLinesByPicking(receiptId, productId, serialNumber, convertedDate)
                             // Determine if the match state needs to be updated
-                            val isMatched = serialList.size == productsAdapter.products.find { it.id == productId }?.quantity?.toInt()
+                            val isMatched = serialList.size == productsAdapter.moveLines.find { it.id == productId }?.quantity?.toInt()
                             updateProductMatchState(productId, receiptId, isMatched, serialList)
                             withContext(Dispatchers.Main) {
-                                showGreenToast("Serial number added for $productName. ${serialList.size}/${productsAdapter.products.find { it.id == productId }?.quantity?.toInt()} verified")
+                                showGreenToast("Serial number added for $productName. ${serialList.size}/${productsAdapter.moveLines.find { it.id == productId }?.quantity?.toInt()} verified")
                             }
                         } else {
                             withContext(Dispatchers.Main) {
@@ -1738,54 +1581,169 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, receiptId: Int, productId: Int, recount: Boolean = false) {
-        val editText = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            hint = "Enter product quantity"
+//    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, receiptId: Int, lineId: Int, recount: Boolean = false, productId: Int) {
+//        val editText = EditText(this).apply {
+//            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+//            hint = "Enter product quantity"
+//        }
+//
+//        AlertDialog.Builder(this)
+//            .setTitle(if (recount) "Recount Required" else "Enter Quantity")
+//            .setMessage(if (recount) "Recount for $productName. Enter the exact quantity." else "Enter the exact quantity for $productName.")
+//            .setView(editText)
+//            .setPositiveButton("OK") { _, _ ->
+//                val enteredQuantity = editText.text.toString().toDoubleOrNull()
+//                if (enteredQuantity != null && enteredQuantity == expectedQuantity) {
+////                    Toast.makeText(this, "Quantity entered for $productName", Toast.LENGTH_LONG).show()
+//                    showGreenToast("Quantity updated for $productName")
+//                    updateProductMatchState(productId, receiptId, true)
+//                } else if (!recount) {
+//                    promptForProductQuantity(productName, expectedQuantity, receiptId, productId, recount = true)
+//                } else {
+//                    val localReceiptId = receiptName // Copy the mutable property to a local variable
+//
+//                    lifecycleScope.launch(Dispatchers.IO) {
+//                        if (localReceiptId != null) { // Use the local copy for the check
+//                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localReceiptId)
+//                            if (buyerDetails != null) {
+//                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, receiptName, productName) // Pass the local copy to the function
+//                                withContext(Dispatchers.Main) {
+////                                    Toast.makeText(this@ProductsActivity, "Flagged ${buyerDetails.login}. Email sent.", Toast.LENGTH_LONG).show()
+//                                    showRedToast("Flagged")
+//                                }
+//                            } else {
+//                                withContext(Dispatchers.Main) {
+////                                    Toast.makeText(this@ProductsActivity, "Flagged, but buyer details not found.", Toast.LENGTH_LONG).show()
+//                                    showRedToast("Flagged, but buyer details not found")
+//                                }
+//                            }
+//                        } else {
+//                            withContext(Dispatchers.Main) {
+////                                Toast.makeText(this@ProductsActivity, "Receipt name is null or not found", Toast.LENGTH_LONG).show()
+//                                showRedToast("Receipt name is null or not found")
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//            .setNegativeButton("Cancel", null)
+//            .show()
+//    }
+//    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, receiptId: Int, productId: Int, lineId: Int, recount: Boolean = false) {
+//        val editText = EditText(this).apply {
+//            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+//            hint = "Enter product quantity"
+//        }
+//
+//        AlertDialog.Builder(this)
+//            .setTitle(if (recount) "Recount Required" else "Enter Quantity")
+//            .setMessage(if (recount) "Recount for $productName. Enter the exact quantity." else "Enter the exact quantity for $productName.")
+//            .setView(editText)
+//            .setPositiveButton("OK") { _, _ ->
+//                val enteredQuantity = editText.text.toString().toDoubleOrNull()
+//                if (enteredQuantity != null) {
+//                    // Always update the quantity, regardless of its correctness
+//                    lifecycleScope.launch(Dispatchers.IO) {
+//                        odooXmlRpcClient.updateMoveLineQuantityUntracked(
+//                            lineId,
+//                            receiptId,
+//                            productId,
+//                            enteredQuantity
+//                        )
+//                    }
+//
+//                    // Check if the quantity is correct
+//                    if (enteredQuantity == expectedQuantity) {
+//                        showGreenToast("Quantity updated for $productName")
+//                        updateProductMatchState(productId, receiptId, true)
+//                    } else if (!recount) {
+//                        promptForProductQuantity(productName, expectedQuantity, receiptId, productId, lineId, recount = true)
+//                    } else {
+//                        handleIncorrectRecount(productName, receiptId)
+//                    }
+//                } else {
+//                    Toast.makeText(this, "Invalid quantity entered", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//            .setNegativeButton("Cancel", null)
+//            .show()
+//    }
+    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, receiptId: Int, productId: Int, lineId: Int, recount: Boolean = false) {
+        // Inflate the custom layout
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_input, null)
+        val editText = dialogView.findViewById<EditText>(R.id.quantityInput)
+        val titleTextView = dialogView.findViewById<TextView>(R.id.titleTextView)
+        titleTextView.text = if (recount) "Recount Required for $productName" else "Enter Quantity for $productName"
+
+        editText.setHintTextColor(Color.WHITE)
+
+        // Setup AlertDialog with custom view but no buttons
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(false) // Disable dismissing the dialog by pressing back or touching outside
+            .create()
+
+        // Find and setup the custom buttons
+        val cancelButton = dialogView.findViewById<Button>(R.id.cancelButton)
+        val confirmButton = dialogView.findViewById<Button>(R.id.confirmButton)
+
+        // Cancel button logic
+        cancelButton.setOnClickListener {
+            dialog.dismiss() // This dismisses the dialog
         }
 
-        AlertDialog.Builder(this)
-            .setTitle(if (recount) "Recount Required" else "Enter Quantity")
-            .setMessage(if (recount) "Recount for $productName. Enter the exact quantity." else "Enter the exact quantity for $productName.")
-            .setView(editText)
-            .setPositiveButton("OK") { _, _ ->
-                val enteredQuantity = editText.text.toString().toDoubleOrNull()
-                if (enteredQuantity != null && enteredQuantity == expectedQuantity) {
-//                    Toast.makeText(this, "Quantity entered for $productName", Toast.LENGTH_LONG).show()
+        // Confirm button logic
+        confirmButton.setOnClickListener {
+            val enteredQuantity = editText.text.toString().toDoubleOrNull()
+            if (enteredQuantity != null) {
+                // Always update the quantity, regardless of its correctness
+                lifecycleScope.launch(Dispatchers.IO) {
+                    odooXmlRpcClient.updateMoveLineQuantityUntracked(
+                        lineId,
+                        receiptId,
+                        productId,
+                        enteredQuantity
+                    )
+                }
+
+                // Check if the quantity is correct
+                if (enteredQuantity == expectedQuantity) {
                     showGreenToast("Quantity updated for $productName")
                     updateProductMatchState(productId, receiptId, true)
                 } else if (!recount) {
-                    promptForProductQuantity(productName, expectedQuantity, receiptId, productId, recount = true)
+                    promptForProductQuantity(productName, expectedQuantity, receiptId, productId, lineId, recount = true)
                 } else {
-                    val localReceiptId = receiptName // Copy the mutable property to a local variable
+                    handleIncorrectRecount(productName, receiptId)
+                }
 
-                    lifecycleScope.launch(Dispatchers.IO) {
-                        if (localReceiptId != null) { // Use the local copy for the check
-                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localReceiptId)
-                            if (buyerDetails != null) {
-                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, receiptName, productName) // Pass the local copy to the function
-                                withContext(Dispatchers.Main) {
-//                                    Toast.makeText(this@ProductsActivity, "Flagged ${buyerDetails.login}. Email sent.", Toast.LENGTH_LONG).show()
-                                    showRedToast("Flagged")
-                                }
-                            } else {
-                                withContext(Dispatchers.Main) {
-//                                    Toast.makeText(this@ProductsActivity, "Flagged, but buyer details not found.", Toast.LENGTH_LONG).show()
-                                    showRedToast("Flagged, but buyer details not found")
-                                }
-                            }
-                        } else {
-                            withContext(Dispatchers.Main) {
-//                                Toast.makeText(this@ProductsActivity, "Receipt name is null or not found", Toast.LENGTH_LONG).show()
-                                showRedToast("Receipt name is null or not found")
-                            }
-                        }
-                    }
+                dialog.dismiss() // Dismiss the dialog after confirming
+            } else {
+                Toast.makeText(this, "Invalid quantity entered", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Display the dialog
+        dialog.show()
+    }
+
+    private fun handleIncorrectRecount(productName: String, receiptId: Int) {
+        val localReceiptId = receiptName  // Copy the mutable property to a local variable
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val buyerDetails = localReceiptId?.let { odooXmlRpcClient.fetchAndLogBuyerDetails(it) }
+            if (buyerDetails != null) {
+                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, localReceiptId, productName) // Pass the local copy to the function
+                withContext(Dispatchers.Main) {
+                    showRedToast("Flagged ${buyerDetails.login}. Email sent.")
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    showRedToast("Flagged, but buyer details not found.")
                 }
             }
-            .setNegativeButton("Cancel", null)
-            .show()
+        }
     }
+
 
     private fun sendEmailToBuyer(buyerEmail: String, buyerName: String, receiptName: String?, productName: String) {
         val props = Properties().apply {
@@ -1832,122 +1790,101 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-//private fun updateProductMatchState(
-//    productId: Int,
-//    receiptId: Int,
-//    matched: Boolean = false,
-//    serialNumbers: MutableList<String>? = null,
-//    lotQuantity: Int? = null
-//) {
-//    val key = ProductReceiptKey(productId, receiptId)
+
+//    private fun updateProductMatchState(
+//        productId: Int,
+//        receiptId: Int,
+//        matched: Boolean = false,
+//        serialNumbers: MutableList<String>? = null,
+//        lotQuantity: Int? = null
+//    ) {
+//        val key = ProductReceiptKey(productId, receiptId)
 //
-//    // Get product and its expected quantity
-//    val product = productsAdapter.products.find { it.id == productId }
-//    val expectedQuantity = product?.quantity?.toInt() ?: 0
+//        // Get product and its expected quantity with a fallback to 0 if not found or null
+//        val expectedQuantity = productsAdapter.moveLines.find { it.id == productId }?.quantity?.toInt() ?: 0
 //
-//    // Determine the match state based on tracking type and quantities
-//    val isMatched = when {
-//        // For serialized products, check if the list size matches the product quantity.
-//        serialNumbers != null && product?.trackingType == "serial" -> serialNumbers.size == expectedQuantity
-//        // For lot products, check if the entered lot quantity matches or exceeds the product quantity.
-//        lotQuantity != null && product?.trackingType == "lot" -> {
-//            val currentTotalQuantity = lotQuantities.getOrDefault(key, 0) + lotQuantity
-//            lotQuantities[key] = currentTotalQuantity
-//            currentTotalQuantity >= expectedQuantity
+//        // Update match state based on the logic for serialized or lot-tracked products
+//        if (serialNumbers != null) {
+//            // Serialized products logic
+//            quantityMatches[key] = serialNumbers.size == expectedQuantity
+//        } else if (lotQuantity != null) {
+//            // Lot products logic
+//            val currentQuantity = lotQuantities.getOrDefault(key, 0) + lotQuantity
+//            lotQuantities[key] = currentQuantity
+//            quantityMatches[key] = currentQuantity >= expectedQuantity
+//        } else {
+//            // For non-serialized and non-lotted products, directly use the matched parameter
+//            quantityMatches[key] = matched
 //        }
-//        // For non-serialized and non-lotted products, use the matched parameter.
-//        else -> matched
-//    }
 //
-//    // Update and save the match state
-//    quantityMatches[key] = isMatched
-//    saveMatchStateToPreferences(key, isMatched)
+//        // Check if all products are matched after updating the match state
+//        val allProductsMatched = checkAllProductsMatched(receiptId)
 //
-//    // Update the UI
-//    val position = productsAdapter.findProductPositionById(productId)
-//    if (position != -1) {
-//        runOnUiThread { productsAdapter.notifyItemChanged(position) }
-//    }
+//        // Save match state to preferences
+//        saveMatchStateToPreferences(key, quantityMatches[key] == true)
 //
-//    // Provide feedback based on the match state
-//    val message = when {
-//        serialNumbers != null && !isMatched -> "Partial quantity matched for $productId. ${serialNumbers.size}/$expectedQuantity verified."
-//        lotQuantity != null && !isMatched -> "Partial quantity matched for $productId. ${lotQuantities[key]}/$expectedQuantity verified."
-//        isMatched -> "Verification complete for product ID: $productId."
-//        else -> "Please verify the product details."
+//        // Update UI accordingly
+//        val position = productsAdapter.findProductPositionById(productId)
+//        if (position != -1) {
+//            runOnUiThread { productsAdapter.notifyItemChanged(position) }
+//        }
+//        if (allProductsMatched) {
+//            coroutineScope.launch {
+//                val validated = odooXmlRpcClient.validateOperation(receiptId)
+//                withContext(Dispatchers.Main) {
+//                    if (validated) {
+////                        Log.d("ProductsActivity", "Receipt validated successfully.")
+//                        showGreenToast("Receipt validated")
+//                        // Redirect to ReceiptsActivity
+//                        val intent = Intent(this@ProductsActivity, ReceiptsActivity::class.java)
+//                        startActivity(intent)
+//                        finish() // Optional: if you want to remove the current activity from the stack
+//                    } else {
+////                        Log.e("ProductsActivity", "Failed to validate receipt.")
+//                        showRedToast("Failed to validate receipt")
+//                    }
+//                }
+//            }
+//        }
+//
 //    }
-//    runOnUiThread { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
-//}
-
     private fun updateProductMatchState(
-        productId: Int,
-        receiptId: Int,
-        matched: Boolean = false,
+        lineId: Int,
+        pickId: Int,
+        matched: Boolean = true,
         serialNumbers: MutableList<String>? = null,
-        lotQuantity: Int? = null
     ) {
-        val key = ProductReceiptKey(productId, receiptId)
+        val key = ProductReceiptKey(lineId, pickId)
+        val productLine = productsAdapter.moveLines.find { it.id == lineId }
 
-        // Get product and its expected quantity with a fallback to 0 if not found or null
-        val expectedQuantity = productsAdapter.products.find { it.id == productId }?.quantity?.toInt() ?: 0
-
-        // Update match state based on the logic for serialized or lot-tracked products
-        if (serialNumbers != null) {
-            // Serialized products logic
-            quantityMatches[key] = serialNumbers.size == expectedQuantity
-        } else if (lotQuantity != null) {
-            // Lot products logic
-            val currentQuantity = lotQuantities.getOrDefault(key, 0) + lotQuantity
-            lotQuantities[key] = currentQuantity
-            quantityMatches[key] = currentQuantity >= expectedQuantity
-        } else {
-            // For non-serialized and non-lotted products, directly use the matched parameter
+        if (productLine != null) {
             quantityMatches[key] = matched
-        }
 
-        // Check if all products are matched after updating the match state
-        val allProductsMatched = checkAllProductsMatched(receiptId)
-
-        // Save match state to preferences
-        saveMatchStateToPreferences(key, quantityMatches[key] == true)
-
-        // Update UI accordingly
-        val position = productsAdapter.findProductPositionById(productId)
-        if (position != -1) {
-            runOnUiThread { productsAdapter.notifyItemChanged(position) }
-        }
-        if (allProductsMatched) {
-            coroutineScope.launch {
-                val validated = odooXmlRpcClient.validateOperation(receiptId)
-                withContext(Dispatchers.Main) {
-                    if (validated) {
-//                        Log.d("ProductsActivity", "Receipt validated successfully.")
-                        showGreenToast("Receipt validated")
-                        // Redirect to ReceiptsActivity
-                        val intent = Intent(this@ProductsActivity, ReceiptsActivity::class.java)
-                        startActivity(intent)
-                        finish() // Optional: if you want to remove the current activity from the stack
-                    } else {
-//                        Log.e("ProductsActivity", "Failed to validate receipt.")
-                        showRedToast("Failed to validate receipt")
-                    }
+            // Refresh the UI to reflect the updated state
+            runOnUiThread {
+                val position = productsAdapter.findProductPositionById(lineId)
+                if (position != -1) {
+                    productsAdapter.notifyItemChanged(position)
                 }
+//                checkAndToggleValidateButton(pickId)
             }
+        } else {
+            Log.e("updateProductMatchState", "No line found for ID $lineId")
         }
 
+        saveMatchStateToPreferences(key, quantityMatches[key] == true)
     }
-
 
     private fun checkAllProductsMatched(receiptId: Int): Boolean {
         // Filter the quantityMatches for the current receiptId
-        return quantityMatches.filter { it.key.receiptId == receiptId }.all { it.value }
+        return quantityMatches.filter { it.key.pickId == receiptId }.all { it.value }
     }
 
 
     private fun saveMatchStateToPreferences(key: ProductReceiptKey, matched: Boolean) {
         val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
-            putBoolean("${key.productId}_${key.receiptId}", matched)
+            putBoolean("${key.moveLineId}_${key.pickId}", matched)
             apply()
         }
     }
@@ -1982,7 +1919,7 @@ class ProductsActivity : AppCompatActivity() {
 
         // Now update the adapter with the loaded match states
         runOnUiThread {
-            productsAdapter.updateProducts(productsAdapter.products, receiptId, quantityMatches)
+            productsAdapter.updateProducts(productsAdapter.moveLines, receiptId, quantityMatches)
         }
     }
 

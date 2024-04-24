@@ -6,32 +6,18 @@
     android:padding="16dp"
     android:background="#11151c">
 
-    <TextView
-        android:id="@+id/productsTitleTextView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Products"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="10dp"
-        android:textColor="@color/white"/>
-
     <EditText
         android:id="@+id/barcodeInput"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:hint="Enter barcode"
         android:inputType="text"
-        app:layout_constraintTop_toBottomOf="@id/productsTitleTextView"
+        app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="0dp"
         android:background="@drawable/edittext_border" />
 
-    <!-- Wrapper LinearLayout for buttons -->
     <LinearLayout
         android:id="@+id/buttonWrapper"
         android:layout_width="wrap_content"
@@ -47,7 +33,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Confirm"
-            app:backgroundTint="?attr/colorSecondaryVariant"
+            android:backgroundTint="?attr/colorSecondaryVariant"
             android:layout_marginEnd="4dp"/>
 
         <Button
@@ -68,4 +54,79 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="10dp"/>
+
 </androidx.constraintlayout.widget.ConstraintLayout>
+
+
+
+    <!--<?xml version="1.0" encoding="utf-8"?>-->
+<!--<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
+<!--    android:layout_width="match_parent"-->
+<!--    android:layout_height="match_parent"-->
+<!--    android:padding="16dp"-->
+<!--    android:background="#11151c">-->
+
+<!--    <TextView-->
+<!--        android:id="@+id/productsTitleTextView"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Products"-->
+<!--        android:textSize="24sp"-->
+<!--        android:textStyle="bold"-->
+<!--        app:layout_constraintTop_toTopOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        android:layout_marginTop="10dp"-->
+<!--        android:textColor="@color/white"/>-->
+
+<!--    <EditText-->
+<!--        android:id="@+id/barcodeInput"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:hint="Enter barcode"-->
+<!--        android:inputType="text"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/productsTitleTextView"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        android:layout_marginTop="16dp"-->
+<!--        android:background="@drawable/edittext_border" />-->
+
+<!--    &lt;!&ndash; Wrapper LinearLayout for buttons &ndash;&gt;-->
+<!--    <LinearLayout-->
+<!--        android:id="@+id/buttonWrapper"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="horizontal"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/barcodeInput"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        android:layout_marginTop="8dp">-->
+
+<!--        <Button-->
+<!--            android:id="@+id/confirmButton"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Confirm"-->
+<!--            app:backgroundTint="?attr/colorSecondaryVariant"-->
+<!--            android:layout_marginEnd="4dp"/>-->
+
+<!--        <Button-->
+<!--            android:id="@+id/clearButton"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Clear"-->
+<!--            android:backgroundTint="@color/danger_red"-->
+<!--            android:layout_marginStart="4dp"/>-->
+<!--    </LinearLayout>-->
+
+<!--    <androidx.recyclerview.widget.RecyclerView-->
+<!--        android:id="@+id/productsRecyclerView"-->
+<!--        android:layout_width="0dp"-->
+<!--        android:layout_height="0dp"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/buttonWrapper"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        android:layout_marginTop="10dp"/>-->
+<!--</androidx.constraintlayout.widget.ConstraintLayout>-->

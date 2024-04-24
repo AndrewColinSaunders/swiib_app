@@ -29,7 +29,7 @@
             android:text="Quantity"
             android:layout_marginTop="4dp"
             android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            android:visibility="gone"/>
+            />
 
         <TextView
             android:id="@+id/productIdTextView"
@@ -41,13 +41,89 @@
             android:visibility="gone"/>
 
         <TextView
-            android:id="@+id/productTrackingTypeTextView"
+            android:id="@+id/productDestinationLocationTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Tracking"
+            android:text="Destination Location"
             android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-            />
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
 
+        <TextView
+            android:id="@+id/productLotSerialNumberTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Lot/serial Number"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
+        <TextView
+            android:id="@+id/productUomQtyTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Expected Quantity"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
+        <TextView
+            android:id="@+id/productTotalQuantTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Total Current Quantity"
+            android:layout_marginTop="4dp"
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
+
+
+
+    <!--<?xml version="1.0" encoding="utf-8"?>-->
+<!--<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    xmlns:app="http://schemas.android.com/apk/res-auto"-->
+<!--    android:layout_width="match_parent"-->
+<!--    android:layout_height="wrap_content"-->
+<!--    android:layout_margin="8dp"-->
+<!--    app:cardElevation="4dp"-->
+<!--    app:cardCornerRadius="8dp"-->
+<!--    android:id="@+id/productItemCard">-->
+
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="vertical"-->
+<!--        android:padding="16dp">-->
+
+<!--        <TextView-->
+<!--            android:id="@+id/productNameTextView"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Product Name"-->
+<!--            android:textAppearance="@style/TextAppearance.AppCompat.Large"-->
+<!--            android:textStyle="bold"/>-->
+
+<!--        <TextView-->
+<!--            android:id="@+id/productQuantityTextView"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Quantity"-->
+<!--            android:layout_marginTop="4dp"-->
+<!--            android:textAppearance="@style/TextAppearance.AppCompat.Medium"-->
+<!--            android:visibility="gone"/>-->
+
+<!--        <TextView-->
+<!--            android:id="@+id/productIdTextView"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="ID"-->
+<!--            android:layout_marginTop="4dp"-->
+<!--            android:textAppearance="@style/TextAppearance.AppCompat.Medium"-->
+<!--            android:visibility="gone"/>-->
+
+<!--        <TextView-->
+<!--            android:id="@+id/productTrackingTypeTextView"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Tracking"-->
+<!--            android:layout_marginTop="4dp"-->
+<!--            android:textAppearance="@style/TextAppearance.AppCompat.Medium"-->
+<!--            />-->
+
+<!--    </LinearLayout>-->
+<!--</com.google.android.material.card.MaterialCardView>-->

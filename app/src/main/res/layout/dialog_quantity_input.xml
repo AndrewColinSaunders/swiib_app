@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp"
+    android:background="#212d40">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Enter quantity for product: $productName"
+        android:textAppearance="?attr/textAppearanceHeadline6"
+        android:textColor="@android:color/white"
+        android:gravity="center"/>
+
+    <EditText
+        android:id="@+id/quantityInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter quantity"
+        android:inputType="numberDecimal"
+        android:maxLines="1"
+        android:layout_marginTop="16dp"
+        android:textColor="@android:color/white"
+        android:backgroundTint="@android:color/white"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:layout_marginTop="16dp">
+
+        <Button
+            android:id="@+id/cancelButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Cancel"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/danger_red"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/confirmButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Confirm"
+            android:textColor="@android:color/white"
+            android:backgroundTint="?attr/colorSecondaryVariant"
+            android:layout_marginStart="8dp"/>
+    </LinearLayout>
+</LinearLayout>

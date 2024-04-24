@@ -1461,116 +1461,86 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
         return super.onOptionsItemSelected(item)
     }
 
-private fun showFlagDialog() {
-    val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
-    val dialogBuilder = AlertDialog.Builder(this).apply {
-        setView(dialogView)
-        setCancelable(false)  // Prevent dialog from being dismissed by back press or outside touches
-    }
-    val dialog = dialogBuilder.create()
-
-    dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-        dialog.dismiss()  // Dismiss the dialog when "Cancel" is clicked
-    }
-
-    dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
-        coroutineScope.launch {
-            try {
-                val pickId = this@PickProductsActivity.pickId
-                val pickName = this@PickProductsActivity.pickName ?: run {
-                    withContext(Dispatchers.Main) {
-                        Log.e("PickProductsActivity", "Pick name is null")
-                        showRedToast("Invalid pick details")
-                    }
-                    return@launch
-                }
-
-                val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(pickName)
-                if (buyerDetails != null) {
-                    withContext(Dispatchers.Main) {
-                        // Capture image before sending the email
-                        captureImage(pickId)
-                    }
-
-                    // Ensure email is sent after image capture dialog completion
-                    sendEmailToBuyer(buyerDetails.login, buyerDetails.name, pickName)
-                    withContext(Dispatchers.Main) {
-                        Log.d("PickProductsActivity", "Pick flagged and buyer notified via email.")
-                        showRedToast("Pick flagged")
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Log.e("PickProductsActivity", "Failed to fetch buyer details or flag the pick.")
-                        showRedToast("Failed to flag pick")
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Log.e("PickProductsActivity", "Error in flagging process: ${e.localizedMessage}", e)
-                    showRedToast("Error during flagging")
-                }
-            }
-            dialog.dismiss()  // Dismiss the dialog once the operations are complete
+    private fun showFlagDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
+        val dialogBuilder = AlertDialog.Builder(this).apply {
+            setView(dialogView)
+            setCancelable(false)  // Prevent dialog from being dismissed by back press or outside touches
         }
+        val dialog = dialogBuilder.create()
+
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()  // Dismiss the dialog when "Cancel" is clicked
+        }
+
+        dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
+            coroutineScope.launch {
+                try {
+                    val pickId = this@PickProductsActivity.pickId
+                    val pickName = this@PickProductsActivity.pickName ?: run {
+                        withContext(Dispatchers.Main) {
+                            Log.e("PickProductsActivity", "Pick name is null")
+                            showRedToast("Invalid pick details")
+                        }
+                        return@launch
+                    }
+
+                    val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(pickName)
+                    if (buyerDetails != null) {
+                        withContext(Dispatchers.Main) {
+                            // Capture image before sending the email
+                            captureImage(pickId)
+                        }
+
+                        // Ensure email is sent after image capture dialog completion
+                        sendEmailToBuyer(buyerDetails.login, buyerDetails.name, pickName)
+                        withContext(Dispatchers.Main) {
+                            Log.d("PickProductsActivity", "Pick flagged and buyer notified via email.")
+                            showRedToast("Pick flagged")
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            Log.e("PickProductsActivity", "Failed to fetch buyer details or flag the pick.")
+                            showRedToast("Failed to flag pick")
+                        }
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        Log.e("PickProductsActivity", "Error in flagging process: ${e.localizedMessage}", e)
+                        showRedToast("Error during flagging")
+                    }
+                }
+                dialog.dismiss()  // Dismiss the dialog once the operations are complete
+            }
+        }
+
+        dialog.show()  // Show the dialog
     }
 
-    dialog.show()  // Show the dialog
-}
-
-
-
-//    private fun captureImage(pickId: Int) {
-//        val builder = AlertDialog.Builder(this)
-//        builder.setTitle("Capture Image?")
-//        builder.setMessage("Would you like to capture an image?")
-//
-//        // No button - just dismiss the dialog
-//        builder.setNegativeButton("No") { dialog, _ ->
-//            dialog.dismiss()
-//        }
-//
-//        // Capture Image button - open the camera
-//        builder.setPositiveButton("Capture Image") { dialog, _ ->
-//            dialog.dismiss()
-//            openCamera()
-//        }
-//
-//        val dialog = builder.create()
-//        dialog.show()
-//    }
-//
-//    private fun openCamera() {
-//        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-//        try {
-//            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
-//        } catch (e: ActivityNotFoundException) {
-//            // Display an error message
-//            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
-//        }
-//    }
-//
     companion object {
         private const val CAMERA_REQUEST_CODE = 1001
     }
-private fun captureImage(pickId: Int) {
-    val builder = AlertDialog.Builder(this)
-    builder.setTitle("Capture Image?")
-    builder.setMessage("Would you like to capture an image?")
 
-    // No button - just dismiss the dialog
-    builder.setNegativeButton("No") { dialog, _ ->
-        dialog.dismiss()
+    private fun captureImage(pickId: Int) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Capture Image?")
+        builder.setMessage("Would you like to capture an image?")
+
+        // No button - just dismiss the dialog
+        builder.setNegativeButton("No") { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        // Capture Image button - open the camera
+        builder.setPositiveButton("Capture Image") { dialog, _ ->
+            dialog.dismiss()
+            openCamera(pickId)  // Pass pickId to ensure it is available after capturing the image
+        }
+
+        val dialog = builder.create()
+        dialog.show()
     }
 
-    // Capture Image button - open the camera
-    builder.setPositiveButton("Capture Image") { dialog, _ ->
-        dialog.dismiss()
-        openCamera(pickId)  // Pass pickId to ensure it is available after capturing the image
-    }
-
-    val dialog = builder.create()
-    dialog.show()
-}
     private fun openCamera(pickId: Int) {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         if (cameraIntent.resolveActivity(packageManager) != null) {
@@ -1579,6 +1549,7 @@ private fun captureImage(pickId: Int) {
             Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
         }
     }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
@@ -1600,8 +1571,6 @@ private fun captureImage(pickId: Int) {
             }
         }
     }
-
-
 
     override fun onResume() {
         super.onResume()
@@ -1711,8 +1680,6 @@ private fun captureImage(pickId: Int) {
         }
         dialog.dismiss()
     }
-
-    
         buttonCancel.setOnClickListener {
             dialog.dismiss()
         }
@@ -1753,8 +1720,6 @@ private fun captureImage(pickId: Int) {
 
         toast.show()
     }
-
-
 
     private fun fetchProductsForPick(pickId: Int) {
         coroutineScope.launch {
@@ -1806,8 +1771,6 @@ private fun captureImage(pickId: Int) {
         pickProductsAdapter.updateProducts(moveLines, pickId, quantityMatches)
         Log.d("PickProductsActivity", "Adapter updated with new products and match states.")
     }
-
-
 
     private fun fetchBarcodesForProducts(moveLine: List<MoveLine>) {
         moveLine.forEach { moveLine ->
@@ -1932,7 +1895,6 @@ private fun captureImage(pickId: Int) {
         sourceLocationInput.requestFocus() // Autofocus on the source location input field when the dialog shows
     }
 
-
     private fun displayQuantityDialog(productName: String, expectedQuantity: Double, pickId: Int, lineId: Int) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
         val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
@@ -2054,7 +2016,6 @@ private fun captureImage(pickId: Int) {
         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
     }
 
-
     private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int, locationId: Int, lineId: Int) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
         val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
@@ -2138,7 +2099,6 @@ private fun captureImage(pickId: Int) {
         imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
-
     private fun sendEmailToBuyer(buyerEmail: String, buyerName: String, pickName: String?) {
         val props = Properties().apply {
             put("mail.smtp.host", "mail.dattec.co.za")
@@ -2182,9 +2142,6 @@ private fun captureImage(pickId: Int) {
             Log.e("EmailSender", "Failed to send email.", e)
         }
     }
-
-
-
 
     private fun updateProductMatchState(
         lineId: Int,
@@ -2292,7 +2249,6 @@ private fun captureImage(pickId: Int) {
         }
     }
 
-
     private fun loadMatchStatesFromPreferences(pickId: Int) {
         val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
         val tempQuantityMatches = mutableMapOf<ProductPickKey, Boolean>()
@@ -2337,7 +2293,6 @@ private fun captureImage(pickId: Int) {
             pickProductsAdapter.updateProducts(pickProductsAdapter.lines, pickId, quantityMatches)
         }
     }
-
 }
 
 

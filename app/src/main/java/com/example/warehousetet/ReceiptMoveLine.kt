@@ -1,20 +1,18 @@
 package com.example.warehousetet
 
-
-data class MoveLine(
+data class ReceiptMoveLine(
     val id: Int,
     val productId: Int,
     val productName: String,
-    val lotId: Int?,
-    var lotName: String,
+    val lotName: String,
     val quantity: Double,
-    val locationId: Int,
-    val locationName: String,
+    val expectedQuantity: Double,
+    val totalQuantity: Double,
     val locationDestId: Int,
     val locationDestName: String,
+    val expirationDate: String,
     val barcode: String? = null,
     val trackingType: String = "none",
     val useExpirationDate: Boolean? = null
 )
-
 
