@@ -43,6 +43,7 @@ class PackProductsActivity : AppCompatActivity() {
     private var lastScannedBarcode = StringBuilder()
     private var lastKeyTime: Long = 0
     private var isScannerInput = false
+    private var isPrintVisible = true
 
 
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
@@ -51,7 +52,10 @@ class PackProductsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pack_activity_products)
 
+        shouldShowPrinterIcon = false
+
         loadPackagedIds()
+        //loadPrintIconVisibility()
 
         Log.d("PackProductsActivity", "Activity created with pack ID: $packId")
 
@@ -69,21 +73,20 @@ class PackProductsActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_pack_products, menu)
         val printItem = menu?.findItem(R.id.action_print)
+        val flagItem = menu?.findItem(R.id.action_flag)
         printItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, android.R.color.white), PorterDuff.Mode.SRC_ATOP)
-        printItem?.isVisible = false  // Ensure it starts as invisible
+        flagItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, R.color.danger_red), PorterDuff.Mode.SRC_ATOP)
+
+
+        printItem?.isVisible = isPrintVisible  // Control visibility based on your variable
         return true
     }
 
-    private fun togglePrinterIconVisibility(show: Boolean) {
-        shouldShowPrinterIcon = show
-        invalidateOptionsMenu() // This will call onPrepareOptionsMenu again to refresh the menu
-    }
 
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         super.onPrepareOptionsMenu(menu)
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
         val printItem = menu?.findItem(R.id.action_print)
-        printItem?.isVisible = shouldShowPrinterIcon
         subMenu?.clear()
 
         lifecycleScope.launch(Dispatchers.IO) {
@@ -107,6 +110,15 @@ class PackProductsActivity : AppCompatActivity() {
         return true
     }
 
+//
+//    private fun togglePrinterIconVisibility(show: Boolean) {
+//        shouldShowPrinterIcon = show
+//        invalidateOptionsMenu() // Force menu to update
+//    }
+
+
+
+// Printer code =====================================================================================================
     private fun printPackage(packageName: String) {
         createAndPrintBarcode(packageName)
     }
@@ -194,7 +206,7 @@ class PackProductsActivity : AppCompatActivity() {
         barcodeInput = findViewById(R.id.packBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
 
-
+        shouldShowPrinterIcon = false
 
         packProductsAdapter = PackProductsAdapter(emptyList(), packId, packagedMoveLines)
         findViewById<RecyclerView>(R.id.packProductsRecyclerView).apply {
@@ -226,12 +238,12 @@ class PackProductsActivity : AppCompatActivity() {
             }
         }
 
-
+        
 
 
     }
 
-        //=================================================================================================================================================
+    //=================================================================================================================================================
 
     private fun fetchProductBarcodes(productNames: List<String>): Map<String, String?> = runBlocking {
         productNames.associateWith { productName ->
@@ -245,9 +257,10 @@ class PackProductsActivity : AppCompatActivity() {
         Log.d("PackProductsActivity", "Fetching move lines for pack ID: $packId")
         try {
             val fetchedMoveLines = withContext(Dispatchers.IO) {
-                odooXmlRpcClient.fetchMoveLinesByPickingId(packId)
+                odooXmlRpcClient.fetchMoveLinesByOperationId(packId)
             }
             Log.d("PackProductsActivity", "Fetched move lines: $fetchedMoveLines")
+            Log.d("DeliveryOrdersProductsActivity1234556", "Fetched move lines: ${fetchedMoveLines.map { it.productName + ": " + it.quantity }}")
             updateUIForMoveLines(fetchedMoveLines)
 
             // Extract unique product names
@@ -363,6 +376,7 @@ class PackProductsActivity : AppCompatActivity() {
     private fun handleLotTracking(moveLine: MoveLine) {
         // Implement logic for products tracked by lot
         Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
+        showPackageDialogSerial(moveLine)
     }
 
 
@@ -381,22 +395,22 @@ class PackProductsActivity : AppCompatActivity() {
             text = "Create New"
             setBackgroundColor(ContextCompat.getColor(context, R.color.success_green))
             setOnClickListener {
-                Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLine.id}")
+                Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLine.lineId}")
                 lifecycleScope.launch {
                     try {
                         Log.d("Check what moveline is being parsed", "moveLine ID: $moveLine")
-                        val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.id, this@PackProductsActivity)
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
                         if (result) {
                             Log.d("PackageDialog", "Successfully put item in new package.")
                             Toast.makeText(context, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
-                            packagedMoveLines.add(PackagedMovedLine(moveLine.id))
+                            packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
                             val index = packProductsAdapter.moveLines.indexOf(moveLine)
                             savePackagedIds()
                             packProductsAdapter.notifyItemChanged(index)
-                            togglePrinterIconVisibility(true)
-                            checkPrinterIconVisibility()
                             checkAllItemsPackaged()// Notify adapter to update this item
+                            isPrintVisible = true
                             refreshMenu()
+                            //savePrintIconVisibility()
                         } else {
                             Toast.makeText(context, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
                         }
@@ -418,15 +432,15 @@ class PackProductsActivity : AppCompatActivity() {
             if (packageName.isNotEmpty()) {
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
-                        val result = odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.id, packageName)
+                        val result = odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.lineId, packageName)
                         withContext(Dispatchers.Main) {
                             if (result) {
                                 // Add this line to the list of packaged move lines if not already present
-                                if (!packagedMoveLines.any { it.moveLineId == moveLine.id }) {
-                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.id))
+                                if (!packagedMoveLines.any { it.moveLineId == moveLine.lineId }) {
+                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.lineId))
                                 }
                                 // Find the index and notify the adapter
-                                val index = packProductsAdapter.moveLines.indexOfFirst { it.id == moveLine.id }
+                                val index = packProductsAdapter.moveLines.indexOfFirst { it.lineId == moveLine.lineId }
                                 if (index != -1) {
                                     packProductsAdapter.notifyItemChanged(index)  // Notify adapter to update this item
                                 }
@@ -471,16 +485,16 @@ class PackProductsActivity : AppCompatActivity() {
                     val validSerialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(moveLine.productId) ?: listOf()
                     withContext(Dispatchers.Main) {
                         if (enteredSerial == moveLine.lotName) {  // Directly compare entered serial with lotName from moveLine
-                            val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.id, this@PackProductsActivity)
+                            val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
                             if (result) {
                                 Toast.makeText(this@PackProductsActivity, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
-                                packagedMoveLines.add(PackagedMovedLine(moveLine.id))
+                                packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
                                 val index = packProductsAdapter.moveLines.indexOf(moveLine)
                                 packProductsAdapter.notifyItemChanged(index)  // Notify the adapter to refresh this item
-                                togglePrinterIconVisibility(true)  // Additional UI updates as needed
                                 checkAllItemsPackaged()  // Check if all items are now packaged
-                                checkPrinterIconVisibility()
+                                isPrintVisible = true
                                 refreshMenu()
+                                //savePrintIconVisibility()
                                 dialog.dismiss()  // Only dismiss if successful
                             } else {
                                 Toast.makeText(this@PackProductsActivity, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
@@ -505,33 +519,33 @@ class PackProductsActivity : AppCompatActivity() {
             if (packageName.isNotEmpty() && enteredSerial.isNotEmpty()) {
                 lifecycleScope.launch(Dispatchers.Main) {
                     try {
-                        val isValidSerial = withContext(Dispatchers.IO) {
-                            // Replace this with your actual method to validate the serial
-                            odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(moveLine.productId)?.contains(enteredSerial) ?: false
+                        // Fetch all valid serial numbers for the product IDs associated with move lines, then find the corresponding move line
+                        val moveLine = withContext(Dispatchers.IO) {
+                            packProductsAdapter.moveLines.find { it.lotName == enteredSerial }
                         }
 
-                        if (isValidSerial) {
+                        if (moveLine != null) {
                             val result = withContext(Dispatchers.IO) {
-                                odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.id, packageName)
+                                odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.lineId, packageName)
                             }
                             if (result) {
                                 // Add this line to the list of packaged move lines if not already present
-                                if (!packagedMoveLines.any { it.moveLineId == moveLine.id }) {
-                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.id))
+                                if (!packagedMoveLines.any { it.moveLineId == moveLine.lineId }) {
+                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.lineId))
                                 }
                                 // Find the index and notify the adapter
-                                val index = packProductsAdapter.moveLines.indexOfFirst { it.id == moveLine.id }
+                                val index = packProductsAdapter.moveLines.indexOfFirst { it.lineId == moveLine.lineId }
                                 if (index != -1) {
                                     packProductsAdapter.notifyItemChanged(index)  // Notify adapter to update this item
                                 }
                                 addToPackageButton.setBackgroundColor(ContextCompat.getColor(this@PackProductsActivity, R.color.success_green))
-                                Toast.makeText(this@PackProductsActivity, "Package set successfully.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@PackProductsActivity, "Package set successfully for move line ID: ${moveLine.lineId}.", Toast.LENGTH_SHORT).show()
                                 dialog.dismiss()
                             } else {
-                                Toast.makeText(this@PackProductsActivity, "Failed to set package for move line.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@PackProductsActivity, "Failed to set package for move line ID: ${moveLine.lineId}.", Toast.LENGTH_SHORT).show()
                             }
                         } else {
-                            Toast.makeText(this@PackProductsActivity, "Invalid serial number entered.", Toast.LENGTH_LONG).show()
+                            Toast.makeText(this@PackProductsActivity, "Invalid serial number entered. No corresponding move line found.", Toast.LENGTH_LONG).show()
                             serialInput.requestFocus()
                         }
                     } catch (e: Exception) {
@@ -577,24 +591,31 @@ class PackProductsActivity : AppCompatActivity() {
                 packagedMoveLines.clear()
                 packagedMoveLines.addAll(packagedIds.split(",").map { PackagedMovedLine(it.toInt()) })
                 updateUIForMoveLines(packProductsAdapter.moveLines) // Update the UI once data is loaded
-                checkPrinterIconVisibility()
+
             }
         }
     }
 
     private fun checkAllItemsPackaged() {
         val allPackaged = packProductsAdapter.moveLines.all { moveLine ->
-            packagedMoveLines.any { it.moveLineId == moveLine.id }
+            packagedMoveLines.any { it.moveLineId == moveLine.lineId }
         }
         findViewById<Button>(R.id.validateOperationButton).visibility = if (allPackaged) View.VISIBLE else View.GONE
         savePackagedIds() // This call can also be removed if no other state needs to be saved when checking all items
     }
 
-    private fun checkPrinterIconVisibility() {
-        val hasPackagedItems = packagedMoveLines.isNotEmpty()
-        togglePrinterIconVisibility(hasPackagedItems)
-    }
+//
+//    private fun savePrintIconVisibility() {
+//        val editor = getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
+//        editor.putBoolean("isPrintVisible", isPrintVisible)
+//        editor.apply()
+//    }
 
+//
+//    private fun loadPrintIconVisibility() {
+//        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+//        isPrintVisible = prefs.getBoolean("isPrintVisible", false) // Default to false if not found
+//    }
 
     private fun refreshMenu() {
         invalidateOptionsMenu()

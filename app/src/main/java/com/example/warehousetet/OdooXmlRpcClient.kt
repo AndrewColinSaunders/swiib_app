@@ -1575,36 +1575,125 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 //            null
 //        }
 //    }
-suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Double?>? {
-    val config = getClientConfig("object") ?: return null
-    val client = XmlRpcClient().also { it.setConfig(config) }
+    suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Double?>? {
+        val config = getClientConfig("object") ?: return null
+        val client = XmlRpcClient().also { it.setConfig(config) }
 
-    val domain = listOf(listOf("barcode", "=", barcode))
-    val fields = listOf("product_id", "qty")
-    val params = listOf(
-        Constants.DATABASE,
-        credentialManager.getUserId(),
-        credentialManager.getPassword() ?: "",
-        "product.packaging",
-        "search_read",
-        listOf(domain),
-        mapOf("fields" to fields)
-    )
+        val domain = listOf(listOf("barcode", "=", barcode))
+        val fields = listOf("product_id", "qty")
+        val params = listOf(
+            Constants.DATABASE,
+            credentialManager.getUserId(),
+            credentialManager.getPassword() ?: "",
+            "product.packaging",
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
 
-    return try {
-        val results = client.execute("execute_kw", params) as? Array<Any>
-        if (!results.isNullOrEmpty()) {
-            val packagingData = results[0] as Map<String, Any>
-            // Assuming product_id is stored as an Array[Any] (common in Odoo for many2one fields)
-            val productId = (packagingData["product_id"] as? Array<Any>)?.firstOrNull() as? Int
-            val quantity = packagingData["qty"] as? Double
-            Pair(productId, quantity)
-        } else null
-    } catch (e: Exception) {
-        Log.e("OdooXmlRpcClient", "Error fetching product ID and quantity from packaging barcode: ${e.localizedMessage}")
-        null
+        return try {
+            val results = client.execute("execute_kw", params) as? Array<Any>
+            if (!results.isNullOrEmpty()) {
+                val packagingData = results[0] as Map<String, Any>
+                // Assuming product_id is stored as an Array[Any] (common in Odoo for many2one fields)
+                val productId = (packagingData["product_id"] as? Array<Any>)?.firstOrNull() as? Int
+                val quantity = packagingData["qty"] as? Double
+                Pair(productId, quantity)
+            } else null
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching product ID and quantity from packaging barcode: ${e.localizedMessage}")
+            null
+        }
     }
-}
+
+    suspend fun fetchDeliveryOrders(): List<DeliveryOrders> {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchDeliveryOrders.")
+            return emptyList()
+        }
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val domain = listOf(
+            listOf("picking_type_id.code", "=", "outgoing"), // Adjusted for delivery operations
+            listOf("state", "in", listOf("assigned")),
+            "|",
+            listOf("user_id", "=", false),
+            listOf("user_id", "=", userId),
+            listOf("name", "ilike", "OUT") // Adjusted to delivery operation
+        )
+        val fields = listOf(
+            "id",
+            "name",
+            "date",
+            "user_id",
+            "state",
+            "origin"
+        )
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.picking", // Model remains the same
+            "search_read",
+            listOf(domain),
+            mapOf("fields" to fields)
+        )
+
+        return try {
+            val ordersResult = client.execute("execute_kw", params) as Array<Any>
+            val orders = ordersResult.mapNotNull { it as? Map<String, Any> }.mapNotNull { map ->
+                DeliveryOrders(
+                    id = map["id"] as Int,
+                    name = map["name"] as String,
+                    date = map["date"] as String,
+                    origin = map["origin"].toString(),
+                    locationId = null, // Set these to null initially
+                    locationDestId = null
+                )
+            }
+
+            // For each order, fetch the locations from stock.move.line model
+            orders.forEach { order ->
+                val moveLineDomain = listOf(
+                    listOf("picking_id", "=", order.id)
+                )
+                val moveLineFields = listOf("location_id", "location_dest_id")
+                val moveLineParams = listOf(
+                    Constants.DATABASE,
+                    userId,
+                    password,
+                    "stock.move.line",
+                    "search_read",
+                    listOf(moveLineDomain),
+                    mapOf("fields" to moveLineFields, "limit" to 1) // Assuming one move line per order for simplification
+                )
+
+                val moveLineResult = client.execute("execute_kw", moveLineParams) as Array<Any>
+                val moveLine = moveLineResult.mapNotNull { it as? Map<String, Any> }.firstOrNull()
+
+                order.locationId = (moveLine?.get("location_id") as? Array<Any>)?.get(1)?.toString()
+                order.locationDestId = (moveLine?.get("location_dest_id") as? Array<Any>)?.get(1)?.toString()
+            }
+
+            // Log the orders with location names
+            orders.forEach { order ->
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "Order ID: ${order.id}, Name: ${order.name}, Location: ${order.locationId}, Destination Location: ${order.locationDestId}"
+                )
+            }
+
+            orders
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error fetching delivery orders: ${e.localizedMessage}", e)
+            emptyList()
+        }
+    }
+
 
     suspend fun fetchPacks(): List<Pack> {
         val config = getClientConfig("object")
@@ -1694,7 +1783,7 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
         }
     }
 
-    suspend fun fetchMoveLinesByPickingId(pickingId: Int): List<MoveLine> {
+    suspend fun fetchMoveLinesByOperationId(pickingId: Int): List<MoveLine> {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchMoveLinesByPickingId.")
@@ -1705,7 +1794,7 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
         val password = credentialManager.getPassword() ?: ""
 
         val domain = listOf(listOf("id", "=", pickingId))
-        val fields = listOf("move_lines_summary")  // Assuming this field contains the move lines summary
+        val fields = listOf("detailed_move_lines")  // Assuming this field contains the move lines summary
 
         val params = listOf(
             Constants.DATABASE,
@@ -1719,12 +1808,15 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
 
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
-            val moveLinesSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["move_lines_summary"].toString() else ""
+            val moveLinesSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["detailed_move_lines"].toString() else ""
             val moveLines = parseMoveLinesSummary(moveLinesSummary)
 
             // Log each MoveLine
             moveLines.forEach { moveLine ->
-                Log.d("MoveLineData", "ID: ${moveLine.id}, Product ID: ${moveLine.productId}, Product Name: ${moveLine.productName}, Lot ID: ${moveLine.lotId}, Lot Name: ${moveLine.lotName}, Quantity: ${moveLine.quantity}, LocationId: ${moveLine.locationId}, Location Name:${moveLine.locationName}")
+                Log.d("MoveLineData", "ID: ${moveLine.lineId}, Product ID: ${moveLine.productId}, " +
+                        "Product Name: ${moveLine.productName}, Lot ID: ${moveLine.lotId}, " +
+                        "Lot Name: ${moveLine.lotName}, Quantity: ${moveLine.quantity}, " +
+                        "LocationId: ${moveLine.locationDestId}, Location Name:${moveLine.locationDestName}")
             }
             Log.d("OdooXmlRpcClient", "Raw server response: ${result.toList()}")
 
@@ -1746,19 +1838,25 @@ suspend fun fetchProductIdFromPackagingBarcode(barcode: String): Pair<Int?, Doub
                     val lotId = parts[2].takeIf { it.isNotEmpty() && it != "None" }?.toIntOrNull()
                     val lotName = parts[3].takeIf { it != "None" } ?: ""
                     val quantity = parts[4].toDouble()
-                    val id = parts[5].toInt()
-                    val locationId = parts.getOrNull(6)?.toIntOrNull() ?: -1  // Optional: Default to -1 if not present
-                    val locationName = parts.getOrNull(7) ?: "Unknown" // Optional: Default to "Unknown" if not present
+                    val lineId = parts[5].toInt()
+                    val locationDestId = parts.getOrNull(6)?.toIntOrNull() ?: -1  // Optional: Default to -1 if not present
+                    val locationDestName = parts.getOrNull(7) ?: "Unknown" // Optional: Default to "Unknown" if not present
+                    val resultPackageId = parts[8].takeIf { it.isNotEmpty() && it != "None" }?.toIntOrNull()
+                    val resultPackageName = parts[9]
+
 
                     MoveLine(
-                        id = id,
+                        lineId = lineId,
                         productId = productId,
                         productName = productName,
                         lotId = lotId,
                         lotName = lotName,
                         quantity = quantity,
-                        locationId = locationId,
-                        locationName = locationName
+                        locationDestId = locationDestId,
+                        locationDestName = locationDestName,
+                        resultPackageId = resultPackageId,
+                        resultPackageName = resultPackageName
+
                     )
                 } catch (e: Exception) {
                     Log.e("parseMoveLinesSummary", "Error parsing move lines summary: ${e.localizedMessage}")

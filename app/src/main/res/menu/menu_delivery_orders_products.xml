@@ -6,12 +6,4 @@
         android:icon="@drawable/flag_solid"
         app:showAsAction="ifRoom|withText">
     </item>
-    <item android:id="@+id/action_print"
-        android:title="Print"
-        android:icon="@drawable/printer_icon"
-        app:showAsAction="ifRoom|withText">
-        <menu>
-            <!-- Submenu items will be added dynamically -->
-        </menu>
-    </item>
 </menu>

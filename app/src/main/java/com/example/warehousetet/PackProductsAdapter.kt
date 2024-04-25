@@ -24,10 +24,10 @@ class PackProductsAdapter(
 
     override fun onBindViewHolder(holder: MoveLineViewHolder, position: Int) {
         val moveLine = moveLines[position]
-        val isPackaged = packagedMoveLines.any { it.moveLineId == moveLine.id }
+        val isPackaged = packagedMoveLines.any { it.moveLineId == moveLine.lineId }
         holder.itemView.setOnClickListener {
-            selectedMoveLineId = moveLine.id  // Set the selected line ID when an item is clicked
-            Log.d("PackProductsAdapter", "Product line selected: ID = ${moveLine.id}, Product = ${moveLine.productName}")
+            selectedMoveLineId = moveLine.lineId  // Set the selected line ID when an item is clicked
+            Log.d("PackProductsAdapter", "Product line selected: ID = ${moveLine.lineId}, Product = ${moveLine.productName}")
         }
         holder.bind(moveLine, isPackaged)
     }
