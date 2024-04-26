@@ -2147,7 +2147,6 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
         lineId: Int,
         pickId: Int,
         matched: Boolean = true,
-        serialNumbers: MutableList<String>? = null,
     ) {
         val key = ProductPickKey(lineId, pickId)
         val productLine = pickProductsAdapter.lines.find { it.id == lineId }

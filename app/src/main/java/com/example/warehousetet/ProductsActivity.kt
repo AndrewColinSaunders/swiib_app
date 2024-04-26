@@ -898,8 +898,6 @@ package com.example.warehousetet
 
 
 import android.content.Context
-import android.content.Intent
-import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
@@ -954,6 +952,7 @@ class ProductsActivity : AppCompatActivity() {
     val lotQuantities: MutableMap<ProductReceiptKey, Int> = mutableMapOf()
     private var barcodeToProductIdMap = mutableMapOf<String, Int>()
     private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
+    private val confirmedLines = mutableSetOf<Int>()
 
     private var receiptName: String? = null
 
@@ -1141,50 +1140,46 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-
     private fun hideKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.hideSoftInputFromWindow(barcodeInput.windowToken, 0)
     }
 
-
-    private fun fetchProductsForReceipt(receiptId: Int) {
+    private fun fetchProductsForReceipt(pickId: Int) {
         coroutineScope.launch {
-            Log.d("fetchProductsForReceipt", "Fetching products for receipt ID: $receiptId")
+            try {
+                Log.d("PickProductsActivity", "Fetching products for pick ID: $pickId")
+                val fetchedLines = odooXmlRpcClient.fetchReceiptMoveLinesByPickingId(pickId)
+                val updatedMoveLinesWithDetails = mutableListOf<ReceiptMoveLine>()
 
-            // Fetch basic product information first.
-            val fetchedProducts: List<ReceiptMoveLine> = try {
-                odooXmlRpcClient.fetchReceiptMoveLinesByPickingId(receiptId)
+                // Fetch additional package information if required
+                odooXmlRpcClient.fetchResultPackagesByPickingId(pickId)
+
+                val fetchJobs = fetchedLines.map { moveLines ->
+                    coroutineScope.async(Dispatchers.IO) {
+                        val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(moveLines.productName) ?: Pair("none", false)
+                        val barcode = barcodeToProductIdMap.filterValues { it == moveLines.productId }.keys.firstOrNull()?.toString()
+
+                        moveLines.copy(
+                            trackingType = trackingAndExpiration?.first ?: "none",
+                            useExpirationDate = trackingAndExpiration.second,
+                            barcode = barcode
+                        )
+                    }
+                }
+
+                updatedMoveLinesWithDetails.addAll(fetchJobs.awaitAll())
+
+                // Optionally fetch barcodes for all products in the fetched lines
+                fetchBarcodesForProducts(fetchedLines)
+
+                withContext(Dispatchers.Main) {
+                    // After all async operations complete, update the UI with the detailed move lines
+                    updateUIForProducts(updatedMoveLinesWithDetails, pickId)
+                    Log.d("PickProductsActivity", "UI updated with detailed move lines for Pick")
+                }
             } catch (e: Exception) {
-                Log.e("fetchProductsForReceipt", "Error fetching products: ${e.localizedMessage}")
-                emptyList()
-            }
-
-            // Ensure barcodes and additional details are fetched for all fetched products
-            fetchBarcodesForProducts(fetchedProducts)
-
-            // Initialize a list to store the updated products with additional details
-            val updatedProductsWithDetails = mutableListOf<ReceiptMoveLine>()
-
-            fetchedProducts.forEach { product ->
-                coroutineScope.launch(Dispatchers.IO) {
-                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(product.productName) ?: Pair("none", false)
-                    Log.d("ProductExpiration", "Product: ${product.productName}, Uses Expiration Date: ${trackingAndExpiration.second}")
-                    val barcode = barcodeToProductIdMap.filterValues { it == product.id }.keys.firstOrNull()
-
-                    // Update each product with its tracking type, useExpirationDate, and barcode, without expanding them
-                    val updatedProduct = product.copy(
-                        trackingType = trackingAndExpiration?.first ?: "none",
-                        useExpirationDate = trackingAndExpiration.second,
-                        barcode = barcode
-                    )
-                    updatedProductsWithDetails.add(updatedProduct)
-                }.join() // Wait for all async operations to complete
-            }
-
-            withContext(Dispatchers.Main) {
-                Log.d("fetchProductsForReceipt", "Updating UI with products and their details")
-                updateUIForProducts(updatedProductsWithDetails, receiptId)
+                Log.e("PickProductsActivity", "Error fetching move lines or updating UI: ${e.localizedMessage}", e)
             }
         }
     }
@@ -1196,7 +1191,7 @@ class ProductsActivity : AppCompatActivity() {
                 barcode?.let {
                     // Assuming barcodeToProductIdMap should map barcode to product ID
                     synchronized(this@ProductsActivity) {
-                        barcodeToProductIdMap[barcode] = product.id
+                        barcodeToProductIdMap[barcode] = product.productId
                     }
                 }
             }
@@ -1219,41 +1214,31 @@ class ProductsActivity : AppCompatActivity() {
         coroutineScope.launch {
             val productId = barcodeToProductIdMap[scannedBarcode]
             if (productId != null) {
-                val product = productsAdapter.moveLines.find { it.id == productId }
-                product?.let {
+                val productLines = productsAdapter.moveLines.filter { it.productId == productId }.sortedBy { it.id }
+                val nextProductLine = productLines.find { !confirmedLines.contains(it.id) }
+                Log.d("verifyBarcode", "Product Lines: ${productLines.size}, Next Product Line: ${nextProductLine?.id}")
+                nextProductLine?.let {
                     val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(it.productName)
                     val trackingType = trackingAndExpiration?.first ?: "none"
-
-                    when (trackingType) {
-                        "serial" -> withContext(Dispatchers.Main) {
-                            // Prompt for a serial number for serialized products
-                            promptForSerialNumber(it.productName, receiptId, it.id)
-                        }
-                        "lot" -> withContext(Dispatchers.Main) {
-                            // Prompt for a lot number for lot-tracked products
-                            promptForLotNumber(it.productName, receiptId, it.id)
-                        }
-                        "none" -> withContext(Dispatchers.Main) {
-//                            (lineId: Int, pickingId: Int, productId: Int, productName: String, expectedQuantity: Double, totalQuantity: Double)
-//                            promptForProductQuantity(it.id, receiptId, it.productId, it.productName, it.expectedQuantity )
-                            promptForProductQuantity(it.productName, it.expectedQuantity, receiptId,it.productId, it.id, false)
-                        }
-                        else -> {
-                            // Handle other cases as needed
+                    Log.d("verifyBarcode", "Tracking Type: $trackingType")
+                    withContext(Dispatchers.Main) {
+                        when (trackingType) {
+                            "serial" -> promptForSerialNumber(it.productName, receiptId, it.productId, it.id)
+                            "lot" -> promptForLotNumber(it.productName, receiptId, it.productId, it.id)
+                            "none" -> promptForProductQuantity(it.productName, it.expectedQuantity, receiptId, it.productId, it.id, false)
+                            else -> { Log.d("verifyBarcode", "Unhandled tracking type: $trackingType") }
                         }
                     }
                 }
             } else {
                 withContext(Dispatchers.Main) {
-                    //                Toast.makeText(this@ProductsActivity, "Barcode not found.", Toast.LENGTH_SHORT).show()
                     showRedToast("Barcode not found")
                 }
             }
         }
     }
 
-
-    private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int) {
+    private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT
             hint = "Enter lot number"
@@ -1271,16 +1256,16 @@ class ProductsActivity : AppCompatActivity() {
                     val enteredLotNumber = editText.text.toString().trim()
                     if (enteredLotNumber.isNotEmpty()) {
                         coroutineScope.launch {
-                            val product = productsAdapter.moveLines.find { it.id == productId }
+                            val product = productsAdapter.moveLines.find { it.productId == productId }
                             if (product?.useExpirationDate == true) {
                                 withContext(Dispatchers.Main) {
                                     // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
-                                    promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, true)
+                                    promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, true, lineId)
                                 }
                             } else {
                                 withContext(Dispatchers.Main) {
                                     // Assume promptForLotQuantity is correctly defined elsewhere to handle these parameters
-                                    promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, false)
+                                    promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, false, lineId)
                                 }
                             }
                         }
@@ -1313,7 +1298,7 @@ class ProductsActivity : AppCompatActivity() {
     }
 
 
-    private fun promptForLotQuantity(productName: String, receiptId: Int, productId: Int, lotNumber: String, requiresExpirationDate: Boolean) {
+    private fun promptForLotQuantity(productName: String, receiptId: Int, productId: Int, lotNumber: String, requiresExpirationDate: Boolean, lineId: Int) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
             hint = "Enter quantity"
@@ -1330,12 +1315,13 @@ class ProductsActivity : AppCompatActivity() {
                         if (requiresExpirationDate) {
                             withContext(Dispatchers.Main) {
                                 // Logic to prompt for lot expiration date
-                                promptForLotExpirationDate(productName, receiptId, productId, lotNumber, enteredQuantity)
+                                promptForLotExpirationDate(productName, receiptId, productId, lotNumber, enteredQuantity, lineId)
                             }
                         } else {
                             // Logic for handling the quantity update without expiration date
-//                            odooXmlRpcClient.updateMoveLinesWithoutExpirationWithLot(receiptId, productId, lotNumber, enteredQuantity)
-//                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = enteredQuantity)
+                            odooXmlRpcClient.updateMoveLineLotAndQuantity(lineId, receiptId, productId, lotNumber, enteredQuantity)
+                            confirmedLines.add(lineId)
+                            updateProductMatchState(lineId, receiptId, matched = true)
                             withContext(Dispatchers.Main) {
                                 showGreenToast("Quantity updated for lot without expiration date.")
                             }
@@ -1360,7 +1346,7 @@ class ProductsActivity : AppCompatActivity() {
     }
 
 
-    private fun promptForLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotNumber: String, quantity: Int) {
+    private fun promptForLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotNumber: String, quantity: Int, lineId: Int) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER // Ensure numerical input for date; consider TYPE_CLASS_DATETIME or custom date picker
             hint = "Enter expiration date (dd/MM/yyyy)"
@@ -1377,17 +1363,15 @@ class ProductsActivity : AppCompatActivity() {
                 val convertedDate = convertToFullDateTime(enteredExpirationDate) // Ensure this converts to "yyyy-MM-dd"
                 if (isValidDateFormat(convertedDate)) {
                     coroutineScope.launch {
-                        odooXmlRpcClient.updateMoveLinesByPickingWithLot(receiptId, productId, lotNumber, quantity, convertedDate).also {
-                            // Assume this method successfully updates the lot with expiration date
-//                            updateProductMatchState(productId, receiptId, matched = false, lotQuantity = quantity) // Update match state with new lot quantity
+                            odooXmlRpcClient.updateMoveLineLotExpiration(lineId, receiptId, productId, lotNumber, quantity, convertedDate).also {
+                            updateProductMatchState(lineId, receiptId, matched = true)
+                            confirmedLines.add(lineId)
                             withContext(Dispatchers.Main) {
-//                                Toast.makeText(this@ProductsActivity, "Lot expiration date updated successfully.", Toast.LENGTH_SHORT).show()
                                 showGreenToast("Lot expiration date updated")
                             }
                         }
                     }
                 } else {
-//                    Toast.makeText(this, "Invalid expiration date entered. Please use the format dd/MM/yyyy.", Toast.LENGTH_SHORT).show()
                     showRedToast("Invalid expiration date entered. Please use the format DD/MM/YY")
                 }
             }
@@ -1395,7 +1379,7 @@ class ProductsActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int) {
+    private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT
             hint = "Enter serial number"
@@ -1420,7 +1404,7 @@ class ProductsActivity : AppCompatActivity() {
                 val enteredSerialNumber = editText.text.toString().trim()
                 if (enteredSerialNumber.isNotEmpty()) {
                     coroutineScope.launch {
-                        val product = productsAdapter.moveLines.find { it.id == productId }
+                        val product = productsAdapter.moveLines.find { it.productId == productId }
                         val key = ProductReceiptKey(productId, receiptId)
                         val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
 
@@ -1428,14 +1412,16 @@ class ProductsActivity : AppCompatActivity() {
                             if (product?.useExpirationDate == true) {
                                 withContext(Dispatchers.Main) {
                                     dialog.dismiss() // Correctly reference 'dialog' here
-                                    promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber)
+                                    promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber, lineId)
                                 }
                             } else {
-                                odooXmlRpcClient.updateMoveLinesWithoutExpiration(receiptId, productId, enteredSerialNumber)
+//                                (moveLineId: Int, pickingId: Int, productId: Int, lotName: String)
+                                odooXmlRpcClient.updateMoveLineSerialNumber(lineId, receiptId, productId, enteredSerialNumber)
                                 serialList.add(enteredSerialNumber)
-                                updateProductMatchState(productId, receiptId, matched = true, serialList)
+                                updateProductMatchState(lineId, receiptId, true)
+                                confirmedLines.add(lineId)
                                 withContext(Dispatchers.Main) {
-                                    showGreenToast("Serial number added for $productName. ${serialList.size}/${product?.quantity?.toInt()} verified")
+                                    showGreenToast("Serial number added for $productName.")
                                 }
                             }
                         } else {
@@ -1506,7 +1492,7 @@ class ProductsActivity : AppCompatActivity() {
         })
     }
 
-    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String) {
+    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String, lineId: Int) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER // Adjusted for numeric input, setupDateInputField will handle formatting
             hint = "Enter expiration date (dd/MM/yyyy)"
@@ -1524,17 +1510,18 @@ class ProductsActivity : AppCompatActivity() {
                 val convertedDate = convertToFullDateTime(enteredExpirationDate) // Ensure this conversion to full date
                 if (isValidDateFormat(convertedDate)) {
                     coroutineScope.launch {
-                        val key = ProductReceiptKey(productId, receiptId)
+                        val key = ProductReceiptKey(lineId, receiptId)
                         val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
                         if (!serialList.contains(serialNumber)) {
                             serialList.add(serialNumber)
                             // Proceed to update the backend as required, using the serial number and converted date
-                            odooXmlRpcClient.updateMoveLinesByPicking(receiptId, productId, serialNumber, convertedDate)
+                            odooXmlRpcClient.updateMoveLineSerialExpirationDate(lineId, receiptId, productId, serialNumber, convertedDate )
+                            confirmedLines.add(lineId)
                             // Determine if the match state needs to be updated
-                            val isMatched = serialList.size == productsAdapter.moveLines.find { it.id == productId }?.quantity?.toInt()
-                            updateProductMatchState(productId, receiptId, isMatched, serialList)
+                            val isMatched = serialList.size == productsAdapter.moveLines.find { it.productId == productId }?.quantity?.toInt()
+                            updateProductMatchState(lineId, receiptId, isMatched)
                             withContext(Dispatchers.Main) {
-                                showGreenToast("Serial number added for $productName. ${serialList.size}/${productsAdapter.moveLines.find { it.id == productId }?.quantity?.toInt()} verified")
+                                showGreenToast("Serial number added for $productName.")
                             }
                         } else {
                             withContext(Dispatchers.Main) {
@@ -1581,93 +1568,7 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-//    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, receiptId: Int, lineId: Int, recount: Boolean = false, productId: Int) {
-//        val editText = EditText(this).apply {
-//            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-//            hint = "Enter product quantity"
-//        }
-//
-//        AlertDialog.Builder(this)
-//            .setTitle(if (recount) "Recount Required" else "Enter Quantity")
-//            .setMessage(if (recount) "Recount for $productName. Enter the exact quantity." else "Enter the exact quantity for $productName.")
-//            .setView(editText)
-//            .setPositiveButton("OK") { _, _ ->
-//                val enteredQuantity = editText.text.toString().toDoubleOrNull()
-//                if (enteredQuantity != null && enteredQuantity == expectedQuantity) {
-////                    Toast.makeText(this, "Quantity entered for $productName", Toast.LENGTH_LONG).show()
-//                    showGreenToast("Quantity updated for $productName")
-//                    updateProductMatchState(productId, receiptId, true)
-//                } else if (!recount) {
-//                    promptForProductQuantity(productName, expectedQuantity, receiptId, productId, recount = true)
-//                } else {
-//                    val localReceiptId = receiptName // Copy the mutable property to a local variable
-//
-//                    lifecycleScope.launch(Dispatchers.IO) {
-//                        if (localReceiptId != null) { // Use the local copy for the check
-//                            val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(localReceiptId)
-//                            if (buyerDetails != null) {
-//                                sendEmailToBuyer(buyerDetails.login, buyerDetails.name, receiptName, productName) // Pass the local copy to the function
-//                                withContext(Dispatchers.Main) {
-////                                    Toast.makeText(this@ProductsActivity, "Flagged ${buyerDetails.login}. Email sent.", Toast.LENGTH_LONG).show()
-//                                    showRedToast("Flagged")
-//                                }
-//                            } else {
-//                                withContext(Dispatchers.Main) {
-////                                    Toast.makeText(this@ProductsActivity, "Flagged, but buyer details not found.", Toast.LENGTH_LONG).show()
-//                                    showRedToast("Flagged, but buyer details not found")
-//                                }
-//                            }
-//                        } else {
-//                            withContext(Dispatchers.Main) {
-////                                Toast.makeText(this@ProductsActivity, "Receipt name is null or not found", Toast.LENGTH_LONG).show()
-//                                showRedToast("Receipt name is null or not found")
-//                            }
-//                        }
-//                    }
-//                }
-//            }
-//            .setNegativeButton("Cancel", null)
-//            .show()
-//    }
-//    private fun promptForProductQuantity(productName: String, expectedQuantity: Double, receiptId: Int, productId: Int, lineId: Int, recount: Boolean = false) {
-//        val editText = EditText(this).apply {
-//            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-//            hint = "Enter product quantity"
-//        }
-//
-//        AlertDialog.Builder(this)
-//            .setTitle(if (recount) "Recount Required" else "Enter Quantity")
-//            .setMessage(if (recount) "Recount for $productName. Enter the exact quantity." else "Enter the exact quantity for $productName.")
-//            .setView(editText)
-//            .setPositiveButton("OK") { _, _ ->
-//                val enteredQuantity = editText.text.toString().toDoubleOrNull()
-//                if (enteredQuantity != null) {
-//                    // Always update the quantity, regardless of its correctness
-//                    lifecycleScope.launch(Dispatchers.IO) {
-//                        odooXmlRpcClient.updateMoveLineQuantityUntracked(
-//                            lineId,
-//                            receiptId,
-//                            productId,
-//                            enteredQuantity
-//                        )
-//                    }
-//
-//                    // Check if the quantity is correct
-//                    if (enteredQuantity == expectedQuantity) {
-//                        showGreenToast("Quantity updated for $productName")
-//                        updateProductMatchState(productId, receiptId, true)
-//                    } else if (!recount) {
-//                        promptForProductQuantity(productName, expectedQuantity, receiptId, productId, lineId, recount = true)
-//                    } else {
-//                        handleIncorrectRecount(productName, receiptId)
-//                    }
-//                } else {
-//                    Toast.makeText(this, "Invalid quantity entered", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//            .setNegativeButton("Cancel", null)
-//            .show()
-//    }
+
     private fun promptForProductQuantity(productName: String, expectedQuantity: Double, receiptId: Int, productId: Int, lineId: Int, recount: Boolean = false) {
         // Inflate the custom layout
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_input, null)
@@ -1710,6 +1611,7 @@ class ProductsActivity : AppCompatActivity() {
                 if (enteredQuantity == expectedQuantity) {
                     showGreenToast("Quantity updated for $productName")
                     updateProductMatchState(productId, receiptId, true)
+                    confirmedLines.add(lineId)
                 } else if (!recount) {
                     promptForProductQuantity(productName, expectedQuantity, receiptId, productId, lineId, recount = true)
                 } else {
@@ -1852,7 +1754,6 @@ class ProductsActivity : AppCompatActivity() {
         lineId: Int,
         pickId: Int,
         matched: Boolean = true,
-        serialNumbers: MutableList<String>? = null,
     ) {
         val key = ProductReceiptKey(lineId, pickId)
         val productLine = productsAdapter.moveLines.find { it.id == lineId }

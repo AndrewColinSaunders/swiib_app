@@ -2374,10 +2374,129 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         }
     }
 
+    suspend fun updateMoveLineSerialNumber(moveLineId: Int, pickingId: Int, productId: Int, lotName: String): Boolean {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLineLotName.")
+            return false
+        }
 
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
 
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line",
+            "update_move_line_lot_name",
+            listOf(moveLineId, pickingId, productId, lotName)
+        )
 
+        return try {
+            val result = client.execute("execute_kw", params) as? Boolean ?: false
+            Log.d("OdooXmlRpcClient", "Lot name update result for move line ID $moveLineId: $result")
+            result
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error updating lot name for move line ID: ${e.localizedMessage}", e)
+            false
+        }
+    }
 
+    suspend fun updateMoveLineSerialExpirationDate(moveLineId: Int, pickingId: Int, productId: Int, lotName: String, expirationDate: String): Boolean {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLineDetails.")
+            return false
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line",
+            "update_move_line_serial_expiration_date",
+            listOf(moveLineId, pickingId, productId, lotName, expirationDate)
+        )
+
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                client.execute("execute_kw", params) as? Boolean ?: false
+            }
+            Log.d("OdooXmlRpcClient", "Details update result for move line ID $moveLineId: $result")
+            result
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error updating details for move line ID $moveLineId: ${e.localizedMessage}", e)
+            false
+        }
+    }
+    suspend fun updateMoveLineLotAndQuantity(moveLineId: Int, pickingId: Int, productId: Int, lotName: String, quantity: Int): Boolean {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLineLotAndQuantity.")
+            return false
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line",
+            "update_move_line_lot_and_quantity",
+            listOf(moveLineId, pickingId, productId, lotName, quantity)
+        )
+
+        return try {
+            withContext(Dispatchers.IO) {
+                val result = client.execute("execute_kw", params) as Boolean
+                Log.d("OdooXmlRpcClient", "Update lot and quantity result for move line ID $moveLineId: $result")
+                result
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error updating lot and quantity for move line ID $moveLineId: ${e.localizedMessage}", e)
+            false
+        }
+    }
+
+    suspend fun updateMoveLineLotExpiration(moveLineId: Int, pickingId: Int, productId: Int, lotName: String, quantity: Int, expirationDate: String): Boolean {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e("OdooXmlRpcClient", "Client configuration is null, aborting updateMoveLineLotExpiration.")
+            return false
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line",
+            "update_move_line_lot_expiration",
+            listOf(moveLineId, pickingId, productId, lotName, quantity, expirationDate)
+        )
+
+        return try {
+            withContext(Dispatchers.IO) {
+                val result = client.execute("execute_kw", params) as Boolean
+                Log.d("OdooXmlRpcClient", "Update lot, quantity, and expiration result for move line ID $moveLineId: $result")
+                result
+            }
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error updating lot, quantity, and expiration for move line ID $moveLineId: ${e.localizedMessage}", e)
+            false
+        }
+    }
 
 }
 

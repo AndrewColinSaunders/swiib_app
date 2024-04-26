@@ -13,9 +13,17 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Configure Swiib"
+        android:text="Welcome to Swiib!"
         android:textSize="34sp"
         android:textStyle="bold"
+        android:textColor="@color/black"
+        android:gravity="center_horizontal"
+        android:layout_marginBottom="20dp"/>
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Please configure the app with your database name and Swiib URL below."
+        android:textSize="15sp"
         android:textColor="@color/black"
         android:gravity="center_horizontal"
         android:layout_marginBottom="40dp"/>
