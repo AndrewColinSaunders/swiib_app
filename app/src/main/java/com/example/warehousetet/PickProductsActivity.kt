@@ -1439,7 +1439,7 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         setupBarcodeVerification(pickId)
-        restoreButtonVisibility(pickId)
+//        restoreButtonVisibility(pickId)
         loadMatchStatesFromPreferences(pickId)
         restoreButtonVisibility(pickId)
     }
@@ -2233,11 +2233,6 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
                 }
             }
         }
-    }
-
-    private fun checkAllProductsMatched(pickId: Int): Boolean {
-        // Filter the quantityMatches for the current receiptId
-        return quantityMatches.filter { it.key.pickId == pickId }.all { it.value }
     }
 
     private fun saveMatchStateToPreferences(key: ProductPickKey, matched: Boolean) {

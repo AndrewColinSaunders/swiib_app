@@ -898,6 +898,7 @@ package com.example.warehousetet
 
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
@@ -914,6 +915,7 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
@@ -940,7 +942,7 @@ import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 
-class ProductsActivity : AppCompatActivity() {
+class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickListener{
     private lateinit var productsAdapter: ProductsAdapter
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
@@ -955,7 +957,7 @@ class ProductsActivity : AppCompatActivity() {
     private val confirmedLines = mutableSetOf<Int>()
 
     private var receiptName: String? = null
-
+    private var receiptId: Int = -1
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_products)
@@ -963,12 +965,12 @@ class ProductsActivity : AppCompatActivity() {
         odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
         barcodeInput = findViewById(R.id.barcodeInput)
         confirmButton = findViewById(R.id.confirmButton)
-        val receiptId = intent.getIntExtra("RECEIPT_ID", -1)
+        receiptId = intent.getIntExtra("RECEIPT_ID", -1)
         receiptName = intent.getStringExtra("RECEIPT_NAME")
         Log.d("ProductsActivity", "Received receipt name: $receiptName")
 
 
-        productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId)
+        productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId, this)
 
         if (receiptId != -1) {
             setupRecyclerView()
@@ -982,10 +984,15 @@ class ProductsActivity : AppCompatActivity() {
         }
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        restoreButtonVisibility(receiptId)
         setupBarcodeVerification(receiptId)
         loadMatchStatesFromPreferences(receiptId)
     }
-
+    override fun onResume() {
+        super.onResume()
+        // Restore visibility state whenever the activity resumes
+        restoreButtonVisibility(receiptId)
+    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_products_activity, menu)
@@ -1119,11 +1126,20 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
+//    private fun setupRecyclerView() {
+//        val recyclerView: RecyclerView = findViewById(R.id.productsRecyclerView)
+//        recyclerView.layoutManager = LinearLayoutManager(this)
+//        recyclerView.adapter = productsAdapter
+//    }
     private fun setupRecyclerView() {
         val recyclerView: RecyclerView = findViewById(R.id.productsRecyclerView)
+        // Ensure you are passing all necessary parameters in the correct order
+        // The parameters should be (List<MoveLine>, Map<ProductPickKey, Boolean>, Map<Int, String>, Int, OnProductClickListener)
+       productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId, this)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = productsAdapter
     }
+
 
     private fun setupBarcodeVerification(receiptId: Int) {
         confirmButton.setOnClickListener {
@@ -1692,64 +1708,6 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-
-//    private fun updateProductMatchState(
-//        productId: Int,
-//        receiptId: Int,
-//        matched: Boolean = false,
-//        serialNumbers: MutableList<String>? = null,
-//        lotQuantity: Int? = null
-//    ) {
-//        val key = ProductReceiptKey(productId, receiptId)
-//
-//        // Get product and its expected quantity with a fallback to 0 if not found or null
-//        val expectedQuantity = productsAdapter.moveLines.find { it.id == productId }?.quantity?.toInt() ?: 0
-//
-//        // Update match state based on the logic for serialized or lot-tracked products
-//        if (serialNumbers != null) {
-//            // Serialized products logic
-//            quantityMatches[key] = serialNumbers.size == expectedQuantity
-//        } else if (lotQuantity != null) {
-//            // Lot products logic
-//            val currentQuantity = lotQuantities.getOrDefault(key, 0) + lotQuantity
-//            lotQuantities[key] = currentQuantity
-//            quantityMatches[key] = currentQuantity >= expectedQuantity
-//        } else {
-//            // For non-serialized and non-lotted products, directly use the matched parameter
-//            quantityMatches[key] = matched
-//        }
-//
-//        // Check if all products are matched after updating the match state
-//        val allProductsMatched = checkAllProductsMatched(receiptId)
-//
-//        // Save match state to preferences
-//        saveMatchStateToPreferences(key, quantityMatches[key] == true)
-//
-//        // Update UI accordingly
-//        val position = productsAdapter.findProductPositionById(productId)
-//        if (position != -1) {
-//            runOnUiThread { productsAdapter.notifyItemChanged(position) }
-//        }
-//        if (allProductsMatched) {
-//            coroutineScope.launch {
-//                val validated = odooXmlRpcClient.validateOperation(receiptId)
-//                withContext(Dispatchers.Main) {
-//                    if (validated) {
-////                        Log.d("ProductsActivity", "Receipt validated successfully.")
-//                        showGreenToast("Receipt validated")
-//                        // Redirect to ReceiptsActivity
-//                        val intent = Intent(this@ProductsActivity, ReceiptsActivity::class.java)
-//                        startActivity(intent)
-//                        finish() // Optional: if you want to remove the current activity from the stack
-//                    } else {
-////                        Log.e("ProductsActivity", "Failed to validate receipt.")
-//                        showRedToast("Failed to validate receipt")
-//                    }
-//                }
-//            }
-//        }
-//
-//    }
     private fun updateProductMatchState(
         lineId: Int,
         pickId: Int,
@@ -1767,7 +1725,7 @@ class ProductsActivity : AppCompatActivity() {
                 if (position != -1) {
                     productsAdapter.notifyItemChanged(position)
                 }
-//                checkAndToggleValidateButton(pickId)
+                checkAndToggleValidateButton(pickId)
             }
         } else {
             Log.e("updateProductMatchState", "No line found for ID $lineId")
@@ -1775,13 +1733,78 @@ class ProductsActivity : AppCompatActivity() {
 
         saveMatchStateToPreferences(key, quantityMatches[key] == true)
     }
+    private fun checkAndToggleValidateButton(pickId: Int) {
+        val allMatched = quantityMatches.filterKeys { it.pickId == pickId }.all { it.value }
+        val validateButton = findViewById<Button>(R.id.pickValidateButton)
 
-    private fun checkAllProductsMatched(receiptId: Int): Boolean {
-        // Filter the quantityMatches for the current receiptId
-        return quantityMatches.filter { it.key.pickId == receiptId }.all { it.value }
+        validateButton.visibility = if (allMatched) View.VISIBLE else View.GONE
+        saveButtonVisibilityState(pickId, allMatched)
+
+        if (allMatched) {
+            validateButton.setOnClickListener {
+                coroutineScope.launch {
+                    val validationSuccessful = odooXmlRpcClient.validateOperation(pickId)
+                    runOnUiThread {
+                        if (validationSuccessful) {
+                            Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                            // Redirect to PickActivity upon successful validation
+                            val intent = Intent(this@ProductsActivity, ReceiptsActivity::class.java)
+                            startActivity(intent)
+                            finish()  // Optionally call finish() if you want to remove this activity from the back stack
+                        } else {
+                            Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        }
     }
 
+    private fun saveButtonVisibilityState(pickId: Int, visible: Boolean) {
+        val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
+        with(sharedPref.edit()) {
+            putBoolean("ValidateButtonVisible_$pickId", visible)
+            apply()
+        }
+    }
 
+    private fun restoreButtonVisibility(pickId: Int) {
+        val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
+        val isVisible = sharedPref.getBoolean("ValidateButtonVisible_$pickId", false)
+        val validateButton = findViewById<Button>(R.id.pickValidateButton)
+        validateButton.visibility = if (isVisible) View.VISIBLE else View.GONE
+
+        if (isVisible) {
+            setupValidateButtonListener(pickId)
+        }
+    }
+
+    private fun setupValidateButtonListener(pickId: Int) {
+        val validateButton = findViewById<Button>(R.id.pickValidateButton)
+        validateButton.setOnClickListener {
+            coroutineScope.launch {
+                val validationSuccessful = odooXmlRpcClient.validateOperation(pickId)
+                runOnUiThread {
+                    if (validationSuccessful) {
+                        Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this@ProductsActivity, ReceiptsActivity::class.java)
+                        startActivity(intent)
+                        finish()  // Optionally call finish() if you want to remove this activity from the back stack
+                    } else {
+                        Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
+
+//    private fun saveMatchStateToPreferences(key: ProductReceiptKey, matched: Boolean) {
+//        val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
+//        with(sharedPref.edit()) {
+//            putBoolean("${key.moveLineId}_${key.pickId}", matched)
+//            apply()
+//        }
+//    }
     private fun saveMatchStateToPreferences(key: ProductReceiptKey, matched: Boolean) {
         val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
         with(sharedPref.edit()) {
@@ -1790,26 +1813,70 @@ class ProductsActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadMatchStatesFromPreferences(receiptId: Int) {
+//    private fun loadMatchStatesFromPreferences(receiptId: Int) {
+//        val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
+//        val tempQuantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
+//
+//        sharedPref.all.forEach { (prefKey, value) ->
+//            if (value is Boolean) {
+//                val parts = prefKey.split("_").let { if (it.size == 2) it else null }
+//                parts?.let {
+//                    try {
+//                        val productId = it[0].toInt()
+//                        val prefReceiptId = it[1].toInt()
+//                        if (prefReceiptId == receiptId) {
+//                            val key = ProductReceiptKey(productId, prefReceiptId)
+//                            tempQuantityMatches[key] = value
+//                        }
+//                        else{
+//
+//                        }
+//                    } catch (e: NumberFormatException) {
+//                        Log.e("ProductsActivity", "Error parsing shared preference key: $prefKey", e)
+//                    }
+//                }
+//            }
+//        }
+//
+//        quantityMatches.clear()
+//        quantityMatches.putAll(tempQuantityMatches)
+//
+//        // Now update the adapter with the loaded match states
+//        runOnUiThread {
+//            productsAdapter.updateProducts(productsAdapter.moveLines, receiptId, quantityMatches)
+//        }
+//    }
+    private fun loadMatchStatesFromPreferences(pickId: Int) {
         val sharedPref = getSharedPreferences("ProductMatchStates", Context.MODE_PRIVATE)
         val tempQuantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
 
         sharedPref.all.forEach { (prefKey, value) ->
             if (value is Boolean) {
-                val parts = prefKey.split("_").let { if (it.size == 2) it else null }
-                parts?.let {
-                    try {
-                        val productId = it[0].toInt()
-                        val prefReceiptId = it[1].toInt()
-                        if (prefReceiptId == receiptId) {
-                            val key = ProductReceiptKey(productId, prefReceiptId)
-                            tempQuantityMatches[key] = value
+                if (prefKey.startsWith("ValidateButtonVisible")) {
+                    // Correct handling of the ValidateButtonVisible key
+                    val parts = prefKey.split("_")
+                    if (parts.size == 2) {
+                        val storedPickId = parts[1].toIntOrNull()
+                        if (storedPickId == pickId) {
+                            findViewById<Button>(R.id.pickValidateButton).visibility = if (value) View.VISIBLE else View.GONE
                         }
-                        else{
-
+                    }
+                } else {
+                    // Handling standard product match keys
+                    val parts = prefKey.split("_")
+                    if (parts.size == 2) {
+                        try {
+                            val moveLineId = parts[0].toInt()
+                            val prefPickId = parts[1].toInt()
+                            if (prefPickId == pickId) {
+                                val key = ProductReceiptKey(moveLineId, prefPickId)
+                                tempQuantityMatches[key] = value
+                            }
+                        } catch (e: NumberFormatException) {
+                            Log.e("PickProductsActivity", "Error parsing shared preference key: $prefKey", e)
                         }
-                    } catch (e: NumberFormatException) {
-                        Log.e("ProductsActivity", "Error parsing shared preference key: $prefKey", e)
+                    } else {
+                        Log.e("PickProductsActivity", "Incorrectly formatted shared preference key: $prefKey. Expected format: productId_pickId")
                     }
                 }
             }
@@ -1820,13 +1887,16 @@ class ProductsActivity : AppCompatActivity() {
 
         // Now update the adapter with the loaded match states
         runOnUiThread {
-            productsAdapter.updateProducts(productsAdapter.moveLines, receiptId, quantityMatches)
+            productsAdapter.updateProducts(productsAdapter.moveLines, pickId, quantityMatches)
         }
     }
-
     override fun onDestroy() {
         super.onDestroy()
         coroutineScope.cancel()
+    }
+
+    override fun onProductClick(product: ReceiptMoveLine) {
+        Log.d("onProductClick", "Product clicked")
     }
 }
 

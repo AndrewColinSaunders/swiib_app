@@ -90,12 +90,17 @@ import com.google.android.material.card.MaterialCardView
 class ProductsAdapter(
     var moveLines: List<ReceiptMoveLine>,
     private var quantityMatches: Map<ProductReceiptKey, Boolean>,
-    private var receiptId: Int
+    private var receiptId: Int,
+    private val listener: OnProductClickListener
 ) : RecyclerView.Adapter<ProductsAdapter.ProductViewHolder>() {
+
+    interface OnProductClickListener {
+        fun onProductClick(product: ReceiptMoveLine)
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.product_item, parent, false)
-        return ProductViewHolder(view)
+        return ProductViewHolder(view, listener)
     }
 
     override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
@@ -118,7 +123,7 @@ class ProductsAdapter(
         return moveLines.indexOfFirst { it.id == productId }
     }
 
-    class ProductViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class ProductViewHolder(itemView: View, private val listener: ProductsAdapter.OnProductClickListener) : RecyclerView.ViewHolder(itemView) {
         private val nameTextView: TextView = itemView.findViewById(R.id.productNameTextView)
         private val quantityTextView: TextView = itemView.findViewById(R.id.productQuantityTextView)
         private val productQuantityTextView: TextView = itemView.findViewById(R.id.productQuantityTextView)
@@ -156,6 +161,9 @@ class ProductsAdapter(
                 else ContextCompat.getColor(context, R.color.cardGrey) // Default or original card background color
             )
 
+            itemView.setOnClickListener {
+                listener.onProductClick(moveLine)
+            }
         }
     }
 }
