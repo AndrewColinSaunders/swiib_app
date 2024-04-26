@@ -921,6 +921,8 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -1896,7 +1898,95 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
     }
 
     override fun onProductClick(product: ReceiptMoveLine) {
-        Log.d("onProductClick", "Product clicked")
+        showProductDialog(product)
     }
+    private fun showProductDialog(product: ReceiptMoveLine) {
+        // Inflate the custom layout for the dialog
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.receipt_product_details_dialog, null)
+
+        // Retrieve all the TextViews from the inflated layout
+        val textProductName = dialogView.findViewById<TextView>(R.id.textProductName)
+        val textProductQuantity = dialogView.findViewById<TextView>(R.id.textProductQuantity)
+        val textProductFromLocation = dialogView.findViewById<TextView>(R.id.textProductFromLocation)
+        val textProductToLocation = dialogView.findViewById<TextView>(R.id.textProductToLocation)
+        val textProductLotNumber = dialogView.findViewById<TextView>(R.id.textProductLotNumber)
+        val editTextProductLotNumber = dialogView.findViewById<EditText>(R.id.editTextProductLotNumber)
+        val lotNumberLayout = dialogView.findViewById<LinearLayout>(R.id.lotNumberLayout) // Reference to the LinearLayout
+        val buttonEditLotNumber = dialogView.findViewById<ImageButton>(R.id.buttonEditLotNumber)
+        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
+        val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmSN) // Ensure this ID is correct
+
+        // Set values to the TextViews
+        textProductName.text = product.productName
+        textProductQuantity.text = "Quantity: ${product.quantity}"
+//        textProductFromLocation.text = "From Location: ${product.locationName}"
+        textProductToLocation.text = "To Location: ${product.locationDestName}"
+        textProductLotNumber.text = "${product.lotName}"
+
+        // Determine the product's tracking type
+        coroutineScope.launch {
+            val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(product.productName)
+            val trackingType = trackingAndExpiration?.first ?: "none"
+
+            withContext(Dispatchers.Main) {
+                // Toggle the visibility for editing the lot number based on tracking type
+                if ((trackingType == "serial" || trackingType == "lot") && product.lotName.isNotEmpty()) {
+                    lotNumberLayout.visibility = View.VISIBLE
+                    buttonEditLotNumber.visibility = View.VISIBLE
+                    buttonEditLotNumber.setOnClickListener {
+                        if (editTextProductLotNumber.visibility == View.GONE) {
+                            editTextProductLotNumber.visibility = View.VISIBLE
+                            editTextProductLotNumber.setText(product.lotName)
+                            textProductLotNumber.visibility = View.GONE
+                        } else {
+                            editTextProductLotNumber.visibility = View.GONE
+                            textProductLotNumber.visibility = View.VISIBLE
+                            textProductLotNumber.text = "${editTextProductLotNumber.text}"
+                        }
+                    }
+                } else if (trackingType == "none") {
+                    lotNumberLayout.visibility = View.GONE
+                } else {
+                    lotNumberLayout.visibility = View.VISIBLE
+                    buttonEditLotNumber.visibility = View.GONE
+                }
+            }
+        }
+
+        // Create and show the dialog
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        buttonConfirmQuantity.setOnClickListener {
+            if (editTextProductLotNumber.visibility == View.VISIBLE) {
+                val enteredSerialNumber = editTextProductLotNumber.text.toString()
+                product.lotName = enteredSerialNumber
+                textProductLotNumber.text = enteredSerialNumber
+
+                coroutineScope.launch(Dispatchers.IO) {
+                    try {
+//                        odooXmlRpcClient.updateMoveLinesForPick(product.id, receiptId, enteredSerialNumber, product.productId)
+                        withContext(Dispatchers.Main) {
+                            Log.d("UpdateProduct", "Successfully updated move line for product ID: ${product.id}")
+                            fetchProductsForReceipt(receiptId)
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Log.e("UpdateProduct", "Failed to update move line: ${e.localizedMessage}")
+                            // Handle errors, possibly showing a dialog to the user or retrying the operation
+                        }
+                    }
+                }
+            }
+            dialog.dismiss()
+        }
+        buttonCancel.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
 }
 
