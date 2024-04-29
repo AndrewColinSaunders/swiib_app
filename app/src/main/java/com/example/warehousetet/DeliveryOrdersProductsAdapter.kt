@@ -6,92 +6,76 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
-class DeliveryOrdersProductsAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class DeliveryOrdersProductsAdapter : RecyclerView.Adapter<DeliveryOrdersProductsAdapter.GroupViewHolder>() {
     var sections: List<PackageSection> = listOf()
 
-    companion object {
-        const val TYPE_HEADER = 0
-        const val TYPE_ITEM = 1
-    }
+    override fun getItemCount(): Int = sections.size
 
-    override fun getItemCount(): Int {
-        var count = 0
-        sections.forEach {
-            count += 1 // for the header
-            count += it.moveLines.size // for items
-        }
-        return count
-    }
-
-    override fun getItemViewType(position: Int): Int {
-        var cumulatedSize = 0
-        for (section in sections) {
-            if (position == cumulatedSize) {
-                return TYPE_HEADER
-            }
-            cumulatedSize += 1 + section.moveLines.size
-            if (position < cumulatedSize) {
-                return TYPE_ITEM
-            }
-        }
-        throw IllegalArgumentException("Invalid position")
-    }
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GroupViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == TYPE_HEADER) {
-            val headerView = inflater.inflate(R.layout.package_header, parent, false)
-            HeaderViewHolder(headerView)
-        } else {
-            val itemView = inflater.inflate(R.layout.delivery_orders_products_item, parent, false)
-            ItemViewHolder(itemView)
-        }
+        val view = inflater.inflate(R.layout.group_layout, parent, false)
+        return GroupViewHolder(view)
     }
 
-
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        val type = getItemViewType(position)
-        var cumulatedSize = 0
-        for (section in sections) {
-            if (type == TYPE_HEADER && position == cumulatedSize) {
-                (holder as HeaderViewHolder).bind(section)
-                break
-            }
-            cumulatedSize += 1
-            if (type == TYPE_ITEM && position < cumulatedSize + section.moveLines.size) {
-                (holder as ItemViewHolder).bind(section.moveLines[position - cumulatedSize])
-                break
-            }
-            cumulatedSize += section.moveLines.size
-        }
+    override fun onBindViewHolder(holder: GroupViewHolder, position: Int) {
+        holder.bind(sections[position])
     }
 
-    class HeaderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val packageNameTextView: TextView = view.findViewById(R.id.packageNameTextView)
+    class GroupViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val headerTextView: TextView = view.findViewById(R.id.headerTextView)
+        private val itemsRecyclerView: RecyclerView = view.findViewById(R.id.itemsRecyclerView)
 
         fun bind(section: PackageSection) {
-            packageNameTextView.text = section.packageName
+            headerTextView.text = section.packageName
+            setupRecyclerView(section.moveLines)
+        }
+
+        private fun setupRecyclerView(moveLines: List<MoveLine>) {
+            if (itemsRecyclerView.adapter == null) { // Setup RecyclerView only once
+                itemsRecyclerView.layoutManager = LinearLayoutManager(itemView.context)
+                itemsRecyclerView.adapter = ItemAdapter(moveLines)
+            } else {
+                (itemsRecyclerView.adapter as ItemAdapter).updateData(moveLines)
+            }
         }
     }
 
-    class ItemViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val nameTextView: TextView = view.findViewById(R.id.deliveryOrdersProductNameTextView)
-        private val quantityTextView: TextView = view.findViewById(R.id.deliveryOrdersProductQuantityTextView)
-        private val cardView: MaterialCardView = view as MaterialCardView  // Assuming the whole view is the card
+    class ItemAdapter(private var items: List<MoveLine>) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
+        fun updateData(newItems: List<MoveLine>) {
+            items = newItems
+            notifyDataSetChanged()
+        }
 
-        fun bind(moveLine: MoveLine) {
-            nameTextView.text = moveLine.productName
-            quantityTextView.text = "Quantity: ${moveLine.quantity}"
-            val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)
-            nameTextView.setTextColor(whiteColor)
-            quantityTextView.setTextColor(whiteColor)
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
+            val inflater = LayoutInflater.from(parent.context)
+            val view = inflater.inflate(R.layout.delivery_orders_products_item, parent, false)
+            return ItemViewHolder(view)
+        }
 
-            val backgroundColor = ContextCompat.getColor(itemView.context, R.color.cardGrey)
-            cardView.setCardBackgroundColor(backgroundColor)
+        override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
+            holder.bind(items[position])
+
+        }
+
+        override fun getItemCount() = items.size
+
+        class ItemViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            private val nameTextView: TextView = view.findViewById(R.id.deliveryOrdersProductNameTextView)
+            private val quantityTextView: TextView = view.findViewById(R.id.deliveryOrdersProductQuantityTextView)
+            private val cardView: MaterialCardView = view as MaterialCardView
+
+            fun bind(moveLine: MoveLine) {
+                nameTextView.text = moveLine.productName
+                quantityTextView.text = "Quantity: ${moveLine.quantity}"
+                val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)
+                nameTextView.setTextColor(whiteColor)
+                quantityTextView.setTextColor(whiteColor)
+
+            }
         }
     }
-
 }

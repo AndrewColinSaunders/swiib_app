@@ -44,6 +44,8 @@ class PackProductsActivity : AppCompatActivity() {
     private var lastKeyTime: Long = 0
     private var isScannerInput = false
     private var isPrintVisible = true
+    private var relevantSerialNumbers = mutableListOf<String>()
+
 
 
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
@@ -262,6 +264,8 @@ class PackProductsActivity : AppCompatActivity() {
             Log.d("PackProductsActivity", "Fetched move lines: $fetchedMoveLines")
             Log.d("DeliveryOrdersProductsActivity1234556", "Fetched move lines: ${fetchedMoveLines.map { it.productName + ": " + it.quantity }}")
             updateUIForMoveLines(fetchedMoveLines)
+            updateRelevantSerialNumbers(fetchedMoveLines)
+
 
             // Extract unique product names
             val uniqueProductNames = fetchedMoveLines.map { it.productName }.distinct()
@@ -275,6 +279,16 @@ class PackProductsActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Log.e("PackProductsActivity", "Error fetching move lines for pack: ${e.localizedMessage}")
         }
+    }
+
+    private fun updateRelevantSerialNumbers(moveLines: List<MoveLine>) {
+        relevantSerialNumbers.clear()
+        moveLines.forEach { moveLine ->
+            if (moveLine.lotName.isNotBlank()) {
+                relevantSerialNumbers.add(moveLine.lotName)
+            }
+        }
+        Log.d("PackProductsActivity", "Updated relevant serial numbers: ${relevantSerialNumbers.joinToString(", ")}")
     }
 
 
@@ -480,37 +494,47 @@ class PackProductsActivity : AppCompatActivity() {
 
         createNewButton.setOnClickListener {
             val enteredSerial = serialInput.text.toString().trim()
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    val validSerialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(moveLine.productId) ?: listOf()
-                    withContext(Dispatchers.Main) {
-                        if (enteredSerial == moveLine.lotName) {  // Directly compare entered serial with lotName from moveLine
-                            val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
+
+            // Log all relevant serial numbers for debugging
+            Log.d("PackProductsActivity", "Current relevant serial numbers: ${relevantSerialNumbers.joinToString(", ")}")
+
+            // Check if the entered serial number is in the list of relevant serial numbers
+            if (relevantSerialNumbers.contains(enteredSerial)) {
+                // If the serial number is valid, proceed with creating the new package
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
+                        withContext(Dispatchers.Main) {
                             if (result) {
                                 Toast.makeText(this@PackProductsActivity, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
                                 packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
                                 val index = packProductsAdapter.moveLines.indexOf(moveLine)
-                                packProductsAdapter.notifyItemChanged(index)  // Notify the adapter to refresh this item
+                                packProductsAdapter.notifyItemChanged(index)  // Refresh the item in the adapter
                                 checkAllItemsPackaged()  // Check if all items are now packaged
                                 isPrintVisible = true
-                                refreshMenu()
-                                //savePrintIconVisibility()
-                                dialog.dismiss()  // Only dismiss if successful
+                                refreshMenu()  // Refresh the menu to update state
+                                dialog.dismiss()  // Dismiss the dialog on successful packaging
                             } else {
                                 Toast.makeText(this@PackProductsActivity, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
                             }
-                        } else {
-                            Toast.makeText(this@PackProductsActivity, "Invalid serial number entered.", Toast.LENGTH_LONG).show()
-                            serialInput.requestFocus()
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(this@PackProductsActivity, "Error during packaging: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                         }
                     }
-                } catch (e: Exception) {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(this@PackProductsActivity, "Error during packaging: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                    }
                 }
+            } else {
+                // If the serial number does not match, log an error and show a toast message
+                Log.e("PackProductsActivity", "Serial number mismatch: entered $enteredSerial does not match any known serial numbers.")
+                Toast.makeText(this@PackProductsActivity, "Invalid serial number entered. Please check and try again.", Toast.LENGTH_LONG).show()
+                serialInput.requestFocus()  // Focus back to the input for correction
             }
         }
+
+
+
+
 
         addToPackageButton.setOnClickListener {
             val packageName = packageInput.text.toString()
@@ -558,6 +582,25 @@ class PackProductsActivity : AppCompatActivity() {
             }
         }
         dialog.show()
+    }
+
+    private fun filterRelevantSerialNumbers(allSerialNumbers: List<String>, lotName: String) {
+        relevantSerialNumbers.clear()
+        relevantSerialNumbers.addAll(allSerialNumbers.filter { serial -> serial.contains(lotName) })
+    }
+
+    private fun fetchAndFilterSerialNumbers(productId: Int, lotName: String) {
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val allSerialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId) ?: listOf()
+                withContext(Dispatchers.Main) {
+                    filterRelevantSerialNumbers(allSerialNumbers, lotName)
+                    // You may log or update UI here if needed
+                }
+            } catch (e: Exception) {
+                Log.e("PackProductsActivity", "Error fetching serial numbers for product ID: $productId", e)
+            }
+        }
     }
 
 
