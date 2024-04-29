@@ -1,9 +1,18 @@
+<!--<menu xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    xmlns:app="http://schemas.android.com/apk/res-auto">-->
+<!--    <item-->
+<!--        android:id="@+id/action_widget_button"-->
+<!--        android:icon="@drawable/magnifying_glass_solid"-->
+<!--        android:title="Search"-->
+<!--        app:showAsAction="ifRoom" />-->
+<!--</menu>-->
+
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_widget_button"
-        android:icon="@drawable/search_icon"
-        android:title="Widget Button"
-        app:showAsAction="ifRoom" />
+        android:title="Search"
+        android:icon="@drawable/magnifying_glass_solid"
+        app:showAsAction="ifRoom|collapseActionView"
+        app:actionViewClass="androidx.appcompat.widget.SearchView" />
 </menu>
-

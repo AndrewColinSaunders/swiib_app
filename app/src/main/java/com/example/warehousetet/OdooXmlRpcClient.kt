@@ -2498,6 +2498,66 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         }
     }
 
+
+    suspend fun createMoveLineForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double): Map<String, Any>? {
+        val config = getClientConfig("object")
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val methodName = "create_move_line_for_receiving"
+        val model = "stock.move.line"
+        val args = listOf(pickingId, productId, lotName, quantity)  // Ensure this is a list
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            model,
+            methodName,
+            args
+        )
+
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                client.execute("execute_kw", params) as Map<*, *>
+            }
+            result as Map<String, Any>
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
+            null
+        }
+    }
+    suspend fun createMoveLineWithExpirationForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double, expirationDate: String): Map<String, Any>? {
+        val config = getClientConfig("object")
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val methodName = "create_move_line_for_receiving_with_expiration"
+        val model = "stock.move.line"
+        val args = listOf(pickingId, productId, lotName, quantity, expirationDate)  // Ensure this is a list
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            model,
+            methodName,
+            args
+        )
+
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                client.execute("execute_kw", params) as Map<*, *>
+            }
+            result as Map<String, Any>
+        } catch (e: Exception) {
+            Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
+            null
+        }
+    }
+
 }
 
 

@@ -2,7 +2,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
         android:id="@+id/action_flag"
-        android:icon="@drawable/flag_regular"
         android:title="Flag"
+        android:icon="@drawable/flag_regular"
         app:showAsAction="ifRoom|withText"/>
 </menu>

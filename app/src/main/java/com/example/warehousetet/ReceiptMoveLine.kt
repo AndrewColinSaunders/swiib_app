@@ -4,7 +4,7 @@ data class ReceiptMoveLine(
     val id: Int,
     val productId: Int,
     val productName: String,
-    var lotName: String,
+    val lotName: String,
     val quantity: Double,
     val expectedQuantity: Double,
     val totalQuantity: Double,

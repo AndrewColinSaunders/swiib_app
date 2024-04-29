@@ -3,8 +3,10 @@ package com.example.warehousetet
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
@@ -41,6 +43,55 @@ class PickActivity : AppCompatActivity() {
         super.onPause()
         stopPeriodicRefresh()
     }
+//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//        menuInflater.inflate(R.menu.menu_main, menu)
+//        return true
+//    }
+//override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//    menuInflater.inflate(R.menu.menu_main, menu)
+//
+//    val searchItem = menu.findItem(R.id.action_widget_button)
+//    val searchView = searchItem.actionView as? SearchView
+//    searchView?.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+//        override fun onQueryTextSubmit(query: String?): Boolean {
+//            // You can handle query submit here if needed
+//            return true
+//        }
+//
+//        override fun onQueryTextChange(newText: String?): Boolean {
+//            pickAdapter.filter(newText ?: "")
+//            return true
+//        }
+//    })
+//    return true
+//}
+override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    menuInflater.inflate(R.menu.menu_main, menu)
+    val searchItem = menu.findItem(R.id.action_widget_button)
+    val searchView = searchItem.actionView as SearchView
+
+    searchView.apply {
+        setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                // Not needed for this use case
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                pickAdapter.filter(newText ?: "")
+                return true
+            }
+        })
+        setOnCloseListener {
+            pickAdapter.filter("")  // Clear filter when search is closed
+            false
+        }
+    }
+
+    return true
+}
+
+
 
     private fun initializeRecyclerView() {
         val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView) // Make sure your layout file for PickActivity includes a RecyclerView with this ID

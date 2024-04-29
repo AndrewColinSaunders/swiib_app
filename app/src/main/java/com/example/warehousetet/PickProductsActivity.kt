@@ -1325,7 +1325,6 @@
 
 package com.example.warehousetet
 
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -1607,7 +1606,7 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
         val textProductName = dialogView.findViewById<TextView>(R.id.textProductName)
         val textProductQuantity = dialogView.findViewById<TextView>(R.id.textProductQuantity)
         val textProductFromLocation = dialogView.findViewById<TextView>(R.id.textProductFromLocation)
-        val textProductToLocation = dialogView.findViewById<TextView>(R.id.textProductToLocation)
+        val textProductToLocation = dialogView.findViewById<TextView>(R.id.textProductToLocationHeading)
         val textProductLotNumber = dialogView.findViewById<TextView>(R.id.textProductLotNumber)
         val editTextProductLotNumber = dialogView.findViewById<EditText>(R.id.editTextProductLotNumber)
         val lotNumberLayout = dialogView.findViewById<LinearLayout>(R.id.lotNumberLayout) // Reference to the LinearLayout

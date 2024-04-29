@@ -5,8 +5,9 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"> <!-- Add this line -->
     <item
         android:id="@+id/action_flag_receipt"
-        android:title="Flag receipt"
+        android:title="Flag"
         android:orderInCategory="100"
+        android:icon="@drawable/flag_regular"
         app:showAsAction="ifRoom" />
 </menu>
 

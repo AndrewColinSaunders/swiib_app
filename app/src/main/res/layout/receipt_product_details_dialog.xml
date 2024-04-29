@@ -17,16 +17,6 @@
         android:textColor="@android:color/white"
         android:layout_marginBottom="16dp" />
 
-<!--    <TextView-->
-<!--        android:id="@+id/textProductQuantity"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="Quantity"-->
-<!--        android:textStyle="bold"-->
-<!--        android:textSize="18sp"-->
-<!--        android:layout_marginTop="16dp"-->
-<!--        android:layout_marginBottom="16dp"-->
-<!--        android:textColor="@android:color/white" />-->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -47,7 +37,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Quantity"
+                android:text="Quantity:"
                 android:textStyle="bold"
                 android:textSize="18sp"
                 android:textColor="@android:color/white"/>
@@ -58,17 +48,19 @@
                 android:layout_height="32dp"
                 android:src="@android:drawable/ic_menu_edit"
                 android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/edit_lot_number"
+                android:contentDescription="Edit quantity"
                 android:padding="4dp"/>
         </LinearLayout>
         <TextView
             android:id="@+id/textProductQuantity"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Lot/Serial Number"
+            android:text="Quantity"
             android:textSize="18sp"
             android:textColor="@android:color/white"
-            android:layout_marginTop="4dp"/>
+            android:layout_marginTop="4dp"
+            android:backgroundTint="@android:color/white"
+            android:textCursorDrawable="@drawable/cursor_white"/>
 
         </LinearLayout>
         <EditText
@@ -81,25 +73,25 @@
             android:textSize="18sp"
             android:layout_marginTop="8dp"
             android:importantForAutofill="yes"
-            android:autofillHints="@string/lot_serial_number"
-            android:textColor="@android:color/white"/>
+            android:autofillHints="Edit quantity"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/white"
+            android:textCursorDrawable="@drawable/cursor_white"/>
 
     <TextView
-        android:id="@+id/textProductFromLocation"
+        android:id="@+id/textProductToLocationHeading"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="From Location"
+        android:text="To Location:"
         android:textStyle="bold"
         android:textSize="18sp"
         android:layout_marginBottom="16dp"
         android:textColor="@android:color/white" />
-
     <TextView
         android:id="@+id/textProductToLocation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="To Location"
-        android:textStyle="bold"
         android:textSize="18sp"
         android:layout_marginBottom="16dp"
         android:textColor="@android:color/white" />
@@ -148,11 +140,11 @@
             android:text="Lot/Serial Number"
             android:textSize="18sp"
             android:textColor="@android:color/white"
-            android:layout_marginTop="4dp"/>
+            android:layout_marginTop="4dp"
+            android:backgroundTint="@color/white"
+            android:textCursorDrawable="@drawable/cursor_white"/>
 
     </LinearLayout>
-
-
 
     <EditText
         android:id="@+id/editTextProductLotNumber"
@@ -165,7 +157,9 @@
         android:layout_marginTop="8dp"
         android:importantForAutofill="yes"
         android:autofillHints="@string/lot_serial_number"
-        android:textColor="@android:color/white"/>
+        android:textColor="@android:color/white"
+        android:backgroundTint="@color/white"
+        android:textCursorDrawable="@drawable/cursor_white"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -196,7 +190,8 @@
             android:textSize="20sp"
             android:textColor="@android:color/white"
             android:backgroundTint="?attr/colorSecondaryVariant"
-            android:layout_marginStart="8dp"/>
+            android:layout_marginStart="8dp"
+            />
     </LinearLayout>
 </LinearLayout>
 
