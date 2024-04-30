@@ -45,6 +45,8 @@ class PackProductsActivity : AppCompatActivity() {
     private var isScannerInput = false
     private var isPrintVisible = true
     private var relevantSerialNumbers = mutableListOf<String>()
+    private val usedSerialNumbers = mutableSetOf<String>()
+    private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
 
 
 
@@ -240,7 +242,7 @@ class PackProductsActivity : AppCompatActivity() {
             }
         }
 
-        
+
 
 
     }
@@ -282,13 +284,19 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
     private fun updateRelevantSerialNumbers(moveLines: List<MoveLine>) {
-        relevantSerialNumbers.clear()
+        serialNumberToMoveLineIdMap.clear()
         moveLines.forEach { moveLine ->
             if (moveLine.lotName.isNotBlank()) {
-                relevantSerialNumbers.add(moveLine.lotName)
+                // Map each serial number to its move line ID
+                serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
             }
         }
-        Log.d("PackProductsActivity", "Updated relevant serial numbers: ${relevantSerialNumbers.joinToString(", ")}")
+        Log.d("PackProductsActivity", "Updated serial numbers to move line IDs: ${serialNumberToMoveLineIdMap.entries.joinToString(", ") { "${it.key}: ${it.value}" }}")
+    }
+
+    // Function to fetch the move line ID based on the serial number
+    private fun fetchMoveLineIdForSerialNumber(serialNumber: String): Int? {
+        return serialNumberToMoveLineIdMap[serialNumber]
     }
 
 
@@ -495,96 +503,154 @@ class PackProductsActivity : AppCompatActivity() {
         createNewButton.setOnClickListener {
             val enteredSerial = serialInput.text.toString().trim()
 
-            // Log all relevant serial numbers for debugging
-            Log.d("PackProductsActivity", "Current relevant serial numbers: ${relevantSerialNumbers.joinToString(", ")}")
+            // Check if the serial number has already been used
+            if (usedSerialNumbers.contains(enteredSerial)) {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "This serial number has already been used. Please enter a different one.",
+                    Toast.LENGTH_LONG
+                ).show()
+                serialInput.requestFocus() // Focus back to the input for correction
+                return@setOnClickListener
+            }
 
-            // Check if the entered serial number is in the list of relevant serial numbers
-            if (relevantSerialNumbers.contains(enteredSerial)) {
-                // If the serial number is valid, proceed with creating the new package
+            // Attempt to get the moveLineId using the entered serial number
+            val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+            if (moveLineId != null) {
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
-                        val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(
+                            moveLineId,
+                            this@PackProductsActivity
+                        )
                         withContext(Dispatchers.Main) {
                             if (result) {
-                                Toast.makeText(this@PackProductsActivity, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
-                                packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
-                                val index = packProductsAdapter.moveLines.indexOf(moveLine)
-                                packProductsAdapter.notifyItemChanged(index)  // Refresh the item in the adapter
-                                checkAllItemsPackaged()  // Check if all items are now packaged
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Item successfully put into a new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                packageItem(moveLineId)  // Update the adapter
+                                checkAllItemsPackaged()
                                 isPrintVisible = true
-                                refreshMenu()  // Refresh the menu to update state
-                                dialog.dismiss()  // Dismiss the dialog on successful packaging
+                                refreshMenu()
+                                usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
+                                dialog.dismiss()
                             } else {
-                                Toast.makeText(this@PackProductsActivity, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Failed to put item in new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
-                            Toast.makeText(this@PackProductsActivity, "Error during packaging: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this@PackProductsActivity,
+                                "Error during packaging: ${e.localizedMessage}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     }
                 }
             } else {
-                // If the serial number does not match, log an error and show a toast message
-                Log.e("PackProductsActivity", "Serial number mismatch: entered $enteredSerial does not match any known serial numbers.")
-                Toast.makeText(this@PackProductsActivity, "Invalid serial number entered. Please check and try again.", Toast.LENGTH_LONG).show()
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "Invalid serial number entered. Please check and try again.",
+                    Toast.LENGTH_LONG
+                ).show()
                 serialInput.requestFocus()  // Focus back to the input for correction
             }
         }
 
 
 
-
-
         addToPackageButton.setOnClickListener {
-            val packageName = packageInput.text.toString()
+            val packageName = packageInput.text.toString().trim()
             val enteredSerial = serialInput.text.toString().trim()
 
             if (packageName.isNotEmpty() && enteredSerial.isNotEmpty()) {
+                // Check if the serial number has already been used
+                if (usedSerialNumbers.contains(enteredSerial)) {
+                    Toast.makeText(
+                        this@PackProductsActivity,
+                        "This serial number has already been used. Please enter a different one.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    serialInput.requestFocus() // Focus back to the input for correction
+                    return@setOnClickListener
+                }
+
                 lifecycleScope.launch(Dispatchers.Main) {
                     try {
-                        // Fetch all valid serial numbers for the product IDs associated with move lines, then find the corresponding move line
-                        val moveLine = withContext(Dispatchers.IO) {
-                            packProductsAdapter.moveLines.find { it.lotName == enteredSerial }
-                        }
-
-                        if (moveLine != null) {
+                        // Use the serial number to fetch the move line ID
+                        val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+                        if (moveLineId != null) {
                             val result = withContext(Dispatchers.IO) {
-                                odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.lineId, packageName)
+                                odooXmlRpcClient.setPackageForMoveLine(
+                                    packId,
+                                    moveLineId,
+                                    packageName
+                                )
                             }
                             if (result) {
-                                // Add this line to the list of packaged move lines if not already present
-                                if (!packagedMoveLines.any { it.moveLineId == moveLine.lineId }) {
-                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.lineId))
-                                }
-                                // Find the index and notify the adapter
-                                val index = packProductsAdapter.moveLines.indexOfFirst { it.lineId == moveLine.lineId }
-                                if (index != -1) {
-                                    packProductsAdapter.notifyItemChanged(index)  // Notify adapter to update this item
-                                }
-                                addToPackageButton.setBackgroundColor(ContextCompat.getColor(this@PackProductsActivity, R.color.success_green))
-                                Toast.makeText(this@PackProductsActivity, "Package set successfully for move line ID: ${moveLine.lineId}.", Toast.LENGTH_SHORT).show()
+                                // Update the UI and internal state as needed
+                                packageItem(moveLineId)  // Update the adapter
+                                checkAllItemsPackaged()
+                                //isPrintVisible = true
+                                refreshMenu()
+                                usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
+
+                                addToPackageButton.setBackgroundColor(
+                                    ContextCompat.getColor(
+                                        this@PackProductsActivity,
+                                        R.color.success_green
+                                    )
+                                )
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Package set successfully for move line ID: $moveLineId.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                                 dialog.dismiss()
                             } else {
-                                Toast.makeText(this@PackProductsActivity, "Failed to set package for move line ID: ${moveLine.lineId}.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Failed to set package for move line ID: $moveLineId.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                             }
                         } else {
-                            Toast.makeText(this@PackProductsActivity, "Invalid serial number entered. No corresponding move line found.", Toast.LENGTH_LONG).show()
-                            serialInput.requestFocus()
+                            Toast.makeText(
+                                this@PackProductsActivity,
+                                "Invalid serial number entered. Please check and try again.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            serialInput.requestFocus()  // Focus back to the input for correction
                         }
                     } catch (e: Exception) {
                         Log.e("PackageDialog", "Error occurred: ${e.localizedMessage}")
-                        Toast.makeText(this@PackProductsActivity, "An error occurred", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@PackProductsActivity,
+                            "An error occurred",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             } else {
-                Toast.makeText(this@PackProductsActivity, "Please enter a package name and serial number.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "Please enter a package name and serial number.",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
         dialog.show()
     }
 
-    private fun filterRelevantSerialNumbers(allSerialNumbers: List<String>, lotName: String) {
+
+        private fun filterRelevantSerialNumbers(allSerialNumbers: List<String>, lotName: String) {
         relevantSerialNumbers.clear()
         relevantSerialNumbers.addAll(allSerialNumbers.filter { serial -> serial.contains(lotName) })
     }
@@ -646,6 +712,12 @@ class PackProductsActivity : AppCompatActivity() {
         findViewById<Button>(R.id.validateOperationButton).visibility = if (allPackaged) View.VISIBLE else View.GONE
         savePackagedIds() // This call can also be removed if no other state needs to be saved when checking all items
     }
+
+    fun packageItem(moveLineId: Int) {
+        val newPackagedMovedLine = PackagedMovedLine(moveLineId)
+        packProductsAdapter.addPackagedMoveLine(newPackagedMovedLine)
+    }
+
 
 //
 //    private fun savePrintIconVisibility() {

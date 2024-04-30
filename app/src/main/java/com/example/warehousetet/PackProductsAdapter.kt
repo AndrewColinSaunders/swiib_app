@@ -12,7 +12,7 @@ import com.google.android.material.card.MaterialCardView
 class PackProductsAdapter(
     public var moveLines: List<MoveLine>,
     private var packId: Int,
-    private val packagedMoveLines: List<PackagedMovedLine>
+    var packagedMoveLines: MutableList<PackagedMovedLine>
 ) : RecyclerView.Adapter<PackProductsAdapter.MoveLineViewHolder>() {
 
     var selectedMoveLineId: Int? = null
@@ -25,12 +25,10 @@ class PackProductsAdapter(
     override fun onBindViewHolder(holder: MoveLineViewHolder, position: Int) {
         val moveLine = moveLines[position]
         val isPackaged = packagedMoveLines.any { it.moveLineId == moveLine.lineId }
-        holder.itemView.setOnClickListener {
-            selectedMoveLineId = moveLine.lineId  // Set the selected line ID when an item is clicked
-            Log.d("PackProductsAdapter", "Product line selected: ID = ${moveLine.lineId}, Product = ${moveLine.productName}")
-        }
+        Log.d("PackProductsAdapter", "Binding position: $position, ID: ${moveLine.lineId}, isPackaged: $isPackaged")
         holder.bind(moveLine, isPackaged)
     }
+
 
     override fun getItemCount(): Int = moveLines.size
 
@@ -46,6 +44,7 @@ class PackProductsAdapter(
         private val cardView: MaterialCardView = itemView.findViewById(R.id.packProductItemCard)
 
         fun bind(moveLine: MoveLine, isPackaged: Boolean) {
+            Log.d("ViewHolderLog", "Binding move line: ${moveLine.productName}, Packaged: $isPackaged")
             Log.d("PackProductAdapter", "Binding move line: ${moveLine.productName}") // Keeping logcat entry
             nameTextView.text = moveLine.productName
             quantityTextView.text = "Quantity: ${moveLine.quantity}"
@@ -63,4 +62,22 @@ class PackProductsAdapter(
             cardView.setCardBackgroundColor(backgroundColor)
         }
     }
+
+    fun addPackagedMoveLine(packagedMovedLine: PackagedMovedLine) {
+        if (!packagedMoveLines.any { it.moveLineId == packagedMovedLine.moveLineId }) {
+            packagedMoveLines.add(packagedMovedLine)
+            Log.d("AdapterLog", "Added to adapter's packagedMoveLines: ${packagedMovedLine.moveLineId}")
+        } else {
+            Log.d("AdapterLog", "Attempt to add duplicate move line ignored: ${packagedMovedLine.moveLineId}")
+        }
+        val index = moveLines.indexOfFirst { it.lineId == packagedMovedLine.moveLineId }
+        if (index != -1) {
+            notifyItemChanged(index)
+            Log.d("AdapterLog", "Notified change at index: $index")
+        } else {
+            Log.d("AdapterLog", "No index found for moveLineId: ${packagedMovedLine.moveLineId}")
+        }
+        Log.d("AdapterLog", "Post-addition adapter state: ${packagedMoveLines.joinToString { it.moveLineId.toString() }}")
+    }
+
 }
