@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -6,26 +7,25 @@
     android:background="#212d40">
 
     <TextView
-        android:id="@+id/tvDialogTitle"
+        android:id="@+id/textDialogTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Flag Pick"
+        android:text="Capture Image?"
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
         android:textSize="20sp"
         android:textColor="@android:color/white"
         android:gravity="center"
-        android:padding="8dp"
         android:layout_marginBottom="16dp"/>
 
     <TextView
-        android:id="@+id/tvDialogMessage"
+        android:id="@+id/textDialogMessage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Are you sure you want to flag this pick?"
+        android:text="Would you like to capture an image?"
         android:textSize="18sp"
         android:textColor="@android:color/white"
         android:gravity="center"
-        android:paddingBottom="20dp"/>
+        android:layout_marginBottom="20dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -35,11 +35,11 @@
         android:padding="8dp">
 
         <Button
-            android:id="@+id/btnCancel"
+            android:id="@+id/btnNo"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Cancel"
+            android:text="No"
             android:textAllCaps="false"
             android:textSize="20sp"
             android:textColor="@android:color/white"
@@ -47,11 +47,11 @@
             android:layout_marginEnd="8dp"/>
 
         <Button
-            android:id="@+id/btnFlagPick"
+            android:id="@+id/btnCaptureImage"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Flag"
+            android:text="Yes"
             android:textAllCaps="false"
             android:textSize="20sp"
             android:textColor="@android:color/white"
