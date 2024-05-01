@@ -1,18 +1,29 @@
 package com.example.warehousetet
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
+import android.graphics.Typeface
 import android.os.Bundle
+import android.provider.MediaStore
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
+import android.util.Base64
 import android.util.Log
 import android.view.KeyEvent
+import android.view.LayoutInflater
 import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -30,20 +41,31 @@ import com.google.zxing.common.BitMatrix
 import com.google.zxing.MultiFormatWriter
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
-
+import java.io.ByteArrayOutputStream
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.util.Properties
+import javax.mail.Message
+import javax.mail.MessagingException
+import javax.mail.PasswordAuthentication
+import javax.mail.Session
+import javax.mail.Transport
+import javax.mail.internet.InternetAddress
+import javax.mail.internet.MimeMessage
 
 
 class PackProductsActivity : AppCompatActivity() {
     private lateinit var packProductsAdapter: PackProductsAdapter
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private var currentProductName: String? = null
+    //private var currentProductName: String? = null
     private val packagedMoveLines = mutableListOf<PackagedMovedLine>()
     private lateinit var barcodeInput: EditText
     private var shouldShowPrinterIcon = false
     private var lastScannedBarcode = StringBuilder()
     private var lastKeyTime: Long = 0
     private var isScannerInput = false
-    private var isPrintVisible = true
+    //private var isPrintVisible = true
     private var relevantSerialNumbers = mutableListOf<String>()
     private val usedSerialNumbers = mutableSetOf<String>()
     private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
@@ -51,12 +73,12 @@ class PackProductsActivity : AppCompatActivity() {
 
 
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
+    private val packName by lazy {intent.getStringExtra("PACK_NAME")}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pack_activity_products)
 
-        shouldShowPrinterIcon = false
 
         loadPackagedIds()
         //loadPrintIconVisibility()
@@ -82,7 +104,7 @@ class PackProductsActivity : AppCompatActivity() {
         flagItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, R.color.danger_red), PorterDuff.Mode.SRC_ATOP)
 
 
-        printItem?.isVisible = isPrintVisible  // Control visibility based on your variable
+        //printItem?.isVisible = isPrintVisible  // Control visibility based on your variable
         return true
     }
 
@@ -93,14 +115,20 @@ class PackProductsActivity : AppCompatActivity() {
         val printItem = menu?.findItem(R.id.action_print)
         subMenu?.clear()
 
+        val addedPackageNames = mutableSetOf<String>() // Keep track of added package names
+
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val packages =  odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
                 withContext(Dispatchers.Main) {
                     packages.forEach { packageInfo ->
-                        subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
-                            printPackage(packageInfo.name)
-                            true
+                        // Add package name only if it hasn't been added before
+                        if (!addedPackageNames.contains(packageInfo.name)) {
+                            subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
+                                printPackage(packageInfo.name)
+                                true
+                            }
+                            addedPackageNames.add(packageInfo.name) // Add package name to the set
                         }
                     }
                 }
@@ -113,6 +141,7 @@ class PackProductsActivity : AppCompatActivity() {
         }
         return true
     }
+
 
 //
 //    private fun togglePrinterIconVisibility(show: Boolean) {
@@ -351,13 +380,10 @@ class PackProductsActivity : AppCompatActivity() {
 
 
 
-
-
-
-    private fun handleVerificationFailure(productName: String?, scannedBarcode: String, expectedBarcode: String?) {
-        Toast.makeText(this, "Barcode mismatch for $productName. Expected: $expectedBarcode, Found: $scannedBarcode", Toast.LENGTH_LONG).show()
-        barcodeInput.selectAll() // Select all text in EditText to facilitate correction
-    }
+//    private fun handleVerificationFailure(productName: String?, scannedBarcode: String, expectedBarcode: String?) {
+//        Toast.makeText(this, "Barcode mismatch for $productName. Expected: $expectedBarcode, Found: $scannedBarcode", Toast.LENGTH_LONG).show()
+//        barcodeInput.selectAll() // Select all text in EditText to facilitate correction
+//    }
 
 
     private fun checkProductTrackingAndHandle(moveLine: MoveLine) = lifecycleScope.launch {
@@ -385,7 +411,8 @@ class PackProductsActivity : AppCompatActivity() {
         Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}.")
 
         // Call the showInformationDialog to display the packing instructions
-        showInformationDialog(moveLine.quantity, moveLine)
+        //showInformationDialog(moveLine.quantity, moveLine)
+        displayQuantityDialog(moveLine.productName, moveLine.quantity, packId, moveLine.lineId, moveLine)
     }
 
 
@@ -430,9 +457,7 @@ class PackProductsActivity : AppCompatActivity() {
                             savePackagedIds()
                             packProductsAdapter.notifyItemChanged(index)
                             checkAllItemsPackaged()// Notify adapter to update this item
-                            isPrintVisible = true
                             refreshMenu()
-                            //savePrintIconVisibility()
                         } else {
                             Toast.makeText(context, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
                         }
@@ -448,6 +473,7 @@ class PackProductsActivity : AppCompatActivity() {
                 }
             }
         }
+
 
         addToPackageButton.setOnClickListener {
             val packageName = packageInput.text.toString()
@@ -532,7 +558,7 @@ class PackProductsActivity : AppCompatActivity() {
                                 ).show()
                                 packageItem(moveLineId)  // Update the adapter
                                 checkAllItemsPackaged()
-                                isPrintVisible = true
+                                //isPrintVisible = true
                                 refreshMenu()
                                 usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
                                 dialog.dismiss()
@@ -734,5 +760,228 @@ class PackProductsActivity : AppCompatActivity() {
 
     private fun refreshMenu() {
         invalidateOptionsMenu()
+    }
+
+
+
+
+
+    //================================================================================================================
+    //                                                  FlAG CODE
+    //================================================================================================================
+
+    private suspend fun sendEmailToBuyer(buyerEmail: String, buyerName: String, pickName: String?) {
+        withContext(Dispatchers.IO) {
+            val props = Properties().apply {
+                put("mail.smtp.host", "mail.dattec.co.za")
+                put("mail.smtp.socketFactory.port", "465")
+                put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
+                put("mail.smtp.auth", "true")
+                put("mail.smtp.port", "465")
+            }
+
+            val session = Session.getDefaultInstance(props, object : javax.mail.Authenticator() {
+                override fun getPasswordAuthentication(): PasswordAuthentication {
+                    return PasswordAuthentication("info@dattec.co.za", "0s3*X4n)#m,z") // Replace with your actual password
+                }
+            })
+
+            try {
+                val message = MimeMessage(session).apply {
+                    setFrom(InternetAddress("info@dattec.co.za"))
+                    setRecipients(Message.RecipientType.TO, InternetAddress.parse(buyerEmail))
+                    subject = "Action Required: Discrepancy in Received Quantity for Receipt $packName"
+                    setText("""
+            Dear $buyerName,
+
+            During a recent receipt event, we identified a discrepancy in the quantities received for the following item:
+
+            - Pack Name: $packName
+
+            The recorded quantity does not match the expected quantity as per our purchase order. This discrepancy requires your immediate attention and action.
+
+            Please review the receipt and product details at your earliest convenience and undertake the necessary steps to rectify this discrepancy. It is crucial to address these issues promptly to maintain accurate inventory records and ensure operational efficiency.
+
+            Thank you for your prompt attention to this matter.
+
+            Best regards,
+            The Swiib Team
+        """.trimIndent())
+                }
+                Transport.send(message)
+                Log.d("EmailSender", "Email sent successfully to $buyerEmail.")
+            } catch (e: MessagingException) {
+                Log.e("EmailSender", "Failed to send email.", e)
+            }
+        }
+    }
+
+
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressed() // This will handle the back action
+                return true
+            }
+            R.id.action_flag -> {
+                showFlagDialog() // Show flag dialog when flag icon is clicked
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+
+    private fun showFlagDialog() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
+        val dialogBuilder = AlertDialog.Builder(this).apply {
+            setView(dialogView)
+            setCancelable(false)  // Prevent dialog from being dismissed by back press or outside touches
+        }
+        val dialog = dialogBuilder.create()
+
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()  // Dismiss the dialog when "Cancel" is clicked
+        }
+
+        dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
+            lifecycleScope.launch {
+                try {
+                    val pickId = this@PackProductsActivity.packId
+                    val pickName = this@PackProductsActivity.packName ?: run {
+                        Log.e("PackProductsActivity", "Pack name is null")
+                        Toast.makeText(this@PackProductsActivity, "Invalid pack details", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+
+                    val buyerDetails = withContext(Dispatchers.IO) {
+                        odooXmlRpcClient.fetchAndLogBuyerDetails(pickName)
+                    }
+
+                    if (buyerDetails != null) {
+                        // Capture image before sending the email
+                        captureImage(packId)
+
+                        // Ensure email is sent after image capture dialog completion
+                        sendEmailToBuyer(buyerDetails.login, buyerDetails.name, packName)
+                        Log.d("PackProductsActivity", "Pack flagged and buyer notified via email.")
+                        Toast.makeText(this@PackProductsActivity, "Pack flagged", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Log.e("PackProductsActivity", "Failed to fetch buyer details or flag the pack.")
+                        Toast.makeText(this@PackProductsActivity, "Failed to flag pack", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Log.e("PackProductsActivity", "Error in flagging process: ${e.localizedMessage}", e)
+                    Toast.makeText(this@PackProductsActivity, "Error during flagging", Toast.LENGTH_SHORT).show()
+                }
+                dialog.dismiss()  // Dismiss the dialog once the operations are complete
+            }
+        }
+
+        dialog.show()  // Show the dialog
+    }
+
+
+
+    companion object {
+        private const val CAMERA_REQUEST_CODE = 1001
+    }
+
+    private fun captureImage(pickId: Int) {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Capture Image?")
+        builder.setMessage("Would you like to capture an image?")
+
+        // No button - just dismiss the dialog
+        builder.setNegativeButton("No") { dialog, _ ->
+            dialog.dismiss()
+        }
+
+        // Capture Image button - open the camera
+        builder.setPositiveButton("Capture Image") { dialog, _ ->
+            dialog.dismiss()
+            openCamera(packId)  // Pass pickId to ensure it is available after capturing the image
+        }
+
+        val dialog = builder.create()
+        dialog.show()
+    }
+    private fun openCamera(packId: Int) {
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        if (cameraIntent.resolveActivity(packageManager) != null) {
+            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+        } else {
+            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
+        }
+    }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
+            val imageBitmap = data?.extras?.get("data") as? Bitmap
+            if (imageBitmap != null) {
+                val byteArrayOutputStream = ByteArrayOutputStream()
+                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+                val byteArray = byteArrayOutputStream.toByteArray()
+                val encodedImage = Base64.encodeToString(byteArray, Base64.DEFAULT)
+
+                Log.d("CaptureImage", "Encoded image: $encodedImage") // Log the encoded string or its length
+
+                lifecycleScope.launch {
+                    try {
+                        val updateResult = odooXmlRpcClient.updatePickingImage(packId, encodedImage)
+                        Log.d("OdooUpdate", "Update result: $updateResult") // Log the result from the server
+                    } catch (e: Exception) {
+                        Log.e("OdooUpdate", "Failed to update image: ${e.localizedMessage}", e)
+                    }
+                }
+            } else {
+                Log.e("CaptureImage", "Failed to capture image")
+            }
+        }
+    }
+
+
+    //============================================================================================================
+    //                        Code to change the moveline quanity based on what the user enters
+    //============================================================================================================
+
+    private fun displayQuantityDialog(productName: String, expectedQuantity: Double, packId: Int, lineId: Int, moveLine: MoveLine) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
+        val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
+        val buttonConfirm = dialogView.findViewById<Button>(R.id.buttonConfirm)
+        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
+
+        val fullText = "Confirm the quantity of $expectedQuantity for $productName has been picked."
+        val spannableString = SpannableString(fullText)
+
+        // Styling for expectedQuantity
+        val quantityStart = fullText.indexOf("$expectedQuantity")
+        val quantityEnd = quantityStart + "$expectedQuantity".length
+        spannableString.setSpan(StyleSpan(Typeface.BOLD), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spannableString.setSpan(RelativeSizeSpan(1.1f), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        // Styling for productName
+        val productNameStart = fullText.indexOf("$productName")
+        val productNameEnd = productNameStart + "$productName".length
+        spannableString.setSpan(StyleSpan(Typeface.BOLD), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spannableString.setSpan(RelativeSizeSpan(1.1f), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        textViewConfirmation.text = spannableString
+
+        val alertDialog = AlertDialog.Builder(this).apply {
+            setView(dialogView)
+            create()
+        }.show()
+
+        buttonConfirm.setOnClickListener {
+            // Pass the moveLine to the state update function and open the next dialog
+            showPackageDialogNoTracking(moveLine)
+            alertDialog.dismiss()  // Close the dialog after confirmation
+        }
+
+        buttonCancel.setOnClickListener {
+            alertDialog.dismiss()  // Close the dialog when cancel is clicked
+        }
     }
 }
