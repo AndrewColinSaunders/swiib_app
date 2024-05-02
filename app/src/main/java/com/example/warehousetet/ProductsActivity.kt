@@ -899,12 +899,10 @@ package com.example.warehousetet
 
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.os.Bundle
-import android.provider.MediaStore
 import android.text.Editable
 import android.text.InputType
 import android.text.Spannable
@@ -912,7 +910,6 @@ import android.text.SpannableString
 import android.text.TextWatcher
 import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
-import android.util.Base64
 import android.util.Log
 import android.view.KeyEvent
 import android.view.LayoutInflater
@@ -935,7 +932,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.*
-import java.io.ByteArrayOutputStream
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -961,7 +957,6 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
     private var barcodeToProductIdMap = mutableMapOf<String, Int>()
     private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
     private val confirmedLines = mutableSetOf<Int>()
-
 
     private var receiptName: String? = null
     private var receiptId: Int = -1
@@ -1017,46 +1012,17 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         menuItem.title = spanString
         return true
     }
-//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-//        return when (item.itemId) {
-//            R.id.action_flag_receipt -> {
-//                AlertDialog.Builder(this).apply {
-//                    setTitle("Flag Receipt")
-//                    setMessage("Are you sure you want to flag this receipt?")
-//                    setPositiveButton("Flag Receipt") { _, _ ->
-//                        flagReceipt()
-//                    }
-//                    setNegativeButton(android.R.string.cancel, null)
-//                }.show()
-//                true
-//            }
-//            android.R.id.home -> {
-//                onBackPressed()
-//                true
-//            }
-//            else -> super.onOptionsItemSelected(item)
-//        }
-//    }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_flag_receipt -> {
-                // Inflate the custom layout for the dialog
-                val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
-                val dialog = AlertDialog.Builder(this)
-                    .setView(dialogView)
-                    .create()
-
-                // Find buttons and set up click listeners
-                dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-                    dialog.dismiss()
-                }
-
-                dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
-                    flagReceipt()
-                    dialog.dismiss()
-                }
-
-                dialog.show()
+                AlertDialog.Builder(this).apply {
+                    setTitle("Flag Receipt")
+                    setMessage("Are you sure you want to flag this receipt?")
+                    setPositiveButton("Flag Receipt") { _, _ ->
+                        flagReceipt()
+                    }
+                    setNegativeButton(android.R.string.cancel, null)
+                }.show()
                 true
             }
             android.R.id.home -> {
@@ -1066,7 +1032,6 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
             else -> super.onOptionsItemSelected(item)
         }
     }
-
 
     private fun showRedToast(message: String) {
         val toast = Toast.makeText(this@ProductsActivity, message, Toast.LENGTH_SHORT)
@@ -1116,7 +1081,6 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
                 withContext(Dispatchers.Main) {
                     Log.d("ProductsActivity", "Receipt flagged and buyer notified via email.")
                     showRedToast("Receipt flagged")
-                    captureImage(receiptId)
                 }
             } ?: run {
                 withContext(Dispatchers.Main) {
@@ -1265,7 +1229,6 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         productsAdapter.updateProducts(products, receiptId, quantityMatches)
     }
 
-    //prompt for serial numbers all at once
 //    private fun verifyBarcode(scannedBarcode: String, receiptId: Int) {
 //        coroutineScope.launch {
 //            val productId = barcodeToProductIdMap[scannedBarcode]
@@ -1274,14 +1237,16 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
 //                Log.d("verifyBarcode", "Product Lines: ${productLines.size}")
 //
 //                productLines.forEach { productLine ->
-//                    // Directly use the trackingType from the productLine object
-//                    val trackingType = productLine.trackingType
+//                    // Fetch tracking type and proceed based on it
+//                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(productLine.productName)
+//                    val trackingType = trackingAndExpiration?.first ?: "none"
 //                    Log.d("verifyBarcode", "Tracking Type: $trackingType")
 //
 //                    withContext(Dispatchers.Main) {
 //                        // Specific condition for "lot" type products that have been confirmed
 //                        if (trackingType == "lot" && confirmedLines.contains(productLine.id)) {
-//                            showAddNewLotDialog(productLine.productName, receiptId, productLine.productId, trackingType, productLine.id, productLine.useExpirationDate)
+//
+//                            showAddNewLotDialog(productLine.productName, receiptId, productLine.productId, trackingType)
 //                        } else {
 //                            // Process according to tracking type if not already confirmed
 //                            when (trackingType) {
@@ -1300,74 +1265,32 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
 //            }
 //        }
 //    }
-    //prompt for one serial number at a time
-//    private fun verifyBarcode(scannedBarcode: String, receiptId: Int) {
-//        coroutineScope.launch {
-//            val productId = barcodeToProductIdMap[scannedBarcode]
-//            if (productId != null) {
-//                val productLines = productsAdapter.moveLines.filter { it.productId == productId }.sortedBy { it.id }
-//                val nextProductLine = productLines.find { !confirmedLines.contains(it.id) }
-//
-//                nextProductLine?.let { productLine ->
-//                    val trackingType = productLine.trackingType
-//
-//                    withContext(Dispatchers.Main) {
-//                        if (trackingType == "serial") {
-//                            promptForSerialNumber(productLine.productName, receiptId, productLine.productId, productLine.id)
-//                            confirmedLines.add(productLine.id)
-//                        } else if (trackingType == "lot") {
-//                            if (!confirmedLines.contains(productLine.id)) {
-//                                promptForLotNumber(productLine.productName, receiptId, productLine.productId, productLine.id)
-//                            } else {
-//
-//                            }
-//                        } else {
-//                            promptForProductQuantity(productLine.productName, productLine.expectedQuantity, receiptId, productLine.productId, productLine.id, false)
-//                        }
-//                    }
-//                } ?: withContext(Dispatchers.Main) {
-//                    showRedToast("All items for this product have been processed or no such product found.")
-//                }
-//            } else {
-//                withContext(Dispatchers.Main) {
-//                    showRedToast("Barcode not found")
-//                }
-//            }
-//        }
-//    }
     private fun verifyBarcode(scannedBarcode: String, receiptId: Int) {
         coroutineScope.launch {
             val productId = barcodeToProductIdMap[scannedBarcode]
             if (productId != null) {
-                val productLines = productsAdapter.moveLines.filter { it.productId == productId }.sortedBy { it.id }
-                val nextProductLine = productLines.find { !confirmedLines.contains(it.id) }
+                val productLines = productsAdapter.moveLines.filter { it.productId == productId }
+                Log.d("verifyBarcode", "Product Lines: ${productLines.size}")
 
-                nextProductLine?.let { productLine ->
+                productLines.forEach { productLine ->
+                    // Directly use the trackingType from the productLine object
                     val trackingType = productLine.trackingType
+                    Log.d("verifyBarcode", "Tracking Type: $trackingType")
 
                     withContext(Dispatchers.Main) {
-                        when {
-                            // Specific condition for "lot" type products that have been confirmed
-                            trackingType == "lot" && confirmedLines.contains(productLine.id) -> {
-                                showAddNewLotDialog(productLine.productName, receiptId, productLine.productId, trackingType, productLine.id, productLine.useExpirationDate)
-                            }
-                            trackingType == "serial" -> {
-                                promptForSerialNumber(productLine.productName, receiptId, productLine.productId, productLine.id)
-                                confirmedLines.add(productLine.id)
-                            }
-                            trackingType == "lot" -> {
-                                promptForLotNumber(productLine.productName, receiptId, productLine.productId, productLine.id)
-                            }
-                            trackingType == "none" -> {
-                                promptForProductQuantity(productLine.productName, productLine.expectedQuantity, receiptId, productLine.productId, productLine.id, false)
-                            }
-                            else -> {
-                                Log.d("verifyBarcode", "Unhandled tracking type: $trackingType")
+                        // Specific condition for "lot" type products that have been confirmed
+                        if (trackingType == "lot" && confirmedLines.contains(productLine.id)) {
+                            showAddNewLotDialog(productLine.productName, receiptId, productLine.productId, trackingType, productLine.id, productLine.useExpirationDate)
+                        } else {
+                            // Process according to tracking type if not already confirmed
+                            when (trackingType) {
+                                "serial" -> promptForSerialNumber(productLine.productName, receiptId, productLine.productId, productLine.id)
+                                "lot" -> promptForLotNumber(productLine.productName, receiptId, productLine.productId, productLine.id)
+                                "none" -> promptForProductQuantity(productLine.productName, productLine.expectedQuantity, receiptId, productLine.productId, productLine.id, false)
+                                else -> Log.d("verifyBarcode", "Unhandled tracking type: $trackingType")
                             }
                         }
                     }
-                } ?: withContext(Dispatchers.Main) {
-                    showRedToast("All items for this product have been processed or no such product found.")
                 }
             } else {
                 withContext(Dispatchers.Main) {
@@ -1652,6 +1575,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         dialog.show()
     }
 
+
     private fun promptForLotQuantity(productName: String, receiptId: Int, productId: Int, lotNumber: String, requiresExpirationDate: Boolean, lineId: Int) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER
@@ -1699,6 +1623,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         dialog.show()
     }
 
+
     private fun promptForLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotNumber: String, quantity: Int, lineId: Int) {
         val editText = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_NUMBER // Ensure numerical input for date; consider TYPE_CLASS_DATETIME or custom date picker
@@ -1732,104 +1657,29 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
             .show()
     }
 
-//    private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
-//        val editText = EditText(this).apply {
-//            inputType = InputType.TYPE_CLASS_TEXT
-//            hint = "Enter serial number"
-//        }
-//
-//        var actionExecuted = false
-//
-//        // Build the dialog but don't show it yet
-//        val dialogBuilder = AlertDialog.Builder(this)
-//            .setTitle("Enter Serial Number")
-//            .setMessage("Enter the serial number for $productName.")
-//            .setView(editText)
-//            .setNegativeButton("Cancel", null)
-//
-//        // Create the dialog from the builder
-//        val dialog = dialogBuilder.create()
-//
-//        // Now set the positive button separately to have access to 'dialog' variable
-//        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
-//            if (!actionExecuted) {
-//                actionExecuted = true
-//                val enteredSerialNumber = editText.text.toString().trim()
-//                if (enteredSerialNumber.isNotEmpty()) {
-//                    coroutineScope.launch {
-//                        val product = productsAdapter.moveLines.find { it.productId == productId }
-//                        val key = ProductReceiptKey(productId, receiptId)
-//                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
-//
-//                        if (!serialList.contains(enteredSerialNumber)) {
-//                            if (product?.useExpirationDate == true) {
-//                                withContext(Dispatchers.Main) {
-//                                    dialog.dismiss() // Correctly reference 'dialog' here
-//                                    promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber, lineId)
-//                                }
-//                            } else {
-//                                odooXmlRpcClient.updateMoveLineSerialNumber(lineId, receiptId, productId, enteredSerialNumber)
-//                                serialList.add(enteredSerialNumber)
-//                                updateProductMatchState(lineId, receiptId, true)
-//                                confirmedLines.add(lineId)
-//
-//                                withContext(Dispatchers.Main) {
-//                                    showGreenToast("Serial number added for $productName.")
-//                                }
-//                            }
-//                        } else {
-//                            withContext(Dispatchers.Main) {
-//                                showRedToast("Serial number already entered for $productName")
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    showRedToast("Please enter a serial number")
-//                }
-//            }
-//        }
-//
-//        // Set up dialog properties related to keyboard input
-//        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-//        dialog.setOnShowListener {
-//            editText.requestFocus()
-//            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-//            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-//        }
-//
-//        editText.setOnEditorActionListener { _, actionId, event ->
-//            if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
-//                dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
-//                true
-//            } else {
-//                false
-//            }
-//        }
-//
-//        dialog.show()
-//    }
     private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
-        val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
-        val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
-        val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
-        val tvMessage = dialogView.findViewById<TextView>(R.id.tvMessage)
-
-        // Set the message dynamically
-        tvMessage.text = "Product: $productName."
+        val editText = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT
+            hint = "Enter serial number"
+        }
 
         var actionExecuted = false
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)  // Disable dismissing the dialog by pressing back or clicking outside
-            .create()
+        // Build the dialog but don't show it yet
+        val dialogBuilder = AlertDialog.Builder(this)
+            .setTitle("Enter Serial Number")
+            .setMessage("Enter the serial number for $productName.")
+            .setView(editText)
+            .setNegativeButton("Cancel", null)
+
+        // Create the dialog from the builder
+        val dialog = dialogBuilder.create()
 
         // Now set the positive button separately to have access to 'dialog' variable
-        buttonConfirmSN.setOnClickListener {
+        dialog.setButton(AlertDialog.BUTTON_POSITIVE, "OK") { _, _ ->
             if (!actionExecuted) {
                 actionExecuted = true
-                val enteredSerialNumber = serialNumberInput.text.toString().trim()
+                val enteredSerialNumber = editText.text.toString().trim()
                 if (enteredSerialNumber.isNotEmpty()) {
                     coroutineScope.launch {
                         val product = productsAdapter.moveLines.find { it.productId == productId }
@@ -1843,40 +1693,45 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
                                     promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber, lineId)
                                 }
                             } else {
+//                                (moveLineId: Int, pickingId: Int, productId: Int, lotName: String)
                                 odooXmlRpcClient.updateMoveLineSerialNumber(lineId, receiptId, productId, enteredSerialNumber)
                                 serialList.add(enteredSerialNumber)
                                 updateProductMatchState(lineId, receiptId, true)
                                 confirmedLines.add(lineId)
-
                                 withContext(Dispatchers.Main) {
                                     showGreenToast("Serial number added for $productName.")
-                                    dialog.dismiss()
                                 }
                             }
                         } else {
                             withContext(Dispatchers.Main) {
                                 showRedToast("Serial number already entered for $productName")
-                                serialNumberInput.setText("")
-                                serialNumberInput.requestFocus()
                             }
                         }
                     }
                 } else {
                     showRedToast("Please enter a serial number")
-                    serialNumberInput.setText("")
-                    serialNumberInput.requestFocus()
                 }
             }
         }
 
-        buttonCancelSN.setOnClickListener {
-            dialog.dismiss()
+        // Set up dialog properties related to keyboard input
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+        dialog.setOnShowListener {
+            editText.requestFocus()
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+        }
+
+        editText.setOnEditorActionListener { _, actionId, event ->
+            if ((actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER) && !actionExecuted) {
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+                true
+            } else {
+                false
+            }
         }
 
         dialog.show()
-        serialNumberInput.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
     }
 
     private fun setupDateInputField(editText: EditText) {
@@ -2033,7 +1888,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
                 // Check if the quantity is correct
                 if (enteredQuantity == expectedQuantity) {
                     showGreenToast("Quantity updated for $productName")
-                    updateProductMatchState(lineId, receiptId, true)
+                    updateProductMatchState(productId, receiptId, true)
                     confirmedLines.add(lineId)
                 } else if (!recount) {
                     promptForProductQuantity(productName, expectedQuantity, receiptId, productId, lineId, recount = true)
@@ -2095,7 +1950,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
 
                 During a recent receipt event, we identified a discrepancy in the quantities received for the following item:
 
-                - Receipt Name: $receiptName
+                - Receipt ID: $receiptName
                 - Product: $productName
 
                 The recorded quantity does not match the expected quantity as per our purchase order. This discrepancy requires your immediate attention and action.
@@ -2268,105 +2123,6 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         showProductDialog(product)
     }
 
-//    private fun showProductDialog(product: ReceiptMoveLine) {
-//        // Inflate the custom layout for the dialog
-//        val dialogView = LayoutInflater.from(this).inflate(R.layout.receipt_product_details_dialog, null)
-//
-//        // Retrieve all the TextViews and other views
-//        val textProductName = dialogView.findViewById<TextView>(R.id.textProductName)
-//        val textProductQuantity = dialogView.findViewById<TextView>(R.id.textProductQuantity)
-//        val textProductToLocation = dialogView.findViewById<TextView>(R.id.textProductToLocation)
-//        val textProductLotNumber = dialogView.findViewById<TextView>(R.id.textProductLotNumber)
-//        val editTextProductLotNumber = dialogView.findViewById<EditText>(R.id.editTextProductLotNumber)
-//        val lotNumberLayout = dialogView.findViewById<LinearLayout>(R.id.lotNumberLayout)
-//        val buttonEditLotNumber = dialogView.findViewById<ImageButton>(R.id.buttonEditLotNumber)
-//        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
-//        val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
-//        val editTextQuantity = dialogView.findViewById<EditText>(R.id.editTextQuantity)
-//        val buttonEditQuantity = dialogView.findViewById<ImageButton>(R.id.buttonEditQuantity)
-//
-//        // Create and show the dialog
-//        val dialog = AlertDialog.Builder(this)
-//            .setView(dialogView)
-//            .create()
-//        dialog.show()
-//
-//        // Set values to the TextViews
-//        textProductName.text = product.productName
-//        textProductQuantity.text = "${product.quantity}"
-//        textProductToLocation.text = "${product.locationDestName}"
-//        textProductLotNumber.text = "${product.lotName}"
-//
-//        // Initially set the visibility to avoid any flashing or incorrect states
-//        lotNumberLayout.visibility = View.GONE
-//        buttonEditLotNumber.visibility = View.GONE
-//        buttonEditQuantity.visibility = View.GONE
-//
-//        coroutineScope.launch {
-//            withContext(Dispatchers.Main) {
-//                // Default initial settings before checking specific conditions
-//                lotNumberLayout.visibility = View.GONE
-//                buttonEditLotNumber.visibility = View.GONE
-//                buttonEditQuantity.visibility = View.VISIBLE  // Default to visible unless conditions dictate otherwise
-//
-//                if (product.trackingType == "serial") {
-//                    // For 'serial' type, always hide the quantity edit button
-//                    buttonEditQuantity.visibility = View.GONE
-//                    if (product.lotName.isNotEmpty()) {
-//                        // Only show lot editing if lot name is not empty
-//                        lotNumberLayout.visibility = View.VISIBLE
-//                        buttonEditLotNumber.visibility = View.VISIBLE
-//                    }
-//                } else if (product.trackingType == "lot" && product.lotName.isNotEmpty()) {
-//                    // For 'lot' type with a non-empty lot name, enable editing
-//                    lotNumberLayout.visibility = View.VISIBLE
-//                    buttonEditLotNumber.visibility = View.VISIBLE
-//                    buttonEditQuantity.visibility = View.VISIBLE
-//                } else if (product.trackingType == "none") {
-//                    // For 'none' tracking type, hide all lot number editing UI
-//                    lotNumberLayout.visibility = View.GONE
-//                    buttonEditLotNumber.visibility = View.GONE
-//                } else {
-//                    // Default to visibility but not interactable if conditions are not met
-//                    lotNumberLayout.visibility = View.VISIBLE
-//                    buttonEditLotNumber.visibility = View.GONE
-//                    buttonEditQuantity.visibility = View.VISIBLE
-//                }
-//            }
-//        }
-//
-//        // Setup button to toggle editing of quantity
-//        buttonEditQuantity.setOnClickListener {
-//            if (editTextQuantity.visibility == View.GONE) {
-//                editTextQuantity.visibility = View.VISIBLE
-//                editTextQuantity.setText(product.quantity.toString())
-//                textProductQuantity.visibility = View.GONE
-//            } else {
-//                editTextQuantity.visibility = View.GONE
-//                textProductQuantity.visibility = View.VISIBLE
-//                textProductQuantity.text = "Quantity: ${editTextQuantity.text}"
-//            }
-//        }
-//        // Configure buttonEditLotNumber listener
-//        buttonEditLotNumber.setOnClickListener {
-//            if (editTextProductLotNumber.visibility == View.GONE) {
-//                editTextProductLotNumber.visibility = View.VISIBLE
-//                editTextProductLotNumber.setText(product.lotName)
-//                textProductLotNumber.visibility = View.GONE
-//            } else {
-//                editTextProductLotNumber.visibility = View.GONE
-//                textProductLotNumber.visibility = View.VISIBLE
-//                textProductLotNumber.text = editTextProductLotNumber.text.toString()
-//            }
-//        }
-//        buttonConfirmQuantity.setOnClickListener {
-//            dialog.dismiss()
-//        }
-//        buttonCancel.setOnClickListener {
-//            dialog.dismiss()
-//        }
-//    }
-
     private fun showProductDialog(product: ReceiptMoveLine) {
         // Inflate the custom layout for the dialog
         val dialogView = LayoutInflater.from(this).inflate(R.layout.receipt_product_details_dialog, null)
@@ -2384,43 +2140,49 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         val editTextQuantity = dialogView.findViewById<EditText>(R.id.editTextQuantity)
         val buttonEditQuantity = dialogView.findViewById<ImageButton>(R.id.buttonEditQuantity)
 
+        // Create and show the dialog
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+        dialog.show()
+
         // Set values to the TextViews
         textProductName.text = product.productName
         textProductQuantity.text = "${product.quantity}"
         textProductToLocation.text = "${product.locationDestName}"
         textProductLotNumber.text = "${product.lotName}"
 
-        // Flags to track if edits were made
-        var quantityChanged = false
-        var lotNameChanged = false
-
-        // Create and show the dialog
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-        dialog.show()
-
-        // Setup visibility based on product tracking type
+        // Initially set the visibility to avoid any flashing or incorrect states
         lotNumberLayout.visibility = View.GONE
         buttonEditLotNumber.visibility = View.GONE
         buttonEditQuantity.visibility = View.GONE
 
         coroutineScope.launch {
             withContext(Dispatchers.Main) {
+                // Default initial settings before checking specific conditions
+                lotNumberLayout.visibility = View.GONE
+                buttonEditLotNumber.visibility = View.GONE
+                buttonEditQuantity.visibility = View.VISIBLE  // Default to visible unless conditions dictate otherwise
+
                 if (product.trackingType == "serial") {
+                    // For 'serial' type, always hide the quantity edit button
                     buttonEditQuantity.visibility = View.GONE
                     if (product.lotName.isNotEmpty()) {
+                        // Only show lot editing if lot name is not empty
                         lotNumberLayout.visibility = View.VISIBLE
                         buttonEditLotNumber.visibility = View.VISIBLE
                     }
                 } else if (product.trackingType == "lot" && product.lotName.isNotEmpty()) {
+                    // For 'lot' type with a non-empty lot name, enable editing
                     lotNumberLayout.visibility = View.VISIBLE
                     buttonEditLotNumber.visibility = View.VISIBLE
                     buttonEditQuantity.visibility = View.VISIBLE
                 } else if (product.trackingType == "none") {
+                    // For 'none' tracking type, hide all lot number editing UI
                     lotNumberLayout.visibility = View.GONE
                     buttonEditLotNumber.visibility = View.GONE
                 } else {
+                    // Default to visibility but not interactable if conditions are not met
                     lotNumberLayout.visibility = View.VISIBLE
                     buttonEditLotNumber.visibility = View.GONE
                     buttonEditQuantity.visibility = View.VISIBLE
@@ -2428,96 +2190,35 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
             }
         }
 
-        // Button handlers for editing quantity and lot number
+        // Setup button to toggle editing of quantity
         buttonEditQuantity.setOnClickListener {
-            editTextQuantity.visibility = View.VISIBLE
-            editTextQuantity.setText(product.quantity.toString())
-            textProductQuantity.visibility = View.GONE
-            quantityChanged = true
-        }
-        buttonEditLotNumber.setOnClickListener {
-            editTextProductLotNumber.visibility = View.VISIBLE
-            editTextProductLotNumber.setText(product.lotName)
-            textProductLotNumber.visibility = View.GONE
-            lotNameChanged = true
-        }
-
-        // Confirm and cancel button handling
-        buttonConfirmQuantity.setOnClickListener {
-            coroutineScope.launch {
-                when {
-                    quantityChanged && lotNameChanged -> {
-                        odooXmlRpcClient.updateMoveLineQuantityForReceipt(product.id, receiptId, editTextQuantity.text.toString().toInt())
-                        odooXmlRpcClient.updateMoveLinesForReceipt(product.id, receiptId, editTextProductLotNumber.text.toString())
-                    }
-                    quantityChanged -> odooXmlRpcClient.updateMoveLineQuantityForReceipt(product.id, receiptId, editTextQuantity.text.toString().toInt())
-                    lotNameChanged -> odooXmlRpcClient.updateMoveLinesForReceipt(product.id, receiptId, editTextProductLotNumber.text.toString())
-                }
-                withContext(Dispatchers.Main) {
-                    dialog.dismiss()
-                }
+            if (editTextQuantity.visibility == View.GONE) {
+                editTextQuantity.visibility = View.VISIBLE
+                editTextQuantity.setText(product.quantity.toString())
+                textProductQuantity.visibility = View.GONE
+            } else {
+                editTextQuantity.visibility = View.GONE
+                textProductQuantity.visibility = View.VISIBLE
+                textProductQuantity.text = "Quantity: ${editTextQuantity.text}"
             }
         }
-
+        // Configure buttonEditLotNumber listener
+        buttonEditLotNumber.setOnClickListener {
+            if (editTextProductLotNumber.visibility == View.GONE) {
+                editTextProductLotNumber.visibility = View.VISIBLE
+                editTextProductLotNumber.setText(product.lotName)
+                textProductLotNumber.visibility = View.GONE
+            } else {
+                editTextProductLotNumber.visibility = View.GONE
+                textProductLotNumber.visibility = View.VISIBLE
+                textProductLotNumber.text = editTextProductLotNumber.text.toString()
+            }
+        }
+        buttonConfirmQuantity.setOnClickListener {
+            dialog.dismiss()
+        }
         buttonCancel.setOnClickListener {
             dialog.dismiss()
-        }
-    }
-
-    companion object {
-        private const val CAMERA_REQUEST_CODE = 1001
-    }
-
-    private fun captureImage(pickId: Int) {
-        // Inflate the custom layout for the dialog
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.capture_image_dialog, null)
-
-        // Create and show the dialog
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-
-        // Find buttons and set up click listeners
-        dialogView.findViewById<Button>(R.id.btnNo).setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialogView.findViewById<Button>(R.id.btnCaptureImage).setOnClickListener {
-            dialog.dismiss()
-            openCamera()
-        }
-
-        dialog.show()
-    }
-
-    private fun openCamera() {
-        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        if (cameraIntent.resolveActivity(packageManager) != null) {
-            startActivityForResult(cameraIntent, PickProductsActivity.CAMERA_REQUEST_CODE)
-        } else {
-            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PickProductsActivity.CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-            val imageBitmap = data?.extras?.get("data") as? Bitmap
-            if (imageBitmap != null) {
-                val byteArrayOutputStream = ByteArrayOutputStream()
-                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-                val byteArray = byteArrayOutputStream.toByteArray()
-                val encodedImage = Base64.encodeToString(byteArray, Base64.DEFAULT)
-
-                Log.d("CaptureImage", "Encoded image: $encodedImage") // Log the encoded string or its length
-
-                coroutineScope.launch {
-                    val updateResult = odooXmlRpcClient.updatePickingImage(receiptId, encodedImage)
-                    Log.d("OdooUpdate", "Update result: $updateResult") // Log the result from the server
-                }
-            } else {
-                Log.e("CaptureImage", "Failed to capture image")
-            }
         }
     }
 

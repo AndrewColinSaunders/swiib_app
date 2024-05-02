@@ -13,17 +13,6 @@
         android:textAppearance="?attr/textAppearanceHeadline6"
         android:textColor="@android:color/white" />
 
-    <TextView
-        android:id="@+id/tvMessage"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="empty"
-        android:textSize="17dp"
-        android:textAppearance="?android:attr/textAppearance"
-        android:textColor="@android:color/white"
-        android:paddingTop="4dp"
-        android:paddingBottom="8dp" />
-
     <EditText
         android:id="@+id/serialNumberInput"
         android:layout_width="match_parent"
@@ -69,68 +58,3 @@
     </LinearLayout>
 
 </LinearLayout>
-
-
-
-
-
-    <!--<?xml version="1.0" encoding="utf-8"?>-->
-<!--<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"-->
-<!--    android:layout_width="match_parent"-->
-<!--    android:layout_height="wrap_content"-->
-<!--    android:orientation="vertical"-->
-<!--    android:padding="16dp"-->
-<!--    android:background="#212d40">-->
-
-<!--    <TextView-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:text="Enter Serial Number"-->
-<!--        android:textAppearance="?attr/textAppearanceHeadline6"-->
-<!--        android:textColor="@android:color/white" />-->
-
-<!--    <EditText-->
-<!--        android:id="@+id/serialNumberInput"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:inputType="text"-->
-<!--        android:hint="Enter serial number"-->
-<!--        android:textColor="@android:color/white"-->
-<!--        android:backgroundTint="@android:color/white"-->
-<!--        android:layout_marginTop="8dp"-->
-<!--        android:textCursorDrawable="@drawable/cursor_white"/>-->
-
-<!--    <LinearLayout-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="wrap_content"-->
-<!--        android:orientation="horizontal"-->
-<!--        android:layout_marginTop="15dp"-->
-<!--        android:gravity="center">-->
-
-<!--        <Button-->
-<!--            android:id="@+id/buttonCancelSN"-->
-<!--            android:layout_width="0dp"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:layout_weight="1"-->
-<!--            android:text="Cancel"-->
-<!--            android:textAllCaps="false"-->
-<!--            android:textSize="18sp"-->
-<!--            android:textColor="@android:color/white"-->
-<!--            android:backgroundTint="@color/danger_red"-->
-<!--            android:layout_marginEnd="8dp"/>-->
-
-<!--        <Button-->
-<!--            android:id="@+id/buttonConfirmSN"-->
-<!--            android:layout_width="0dp"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:layout_weight="1"-->
-<!--            android:text="Confirm"-->
-<!--            android:textAllCaps="false"-->
-<!--            android:textSize="18sp"-->
-<!--            android:textColor="@android:color/white"-->
-<!--            android:backgroundTint="?attr/colorSecondaryVariant"-->
-<!--            android:layout_marginStart="8dp"/>-->
-
-<!--    </LinearLayout>-->
-
-<!--</LinearLayout>-->
