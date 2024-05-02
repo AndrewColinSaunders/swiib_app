@@ -2164,11 +2164,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         }
     }
 
-    suspend fun updateMoveLineQuantityForReceipt(
-        lineId: Int,
-        pickingId: Int,
-        quantity: Int
-    ) {
+    suspend fun updateMoveLineQuantityForReceipt(lineId: Int, pickingId: Int, quantity: Int){
         val config = getClientConfig("object")
         if (config == null) {
             Log.e(

@@ -1,11 +1,13 @@
 package com.example.warehousetet
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
@@ -33,8 +35,9 @@ import com.google.zxing.EncodeHintType
 
 
 
-class DeliveryOrdersProductsActivity : AppCompatActivity() {
+class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProductsAdapter.VerificationListener {
     private lateinit var deliveryOrdersProductsAdapter: DeliveryOrdersProductsAdapter
+    private lateinit var validateButton: MaterialButton
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private var currentProductName: String? = null
     private val deliveryOrdersMoveLines = mutableListOf<DeliveryOrdersMovedLine>()
@@ -45,11 +48,17 @@ class DeliveryOrdersProductsActivity : AppCompatActivity() {
     private var isScannerInput = false
 
 
+
+
     private val deliveryOrdersId by lazy { intent.getIntExtra("DELIVERY_ORDERS_ID", -1) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_delivery_orders_products)
+
+        validateButton = findViewById(R.id.validateOperationButton)
+        validateButton.visibility = View.INVISIBLE
+
 
         Log.d("DeliveryOrdersProductsActivity", "Activity created with delivery orders ID: $deliveryOrdersId")
 
@@ -73,24 +82,69 @@ class DeliveryOrdersProductsActivity : AppCompatActivity() {
     }
 
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
+                if (isScannerInput) {
+                    val scannedPackageBarcode = lastScannedBarcode.toString()
+                    verifyPackageBarcode(scannedPackageBarcode)
+                    lastScannedBarcode.clear()
+                    isScannerInput = false
+                }
+                return true
+            } else {
+                val char = event.unicodeChar.toChar()
+                if (!Character.isISOControl(char)) {
+                    val currentTime = System.currentTimeMillis()
+                    isScannerInput = lastKeyTime != 0L && (currentTime - lastKeyTime) < 50
+                    lastScannedBarcode.append(char)
+                    lastKeyTime = currentTime
+                }
+            }
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+
 
     private fun initializeUI() {
+
+        deliveryOrdersProductsAdapter = DeliveryOrdersProductsAdapter(this)
+        findViewById<RecyclerView>(R.id.deliveryOrdersProductsRecyclerView).apply {
+            layoutManager = LinearLayoutManager(this@DeliveryOrdersProductsActivity)
+            adapter = deliveryOrdersProductsAdapter
+        }
+
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         val validateButton = findViewById<Button>(R.id.validateOperationButton)
         barcodeInput = findViewById(R.id.deliveryOrdersBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.deliveryOrdersConfirmButton)
 
-        deliveryOrdersProductsAdapter = DeliveryOrdersProductsAdapter()
-        findViewById<RecyclerView>(R.id.deliveryOrdersProductsRecyclerView).apply {
-            layoutManager = LinearLayoutManager(this@DeliveryOrdersProductsActivity)
-            adapter = deliveryOrdersProductsAdapter
-        }
 
         validateButton.setOnClickListener {
+            Log.d("ValidationAttempt", "Attempting to validate operation for pack ID: $deliveryOrdersId")
             lifecycleScope.launch {
                 if (odooXmlRpcClient.validateOperation(deliveryOrdersId, this@DeliveryOrdersProductsActivity)) {
                     Toast.makeText(this@DeliveryOrdersProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
+
+
+                    //============================================================================================================
+                    //                              Plays the sound for the validation button
+                    //                        NB!!!! INCLUDE IN EVERY ACTIVITY FOR VALIDATION BUTTON NB!!!!
+                    //============================================================================================================
+                    MediaPlayer.create(this@DeliveryOrdersProductsActivity, R.raw.validation_sound_effect).apply {
+                        start() // Start playing the sound
+                        setOnCompletionListener {
+                            it.release() // Release the MediaPlayer once the sound is done playing
+                        }
+                    }
+                    //============================================================================================================
+
+
+                    // Navigate to PackActivity if validation is successful
+                    val intent = Intent(this@DeliveryOrdersProductsActivity, DeliveryOrdersActivity::class.java)
+                    startActivity(intent)
                 } else {
                     Toast.makeText(this@DeliveryOrdersProductsActivity, "Failed to validate operation.", Toast.LENGTH_SHORT).show()
                 }
@@ -100,13 +154,39 @@ class DeliveryOrdersProductsActivity : AppCompatActivity() {
         packConfirmButton.setOnClickListener {
             val typedBarcode = barcodeInput.text.toString()
             if (typedBarcode.isNotEmpty()) {
-                verifyProductBarcode(typedBarcode)
+                verifyPackageBarcode(typedBarcode)
                 barcodeInput.text.clear()
             } else {
                 Toast.makeText(this, "Please enter or scan a barcode first.", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+    override fun onVerificationStatusChanged(allVerified: Boolean) {
+        validateButton.visibility = if (allVerified) View.VISIBLE else View.INVISIBLE
+    }
+
+    private fun verifyPackageBarcode(scannedBarcode: String) = lifecycleScope.launch {
+        val matchingPackage = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }
+            .find { it.resultPackageName == scannedBarcode }
+
+        if (matchingPackage != null) {
+            Log.d("DeliveryOrdersProductsActivity", "Package verification successful: Package ID ${matchingPackage.resultPackageId} has been verified.")
+            handlePackageVerificationSuccess(matchingPackage)
+            barcodeInput.text.clear()
+        } else {
+            Toast.makeText(this@DeliveryOrdersProductsActivity, "No matching package found.", Toast.LENGTH_SHORT).show()
+            barcodeInput.selectAll()
+        }
+    }
+
+    private fun handlePackageVerificationSuccess(moveLine: MoveLine) {
+        Log.d("DeliveryOrdersProductsActivity", "Verified package: ${moveLine.resultPackageName}")
+        moveLine.resultPackageId?.let { packageId ->
+            deliveryOrdersProductsAdapter.verifyPackage(packageId)
+        } ?: Log.e("DeliveryOrdersProductsActivity", "Package ID is null, cannot verify package.")
+    }
+
 
 
     private fun fetchProductBarcodes(productNames: List<String>): Map<String, String?> = runBlocking {
@@ -152,6 +232,8 @@ class DeliveryOrdersProductsActivity : AppCompatActivity() {
         }
     }
 
+
+    /*
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
@@ -197,6 +279,9 @@ class DeliveryOrdersProductsActivity : AppCompatActivity() {
     }
 
 
+     */
+
+
     private fun checkProductTrackingAndHandle(moveLine: MoveLine) = lifecycleScope.launch {
         val productName = moveLine.productName
         try {
@@ -233,6 +318,21 @@ class DeliveryOrdersProductsActivity : AppCompatActivity() {
     private fun handleLotTracking(moveLine: MoveLine) {
         // Implement logic for products tracked by lot
         Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
+    }
+
+
+
+    //============================================================================================================
+    //                        Androids built in back button at the bottom of the screen
+    //                             NB!!!!    INCLUDE IN EVERY ACTIVITY    NB!!!!
+    //============================================================================================================
+
+    override fun onBackPressed() {
+        super.onBackPressed()
+        // Create an Intent to start DeliveryOrdersActivity
+        val intent = Intent(this, DeliveryOrdersActivity::class.java)
+        startActivity(intent)
+        finish()  // Optional: Call finish() if you do not want to return to this activity
     }
 
 }

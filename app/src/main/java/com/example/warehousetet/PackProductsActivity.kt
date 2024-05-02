@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.Typeface
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.provider.MediaStore
 import android.text.SpannableString
@@ -23,6 +24,7 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -69,15 +71,14 @@ class PackProductsActivity : AppCompatActivity() {
     private var relevantSerialNumbers = mutableListOf<String>()
     private val usedSerialNumbers = mutableSetOf<String>()
     private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
-
-
-
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
     private val packName by lazy {intent.getStringExtra("PACK_NAME")}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pack_activity_products)
+
+
 
 
         loadPackagedIds()
@@ -94,8 +95,9 @@ class PackProductsActivity : AppCompatActivity() {
         }
     }
 
-
-    //Nothing changing here=============================================================================================================================
+    //============================================================================================================
+    //                                          Flag and printer icon code
+    //============================================================================================================
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_pack_products, menu)
         val printItem = menu?.findItem(R.id.action_print)
@@ -109,133 +111,13 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
 
-    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
-        super.onPrepareOptionsMenu(menu)
-        val subMenu = menu?.findItem(R.id.action_print)?.subMenu
-        val printItem = menu?.findItem(R.id.action_print)
-        subMenu?.clear()
-
-        val addedPackageNames = mutableSetOf<String>() // Keep track of added package names
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val packages =  odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
-                withContext(Dispatchers.Main) {
-                    packages.forEach { packageInfo ->
-                        // Add package name only if it hasn't been added before
-                        if (!addedPackageNames.contains(packageInfo.name)) {
-                            subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
-                                printPackage(packageInfo.name)
-                                true
-                            }
-                            addedPackageNames.add(packageInfo.name) // Add package name to the set
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e("PackageMenu", "Error fetching packages: ${e.localizedMessage}")
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@PackProductsActivity, "Failed to fetch packages", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-        return true
-    }
-
-
-//
-//    private fun togglePrinterIconVisibility(show: Boolean) {
-//        shouldShowPrinterIcon = show
-//        invalidateOptionsMenu() // Force menu to update
-//    }
-
-
-
-// Printer code =====================================================================================================
-    private fun printPackage(packageName: String) {
-        createAndPrintBarcode(packageName)
-    }
-
-    private fun createAndPrintBarcode(packageName: String) {
-        val barcodeBitmap = createBarcodeImage(packageName)
-        barcodeBitmap?.let {
-            val fileName = "package_barcode.png"
-            saveBitmapToFile(it, fileName)
-            printBarcode(fileName)
-        }
-    }
-
-    private fun createBarcodeImage(packageName: String): Bitmap? {
-        return try {
-            // Define the dimensions of the barcode itself
-            val barcodeWidth = 1000
-            val barcodeHeight = 400
-
-            // Generating the barcode
-            val bitMatrix: BitMatrix = MultiFormatWriter().encode(
-                packageName,
-                BarcodeFormat.CODE_128,
-                barcodeWidth,
-                barcodeHeight,
-                hashMapOf(EncodeHintType.MARGIN to 10)
-            )
-
-            // Creating a larger bitmap to include the text beneath the barcode
-            val totalHeight = barcodeHeight + 100 // Additional space for the text
-            val bitmap = Bitmap.createBitmap(barcodeWidth, totalHeight, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-
-            // Paint for the barcode
-            val paint = Paint().apply {
-                color = Color.BLACK
-            }
-
-            // Draw the barcode pixels on the new bitmap
-            for (x in 0 until bitMatrix.width) {
-                for (y in 0 until bitMatrix.height) {
-                    paint.color = if (bitMatrix[x, y]) Color.BLACK else Color.WHITE
-                    canvas.drawRect(x.toFloat(), y.toFloat(), x + 1.toFloat(), y + 1.toFloat(), paint)
-                }
-            }
-
-            // Adding the text under the barcode
-            paint.color = Color.BLACK
-            paint.textSize = 40f // Set the text size as needed
-            paint.textAlign = Paint.Align.CENTER
-            canvas.drawText(packageName, barcodeWidth / 2f, barcodeHeight + 60f, paint) // Adjust text position as needed
-
-            bitmap
-        } catch (e: Exception) {
-            Log.e("PackProductsActivity", "Error generating barcode: ${e.localizedMessage}")
-            null
-        }
-    }
-
-    private fun saveBitmapToFile(bitmap: Bitmap, fileName: String) {
-        val file = File(filesDir, fileName)
-        FileOutputStream(file).use { out ->
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-        }
-    }
-
-    private fun printBarcode(fileName: String) {
-        val filePath = File(filesDir, fileName).absolutePath
-        val bitmap = BitmapFactory.decodeFile(filePath)
-        val printHelper = PrintHelper(this).apply {
-            scaleMode = PrintHelper.SCALE_MODE_FIT
-        }
-        printHelper.printBitmap("Print Job - Package Barcode", bitmap)
-    }
-
-
-
-
     private fun initializeUI() {
         val packName = intent.getStringExtra("PACK_NAME") ?: "Pack"
         supportActionBar?.title = packName
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         val validateButton = findViewById<Button>(R.id.validateOperationButton)
+        validateButton.visibility = View.GONE
         barcodeInput = findViewById(R.id.packBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
 
@@ -247,17 +129,44 @@ class PackProductsActivity : AppCompatActivity() {
             adapter = packProductsAdapter
         }
 
+
+
+        //============================================================================================================
+        //                                          Validate Operation
+        //============================================================================================================
         validateButton.setOnClickListener {
             Log.d("ValidationAttempt", "Attempting to validate operation for pack ID: $packId")
             lifecycleScope.launch {
                 if (odooXmlRpcClient.validateOperation(packId, this@PackProductsActivity)) {
                     Toast.makeText(this@PackProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
+
+
+                    //============================================================================================================
+                    //                              Plays the sound for the validation button
+                    //                        NB!!!! INCLUDE IN EVERY ACTIVITY FOR VALIDATION BUTTON NB!!!!
+                    //============================================================================================================
+                    MediaPlayer.create(this@PackProductsActivity, R.raw.validation_sound_effect).apply {
+                        start() // Start playing the sound
+                        setOnCompletionListener {
+                            it.release() // Release the MediaPlayer once the sound is done playing
+                        }
+                    }
+                    //============================================================================================================
+
+
+                    // Navigate to PackActivity if validation is successful
+                    val intent = Intent(this@PackProductsActivity, PackActivity::class.java)
+                    startActivity(intent)
                 } else {
                     Toast.makeText(this@PackProductsActivity, "Failed to validate operation.", Toast.LENGTH_SHORT).show()
                 }
             }
         }
 
+
+        //============================================================================================================
+        //                       Confirm button for when the user has to type in barcode
+        //============================================================================================================
         packConfirmButton.setOnClickListener {
             val typedBarcode = barcodeInput.text.toString()
             if (typedBarcode.isNotEmpty()) {
@@ -270,14 +179,13 @@ class PackProductsActivity : AppCompatActivity() {
                 Toast.makeText(this, "Please enter or scan a barcode first.", Toast.LENGTH_SHORT).show()
             }
         }
-
-
-
-
     }
 
-    //=================================================================================================================================================
 
+
+    //============================================================================================================
+    //                                          Fetch Products Barcode
+    //============================================================================================================
     private fun fetchProductBarcodes(productNames: List<String>): Map<String, String?> = runBlocking {
         productNames.associateWith { productName ->
             withContext(Dispatchers.IO) {
@@ -286,6 +194,10 @@ class PackProductsActivity : AppCompatActivity() {
         }
     }
 
+
+    //============================================================================================================
+    //                                          Fetch Movelines
+    //============================================================================================================
     private fun fetchMoveLinesForPickingId() = lifecycleScope.launch {
         Log.d("PackProductsActivity", "Fetching move lines for pack ID: $packId")
         try {
@@ -312,30 +224,41 @@ class PackProductsActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateRelevantSerialNumbers(moveLines: List<MoveLine>) {
-        serialNumberToMoveLineIdMap.clear()
-        moveLines.forEach { moveLine ->
-            if (moveLine.lotName.isNotBlank()) {
-                // Map each serial number to its move line ID
-                serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
+
+
+
+    //============================================================================================================
+    //                                          Lot and Serial Number Code
+    //============================================================================================================
+        private fun updateRelevantSerialNumbers(moveLines: List<MoveLine>) {
+            serialNumberToMoveLineIdMap.clear()
+            moveLines.forEach { moveLine ->
+                if (moveLine.lotName.isNotBlank()) {
+                    // Map each serial number to its move line ID
+                    serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
+                }
+            }
+            Log.d("PackProductsActivity", "Updated serial numbers to move line IDs: ${serialNumberToMoveLineIdMap.entries.joinToString(", ") { "${it.key}: ${it.value}" }}")
+        }
+
+        // Function to fetch the move line ID based on the serial number
+        private fun fetchMoveLineIdForSerialNumber(serialNumber: String): Int? {
+            return serialNumberToMoveLineIdMap[serialNumber]
+        }
+
+
+        private fun updateUIForMoveLines(moveLines: List<MoveLine>) {
+            runOnUiThread {
+                packProductsAdapter.moveLines = moveLines
+                packProductsAdapter.notifyDataSetChanged()
             }
         }
-        Log.d("PackProductsActivity", "Updated serial numbers to move line IDs: ${serialNumberToMoveLineIdMap.entries.joinToString(", ") { "${it.key}: ${it.value}" }}")
-    }
-
-    // Function to fetch the move line ID based on the serial number
-    private fun fetchMoveLineIdForSerialNumber(serialNumber: String): Int? {
-        return serialNumberToMoveLineIdMap[serialNumber]
-    }
 
 
-    private fun updateUIForMoveLines(moveLines: List<MoveLine>) {
-        runOnUiThread {
-            packProductsAdapter.moveLines = moveLines
-            packProductsAdapter.notifyDataSetChanged()
-        }
-    }
 
+    //============================================================================================================
+    //                                          Scanner Code
+    //============================================================================================================
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
             if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
@@ -359,6 +282,11 @@ class PackProductsActivity : AppCompatActivity() {
         return super.dispatchKeyEvent(event)
     }
 
+
+
+    //============================================================================================================
+    //                                          Verify Barcode
+    //============================================================================================================
     private fun verifyProductBarcode(scannedBarcode: String) = lifecycleScope.launch {
         val matchingMoveLine = packProductsAdapter.moveLines.find { moveLine ->
             val expectedBarcode = withContext(Dispatchers.IO) {
@@ -386,6 +314,11 @@ class PackProductsActivity : AppCompatActivity() {
 //    }
 
 
+
+
+    //============================================================================================================
+    //                                          Handle Tracking Types
+    //============================================================================================================
     private fun checkProductTrackingAndHandle(moveLine: MoveLine) = lifecycleScope.launch {
         val productName = moveLine.productName
         try {
@@ -407,28 +340,27 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
     private fun handleNoTracking(moveLine: MoveLine) {
-        // Log the handling action
         Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}.")
-
-        // Call the showInformationDialog to display the packing instructions
-        //showInformationDialog(moveLine.quantity, moveLine)
         displayQuantityDialog(moveLine.productName, moveLine.quantity, packId, moveLine.lineId, moveLine)
     }
 
-
     private fun handleSerialTracking(moveLine: MoveLine) {
-        // Implement logic for products tracked by serial number
         Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLine.productName}.")
+        //displayQuantityDialogSerial(moveLine.productName, moveLine)
         showPackageDialogSerial(moveLine)
     }
 
     private fun handleLotTracking(moveLine: MoveLine) {
-        // Implement logic for products tracked by lot
         Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
-        showPackageDialogSerial(moveLine)
+        displayQuantityDialog(moveLine.productName, moveLine.quantity, packId, moveLine.lineId, moveLine)
+        showPackageDialogLot(moveLine)
     }
 
 
+
+    //============================================================================================================
+    //                                          Dialog Code (No Tracking)
+    //============================================================================================================
     private fun showPackageDialogNoTracking(moveLine: MoveLine) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_package_no_tracking, null)
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
@@ -514,6 +446,11 @@ class PackProductsActivity : AppCompatActivity() {
         dialog.show()
     }
 
+
+
+    //============================================================================================================
+    //                                   Dialog Code (Serialised)
+    //============================================================================================================
     private fun showPackageDialogSerial(moveLine: MoveLine) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_package_serial, null)
         val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)  // Ensure correct ID
@@ -561,6 +498,7 @@ class PackProductsActivity : AppCompatActivity() {
                                 //isPrintVisible = true
                                 refreshMenu()
                                 usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
                                 dialog.dismiss()
                             } else {
                                 Toast.makeText(
@@ -676,37 +614,180 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
 
-        private fun filterRelevantSerialNumbers(allSerialNumbers: List<String>, lotName: String) {
-        relevantSerialNumbers.clear()
-        relevantSerialNumbers.addAll(allSerialNumbers.filter { serial -> serial.contains(lotName) })
-    }
+    //============================================================================================================
+    //                                   Dialog Code (Lot)
+    //============================================================================================================
+    private fun showPackageDialogLot(moveLine: MoveLine) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_package_lot, null)
+        val lotInput = dialogView.findViewById<EditText>(R.id.lotInput)  // Ensure correct ID
+        val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
+        val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
+        val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
 
-    private fun fetchAndFilterSerialNumbers(productId: Int, lotName: String) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val allSerialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId) ?: listOf()
-                withContext(Dispatchers.Main) {
-                    filterRelevantSerialNumbers(allSerialNumbers, lotName)
-                    // You may log or update UI here if needed
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Package Options")
+            .setView(dialogView)
+            .create()
+
+        createNewButton.setOnClickListener {
+            val enteredSerial = lotInput.text.toString().trim()
+
+            // Check if the serial number has already been used
+            if (usedSerialNumbers.contains(enteredSerial)) {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "This serial number has already been used. Please enter a different one.",
+                    Toast.LENGTH_LONG
+                ).show()
+                lotInput.requestFocus() // Focus back to the input for correction
+                return@setOnClickListener
+            }
+
+            // Attempt to get the moveLineId using the entered serial number
+            val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+            if (moveLineId != null) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(
+                            moveLineId,
+                            this@PackProductsActivity
+                        )
+                        withContext(Dispatchers.Main) {
+                            if (result) {
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Item successfully put into a new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                packageItem(moveLineId)  // Update the adapter
+                                checkAllItemsPackaged()
+                                //isPrintVisible = true
+                                refreshMenu()
+                                usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Failed to put item in new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@PackProductsActivity,
+                                "Error during packaging: ${e.localizedMessage}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
                 }
-            } catch (e: Exception) {
-                Log.e("PackProductsActivity", "Error fetching serial numbers for product ID: $productId", e)
+            } else {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "Invalid serial number entered. Please check and try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+                lotInput.requestFocus()  // Focus back to the input for correction
             }
         }
-    }
 
 
-    private fun showInformationDialog(quantity: Double, moveLine: MoveLine) {
-        AlertDialog.Builder(this)
-            .setTitle("Product Packing")
-            .setMessage("Please pack $quantity units of the selected product as instructed.")
-            .setPositiveButton("OK") { dialog, which ->
-                showPackageDialogNoTracking(moveLine)  // Pass the moveLine here
+
+        addToPackageButton.setOnClickListener {
+            val packageName = packageInput.text.toString().trim()
+            val enteredSerial = lotInput.text.toString().trim()
+
+            if (packageName.isNotEmpty() && enteredSerial.isNotEmpty()) {
+                // Check if the serial number has already been used
+                if (usedSerialNumbers.contains(enteredSerial)) {
+                    Toast.makeText(
+                        this@PackProductsActivity,
+                        "This serial number has already been used. Please enter a different one.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    lotInput.requestFocus() // Focus back to the input for correction
+                    return@setOnClickListener
+                }
+
+                lifecycleScope.launch(Dispatchers.Main) {
+                    try {
+                        // Use the serial number to fetch the move line ID
+                        val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+                        if (moveLineId != null) {
+                            val result = withContext(Dispatchers.IO) {
+                                odooXmlRpcClient.setPackageForMoveLine(
+                                    packId,
+                                    moveLineId,
+                                    packageName
+                                )
+                            }
+                            if (result) {
+                                // Update the UI and internal state as needed
+                                packageItem(moveLineId)  // Update the adapter
+                                checkAllItemsPackaged()
+                                //isPrintVisible = true
+                                refreshMenu()
+                                usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
+
+                                addToPackageButton.setBackgroundColor(
+                                    ContextCompat.getColor(
+                                        this@PackProductsActivity,
+                                        R.color.success_green
+                                    )
+                                )
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Package set successfully for move line ID: $moveLineId.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Failed to set package for move line ID: $moveLineId.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        } else {
+                            Toast.makeText(
+                                this@PackProductsActivity,
+                                "Invalid serial number entered. Please check and try again.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            lotInput.requestFocus()  // Focus back to the input for correction
+                        }
+                    } catch (e: Exception) {
+                        Log.e("PackageDialog", "Error occurred: ${e.localizedMessage}")
+                        Toast.makeText(
+                            this@PackProductsActivity,
+                            "An error occurred",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } else {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "Please enter a package name and serial number.",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
-            .create()
-            .show()
+        }
+        dialog.show()
     }
 
+
+
+
+
+
+
+    //============================================================================================================
+    //                               Save the state of the activity code
+    //============================================================================================================
     private fun savePackagedIds() {
         val editor = getSharedPreferences("PackPrefs", MODE_PRIVATE).edit()
         val packagedIds = packagedMoveLines.map { it.moveLineId }.joinToString(",")
@@ -768,8 +849,8 @@ class PackProductsActivity : AppCompatActivity() {
 
     //================================================================================================================
     //                                                  FlAG CODE
+    //                  Test whether camera opens on another device if it doesn't work on yours
     //================================================================================================================
-
     private suspend fun sendEmailToBuyer(buyerEmail: String, buyerName: String, pickName: String?) {
         withContext(Dispatchers.IO) {
             val props = Properties().apply {
@@ -942,10 +1023,13 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
 
-    //============================================================================================================
-    //                        Code to change the moveline quanity based on what the user enters
-    //============================================================================================================
 
+
+
+
+    //============================================================================================================
+    //             Code to display the quantity the user has to pack fro the products (no Tracking)
+    //============================================================================================================
     private fun displayQuantityDialog(productName: String, expectedQuantity: Double, packId: Int, lineId: Int, moveLine: MoveLine) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
         val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
@@ -983,5 +1067,182 @@ class PackProductsActivity : AppCompatActivity() {
         buttonCancel.setOnClickListener {
             alertDialog.dismiss()  // Close the dialog when cancel is clicked
         }
+    }
+
+
+    //============================================================================================================
+    //             Code to display the quantity the user has to pack fro the products (Serialised)
+    //============================================================================================================
+    private fun displayQuantityDialogSerial(productName: String, moveLine: MoveLine) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
+        val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
+        val buttonConfirm = dialogView.findViewById<Button>(R.id.buttonConfirm)
+        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
+
+        // Use lotName as the serial number and assume it's a unique count per MoveLine
+        val serialNumber = moveLine.lotName
+        val fullText = "Confirm the serial number $serialNumber for $productName has been picked."
+
+        val spannableString = SpannableString(fullText)
+
+        // Styling for serialNumber (lotName)
+        val numberStart = fullText.indexOf(serialNumber)
+        val numberEnd = numberStart + serialNumber.length
+        spannableString.setSpan(StyleSpan(Typeface.BOLD), numberStart, numberEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spannableString.setSpan(RelativeSizeSpan(1.1f), numberStart, numberEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        // Styling for productName
+        val productNameStart = fullText.indexOf(productName)
+        val productNameEnd = productNameStart + productName.length
+        spannableString.setSpan(StyleSpan(Typeface.BOLD), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        spannableString.setSpan(RelativeSizeSpan(1.1f), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+
+        textViewConfirmation.text = spannableString
+
+        val alertDialog = AlertDialog.Builder(this).apply {
+            setView(dialogView)
+            create()
+        }.show()
+
+        buttonConfirm.setOnClickListener {
+            // Handle confirmation and proceed with specific serial number handling
+            showPackageDialogSerial(moveLine)
+            alertDialog.dismiss()  // Close the dialog after confirmation
+        }
+
+        buttonCancel.setOnClickListener {
+            alertDialog.dismiss()  // Close the dialog when cancel is clicked
+        }
+    }
+
+
+
+
+
+
+    //============================================================================================================
+    //                                      Printer Code
+    //============================================================================================================
+    private fun printPackage(packageName: String) {
+        createAndPrintBarcode(packageName)
+    }
+
+    private fun createAndPrintBarcode(packageName: String) {
+        val barcodeBitmap = createBarcodeImage(packageName)
+        barcodeBitmap?.let {
+            val fileName = "package_barcode.png"
+            saveBitmapToFile(it, fileName)
+            printBarcode(fileName)
+        }
+    }
+
+    private fun createBarcodeImage(packageName: String): Bitmap? {
+        return try {
+            // Define the dimensions of the barcode itself
+            val barcodeWidth = 1000
+            val barcodeHeight = 400
+
+            // Generating the barcode
+            val bitMatrix: BitMatrix = MultiFormatWriter().encode(
+                packageName,
+                BarcodeFormat.CODE_128,
+                barcodeWidth,
+                barcodeHeight,
+                hashMapOf(EncodeHintType.MARGIN to 10)
+            )
+
+            // Creating a larger bitmap to include the text beneath the barcode
+            val totalHeight = barcodeHeight + 100 // Additional space for the text
+            val bitmap = Bitmap.createBitmap(barcodeWidth, totalHeight, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+
+            // Paint for the barcode
+            val paint = Paint().apply {
+                color = Color.BLACK
+            }
+
+            // Draw the barcode pixels on the new bitmap
+            for (x in 0 until bitMatrix.width) {
+                for (y in 0 until bitMatrix.height) {
+                    paint.color = if (bitMatrix[x, y]) Color.BLACK else Color.WHITE
+                    canvas.drawRect(x.toFloat(), y.toFloat(), x + 1.toFloat(), y + 1.toFloat(), paint)
+                }
+            }
+
+            // Adding the text under the barcode
+            paint.color = Color.BLACK
+            paint.textSize = 40f // Set the text size as needed
+            paint.textAlign = Paint.Align.CENTER
+            canvas.drawText(packageName, barcodeWidth / 2f, barcodeHeight + 60f, paint) // Adjust text position as needed
+
+            bitmap
+        } catch (e: Exception) {
+            Log.e("PackProductsActivity", "Error generating barcode: ${e.localizedMessage}")
+            null
+        }
+    }
+
+    private fun saveBitmapToFile(bitmap: Bitmap, fileName: String) {
+        val file = File(filesDir, fileName)
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+        }
+    }
+
+    private fun printBarcode(fileName: String) {
+        val filePath = File(filesDir, fileName).absolutePath
+        val bitmap = BitmapFactory.decodeFile(filePath)
+        val printHelper = PrintHelper(this).apply {
+            scaleMode = PrintHelper.SCALE_MODE_FIT
+        }
+        printHelper.printBitmap("Print Job - Package Barcode", bitmap)
+    }
+
+    //============================================================================================================
+    //                          Submenu for printer (user selects what packages to print code)
+    //============================================================================================================
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        val subMenu = menu?.findItem(R.id.action_print)?.subMenu
+        val printItem = menu?.findItem(R.id.action_print)
+        subMenu?.clear()
+
+        val addedPackageNames = mutableSetOf<String>() // Keep track of added package names
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val packages =  odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
+                withContext(Dispatchers.Main) {
+                    packages.forEach { packageInfo ->
+                        // Add package name only if it hasn't been added before
+                        if (!addedPackageNames.contains(packageInfo.name)) {
+                            subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
+                                printPackage(packageInfo.name)
+                                true
+                            }
+                            addedPackageNames.add(packageInfo.name) // Add package name to the set
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("PackageMenu", "Error fetching packages: ${e.localizedMessage}")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@PackProductsActivity, "Failed to fetch packages", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        return true
+    }
+
+    //============================================================================================================
+    //                        Androids built in back button at the bottom of the screen
+    //                             NB!!!!    INCLUDE IN EVERY ACTIVITY    NB!!!!
+    //============================================================================================================
+    override fun onBackPressed() {
+        super.onBackPressed()
+        // Create an Intent to start PackActivity
+        val intent = Intent(this, PackActivity::class.java)
+        startActivity(intent)
+        finish()  // Optional: Call finish() if you do not want to return to this activity
     }
 }

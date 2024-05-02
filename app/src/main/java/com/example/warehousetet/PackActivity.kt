@@ -4,6 +4,9 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
+import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -64,13 +67,23 @@ class PackActivity : AppCompatActivity() {
             try {
                 val packs = odooXmlRpcClient.fetchPacks() // Implement this method in OdooXmlRpcClient
                 withContext(Dispatchers.Main) {
-                    packAdapter.updatePack(packs)
+                    val emptyStateLayout = findViewById<LinearLayout>(R.id.emptyStateLayout)
+                    if (packs.isEmpty()) {
+                        findViewById<RecyclerView>(R.id.packRecyclerView).visibility = View.GONE
+                        emptyStateLayout.visibility = View.VISIBLE // Show the empty state layout
+                    } else {
+                        packAdapter.updatePack(packs)
+                        findViewById<RecyclerView>(R.id.packRecyclerView).visibility = View.VISIBLE
+                        emptyStateLayout.visibility = View.GONE // Hide the empty state layout
+                    }
                 }
             } catch (e: Exception) {
-                Log.e("PickActivity", "Error fetching picks: ${e.localizedMessage}")
+                Log.e("PackActivity", "Error fetching packs: ${e.localizedMessage}")
             }
         }
     }
+
+
 
     private fun startPeriodicRefresh() {
         refreshJob?.cancel() // Cancel any existing job to avoid duplicates
@@ -100,5 +113,18 @@ class PackActivity : AppCompatActivity() {
         super.onDestroy()
         refreshJob?.cancel()
         coroutineScope.cancel()
+    }
+
+
+    //============================================================================================================
+    //                        Androids built in back button at the bottom of the screen
+    //                             NB!!!!    INCLUDE IN EVERY ACTIVITY    NB!!!!
+    //============================================================================================================
+    override fun onBackPressed() {
+        super.onBackPressed()
+        // Create an Intent to start HomePageActivity
+        val intent = Intent(this, HomePageActivity::class.java)
+        startActivity(intent)
+        finish()  // Optional: Call finish() if you do not want to return to this activity
     }
 }
