@@ -2601,64 +2601,142 @@ private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
     }
 
 
-    suspend fun createMoveLineForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double): Map<String, Any>? {
-        val config = getClientConfig("object")
-        val client = XmlRpcClient().also { it.setConfig(config) }
-        val userId = credentialManager.getUserId()
-        val password = credentialManager.getPassword() ?: ""
+//    suspend fun createMoveLineForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double): Map<String, Any>? {
+//        val config = getClientConfig("object")
+//        val client = XmlRpcClient().also { it.setConfig(config) }
+//        val userId = credentialManager.getUserId()
+//        val password = credentialManager.getPassword() ?: ""
+//
+//        val methodName = "create_move_line_for_receiving"
+//        val model = "stock.move.line"
+//        val args = listOf(pickingId, productId, lotName, quantity)  // Ensure this is a list
+//
+//        val params = listOf(
+//            Constants.DATABASE,
+//            userId,
+//            password,
+//            model,
+//            methodName,
+//            args
+//        )
+//
+//        return try {
+//            val result = withContext(Dispatchers.IO) {
+//                client.execute("execute_kw", params) as Map<*, *>
+//            }
+//            result as Map<String, Any>
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
+//            null
+//        }
+//    }
+suspend fun createMoveLineForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double): Map<String, Any>? {
+    val config = getClientConfig("object")
+    val client = XmlRpcClient().also { it.setConfig(config) }
+    val userId = credentialManager.getUserId()
+    val password = credentialManager.getPassword() ?: ""
 
-        val methodName = "create_move_line_for_receiving"
-        val model = "stock.move.line"
-        val args = listOf(pickingId, productId, lotName, quantity)  // Ensure this is a list
+    val methodName = "create_move_line_for_receiving"
+    val model = "stock.move.line"
+    val args = listOf(pickingId, productId, lotName, quantity)
 
-        val params = listOf(
-            Constants.DATABASE,
-            userId,
-            password,
-            model,
-            methodName,
-            args
-        )
+    val params = listOf(
+        Constants.DATABASE,
+        userId,
+        password,
+        model,
+        methodName,
+        args
+    )
 
-        return try {
-            val result = withContext(Dispatchers.IO) {
-                client.execute("execute_kw", params) as Map<*, *>
-            }
-            result as Map<String, Any>
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
-            null
+    return try {
+        val result = withContext(Dispatchers.IO) {
+            client.execute("execute_kw", params) as? Map<String, Any>
         }
-    }
-    suspend fun createMoveLineWithExpirationForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double, expirationDate: String): Map<String, Any>? {
-        val config = getClientConfig("object")
-        val client = XmlRpcClient().also { it.setConfig(config) }
-        val userId = credentialManager.getUserId()
-        val password = credentialManager.getPassword() ?: ""
-
-        val methodName = "create_move_line_for_receiving_with_expiration"
-        val model = "stock.move.line"
-        val args = listOf(pickingId, productId, lotName, quantity, expirationDate)  // Ensure this is a list
-
-        val params = listOf(
-            Constants.DATABASE,
-            userId,
-            password,
-            model,
-            methodName,
-            args
-        )
-
-        return try {
-            val result = withContext(Dispatchers.IO) {
-                client.execute("execute_kw", params) as Map<*, *>
+        result?.also {
+            if (it["success"] == true) {
+                Log.d("OdooXmlRpcClient", "Move line created successfully with line_id: ${it["line_id"]}")
+            } else {
+                Log.e("OdooXmlRpcClient", "Failed to create move line: ${it["error"] ?: "Unknown error"}")
             }
-            result as Map<String, Any>
-        } catch (e: Exception) {
-            Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
-            null
         }
+    } catch (e: Exception) {
+        Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
+        null
     }
+}
+
+
+
+
+//    suspend fun createMoveLineWithExpirationForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double, expirationDate: String): Map<String, Any>? {
+//        val config = getClientConfig("object")
+//        val client = XmlRpcClient().also { it.setConfig(config) }
+//        val userId = credentialManager.getUserId()
+//        val password = credentialManager.getPassword() ?: ""
+//
+//        val methodName = "create_move_line_for_receiving_with_expiration"
+//        val model = "stock.move.line"
+//        val args = listOf(pickingId, productId, lotName, quantity, expirationDate)  // Ensure this is a list
+//
+//        val params = listOf(
+//            Constants.DATABASE,
+//            userId,
+//            password,
+//            model,
+//            methodName,
+//            args
+//        )
+//
+//        return try {
+//            val result = withContext(Dispatchers.IO) {
+//                client.execute("execute_kw", params) as Map<*, *>
+//            }
+//            result as Map<String, Any>
+//        } catch (e: Exception) {
+//            Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
+//            null
+//        }
+//    }
+suspend fun createMoveLineWithExpirationForReceiving(pickingId: Int, productId: Int, lotName: String, quantity: Double, expirationDate: String): Map<String, Any>? {
+    val config = getClientConfig("object")
+    val client = XmlRpcClient().also { it.setConfig(config) }
+    val userId = credentialManager.getUserId()
+    val password = credentialManager.getPassword() ?: ""
+
+    val methodName = "create_move_line_for_receiving_with_expiration"
+    val model = "stock.move.line"
+    val args = listOf(pickingId, productId, lotName, quantity, expirationDate)  // Ensure this is correctly passed as a list
+
+    val params = listOf(
+        Constants.DATABASE,
+        userId,
+        password,
+        model,
+        methodName,
+        args
+    )
+
+    Log.d("OdooXmlRpcClient", "Attempting to create move line with expiration: PickingID: $pickingId, ProductID: $productId, LotName: $lotName, Quantity: $quantity, ExpirationDate: $expirationDate")
+
+    return try {
+        val result = withContext(Dispatchers.IO) {
+            client.execute("execute_kw", params) as? Map<String, Any>
+        }
+        result?.also {
+            if (it["success"] == true) {
+                Log.d("OdooXmlRpcClient", "Move line created successfully with line_id: ${it["line_id"]}")
+            } else {
+                Log.e("OdooXmlRpcClient", "Failed to create move line: ${it["error"] ?: "Unknown error"}")
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}. Params: $params", e)
+        null
+    }
+}
+
+
 
 }
 

@@ -2021,7 +2021,7 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
         val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
         val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
         val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
-        val messageTextView = dialogView.findViewById<TextView>(R.id.tvMessage)
+        val messageTextView = dialogView.findViewById<TextView>(R.id.ProductMessage)
         messageTextView.text = "Product: $productName"
         serialNumberInput.setHintTextColor(Color.WHITE)
 
@@ -2189,7 +2189,7 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
                             startActivity(intent)
                             finish()  // Optionally call finish() if you want to remove this activity from the back stack
                         } else {
-                            Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(applicationContext, "Failed to validate picking.\nPlease flag or recount quantities", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }

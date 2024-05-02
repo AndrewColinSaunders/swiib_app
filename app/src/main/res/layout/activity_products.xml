@@ -58,7 +58,7 @@
         android:id="@+id/pickValidateButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Validate Pick"
+        android:text="Validate Receipt"
         android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
