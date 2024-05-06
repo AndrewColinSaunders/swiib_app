@@ -60,12 +60,15 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
     private lateinit var confirmButton: Button
 
     //    private var productBarcodes = hashMapOf<String, String>()
-    private var productSerialNumbers = hashMapOf<ProductReceiptKey, MutableList<String>>()
-    val lotQuantities: MutableMap<ProductReceiptKey, Int> = mutableMapOf()
+//    private var productSerialNumbers = hashMapOf<ProductReceiptKey, MutableList<String>>()
+//    private var productLotNumbers = hashMapOf<ProductReceiptKey, MutableList<String>>()
+
+    private var pickSerialNumbers = hashMapOf<Int, MutableList<String>>()
+    private var pickLotNumbers = hashMapOf<Int, MutableList<String>>()
+
     private var barcodeToProductIdMap = mutableMapOf<String, Int>()
     private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
     private val confirmedLines = mutableSetOf<Int>()
-
 
     private var receiptName: String? = null
     private var receiptId: Int = -1
@@ -517,447 +520,221 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         // Display the dialog
         dialog.show()
     }
-    private fun promptForNewLotNumber(productName: String, receiptId: Int, productId: Int, lineId: Int, trackingType: String, usesExpirationDate: Boolean?) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_number_input, null)
 
-        // Retrieve and set the views
-        val textEnterLotTitle = dialogView.findViewById<TextView>(R.id.textEnterLotTitle)
-        val textEnterLotMessage = dialogView.findViewById<TextView>(R.id.textEnterLotMessage)
-        val editTextLotNumber = dialogView.findViewById<EditText>(R.id.editTextLotNumber)
-        val buttonCancelLot = dialogView.findViewById<Button>(R.id.buttonCancelLot)
-        val buttonConfirmLot = dialogView.findViewById<Button>(R.id.buttonConfirmLot)
-        editTextLotNumber.setHintTextColor(Color.WHITE)
-        // Update the message to include the product name
-        textEnterLotMessage.text = "Enter the lot number for $productName:"
-
-        // Create and show the dialog
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false) // Optional: makes the dialog modal, i.e., it cannot be dismissed by tapping outside of it.
-            .create()
-
-        // Setup button listeners
-        buttonCancelLot.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        buttonConfirmLot.setOnClickListener {
-            val enteredLotNumber = editTextLotNumber.text.toString().trim()
-            if (enteredLotNumber.isNotEmpty()) {
-                coroutineScope.launch { showNewLotQuantityDialog(receiptId, productId, productName, lineId, trackingType, enteredLotNumber, usesExpirationDate) }
-
-                Log.d("LotNumberInput", "Confirmed lot number: $enteredLotNumber for Product ID: $productId")
-                // Optionally update the backend or local state here
-                dialog.dismiss()
-            } else {
-                Toast.makeText(this, "Please enter a lot number.", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        // Display the dialog
-        dialog.show()
-    }
-
-//    private fun showNewLotQuantityDialog(receiptId: Int, productId: Int, productName: String, lineId: Int, trackingType: String, lotName: String, usesExpirationDate: Boolean?) {
-//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_quantity_input, null)
+//    private fun promptForNewLotNumber(productName: String, receiptId: Int, productId: Int, lineId: Int, trackingType: String, usesExpirationDate: Boolean?) {
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_number_input, null)
 //
-//        val textEnterLotQuantityTitle = dialogView.findViewById<TextView>(R.id.textEnterLotQuantityTitle)
-//        val textEnterLotQuantityMessage = dialogView.findViewById<TextView>(R.id.textEnterLotQuantityMessage)
-//        val editTextLotQuantity = dialogView.findViewById<EditText>(R.id.editTextLotQuantity)
-//        val buttonCancelQuantity = dialogView.findViewById<Button>(R.id.buttonCancelQuantity)
-//        val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmQuantity)
-//        editTextLotQuantity.setHintTextColor(Color.WHITE)
+//        // Retrieve and set the views
+//        val textEnterLotMessage = dialogView.findViewById<TextView>(R.id.textEnterLotMessage)
+//        val editTextLotNumber = dialogView.findViewById<EditText>(R.id.editTextLotNumber)
+//        val buttonCancelLot = dialogView.findViewById<Button>(R.id.buttonCancelLot)
+//        val buttonConfirmLot = dialogView.findViewById<Button>(R.id.buttonConfirmLot)
+//        editTextLotNumber.setHintTextColor(Color.WHITE)
+//        textEnterLotMessage.text = "Enter the lot number for $productName:"
 //
-//        // Setting dynamic text for the lot name
-//        textEnterLotQuantityMessage.text = "Enter quantity for lot: $lotName"
-//
-//        // Create the AlertDialog
 //        val dialog = AlertDialog.Builder(this)
 //            .setView(dialogView)
 //            .setCancelable(false)
 //            .create()
 //
-//        // Set the button handlers
-//        buttonCancelQuantity.setOnClickListener {
-//            dialog.dismiss()  // Dismiss the dialog without taking action
-//        }
-//
-//        buttonConfirmQuantity.setOnClickListener {
-//            val enteredQuantity = editTextLotQuantity.text.toString().toDoubleOrNull()
-//            if (enteredQuantity != null) {
-//                // Check if usesExpirationDate is true or false
-//                if (!usesExpirationDate!!) {
-//                    coroutineScope.launch {
-//                        try {
-//                            withContext(Dispatchers.Main) {
-//                                val newLineId = odooXmlRpcClient.createMoveLineForReceiving(receiptId, productId, lotName, enteredQuantity)
-//                                Log.d("NewLineId", "New Line ID: $newLineId")
-//                                fetchProductsForReceipt(receiptId)
-//                                dialog.dismiss()
-//                            }
-//                        } catch (e: Exception) {
-//                            withContext(Dispatchers.Main) {
-//
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    // Call the function to prompt for the expiration date
-//                    promptForNewLotExpirationDate(productName, receiptId, productId, lotName, enteredQuantity, lineId)
-//                    dialog.dismiss()
-//                }
-//            } else {
-//                Toast.makeText(this, "Invalid quantity entered. Please try again.", Toast.LENGTH_SHORT).show()
-//            }
-//        }
-//
-//        // Show the dialog
-//        dialog.show()
-//    }
-
-//    private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, productName: String, lineId: Int, trackingType: String, lotName: String, usesExpirationDate: Boolean?) {
-//        // Fetch the latest data first, ensure UI updates post-fetch are on the main thread
-//        fetchProductsForReceipt(receiptId)
-//
-//        withContext(Dispatchers.Main) {
-//            val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_lot_quantity_input, null)
-//            val textEnterLotQuantityMessage = dialogView.findViewById<TextView>(R.id.textEnterLotQuantityMessage)
-//            val editTextLotQuantity = dialogView.findViewById<EditText>(R.id.editTextLotQuantity)
-//            val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmQuantity)
-//            editTextLotQuantity.setHintTextColor(Color.WHITE)
-//
-//            textEnterLotQuantityMessage.text = "Enter quantity for lot: $lotName"
-//
-//            val dialog = AlertDialog.Builder(this@ProductsActivity)
-//                .setView(dialogView)
-//                .setCancelable(false)
-//                .create()
-//
-//            buttonConfirmQuantity.setOnClickListener {
-//                val enteredQuantity = editTextLotQuantity.text.toString().toDoubleOrNull()
-//                if (enteredQuantity != null) {
-//                    coroutineScope.launch {
-//                        if (usesExpirationDate == true) {
-//                            // If expiration date is required, call the function to handle this
-//                            promptForNewLotExpirationDate(productName, receiptId, productId, lotName, enteredQuantity, lineId)
-//                            dialog.dismiss()
-//                        } else {
-//                            // Otherwise, create the move line immediately
-//                            try {
-//                                val response = odooXmlRpcClient.createMoveLineForReceiving(receiptId, productId, lotName, enteredQuantity)
-//                                val newLineId = response?.get("line_id") as? Int
-//                                if (newLineId != null) {
-//                                    updateProductMatchState(newLineId, receiptId, true)
-//                                    withContext(Dispatchers.Main) {
-//                                        dialog.dismiss()
-//                                        showGreenToast("Lot quantity updated and match state set.")
-//                                    }
-//                                } else {
-//                                    withContext(Dispatchers.Main) {
-//                                        showRedToast("Failed to create new move line or retrieve line ID.")
-//                                    }
-//                                }
-//                            } catch (e: Exception) {
-//                                withContext(Dispatchers.Main) {
-//                                    Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
-//                                    showRedToast("Error in creating move line.")
-//                                }
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    Toast.makeText(this@ProductsActivity, "Invalid quantity entered. Please try again.", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//
-//            dialog.show()
-//        }
-//    }
-    //latest
-//    private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, productName: String, lineId: Int, trackingType: String, lotName: String, usesExpirationDate: Boolean?) {
-//        // Fetch the latest data first, ensure UI updates post-fetch are on the main thread
-//        fetchProductsForReceipt(receiptId)
-//
-//        withContext(Dispatchers.Main) {
-//            val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_lot_quantity_input, null)
-//            val textEnterLotQuantityMessage = dialogView.findViewById<TextView>(R.id.textEnterLotQuantityMessage)
-//            val editTextLotQuantity = dialogView.findViewById<EditText>(R.id.editTextLotQuantity)
-//            val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmQuantity)
-//            editTextLotQuantity.setHintTextColor(Color.WHITE)
-//
-//            textEnterLotQuantityMessage.text = "Enter quantity for lot: $lotName"
-//
-//            val dialog = AlertDialog.Builder(this@ProductsActivity)
-//                .setView(dialogView)
-//                .setCancelable(false)
-//                .create()
-//
-//            buttonConfirmQuantity.setOnClickListener {
-//                val enteredQuantity = editTextLotQuantity.text.toString().toDoubleOrNull()
-//                if (enteredQuantity != null) {
-//                    coroutineScope.launch {
-//                        if (usesExpirationDate == true) {
-//                            val response = odooXmlRpcClient.createMoveLineWithExpirationForReceiving(receiptId, productId, lotName, enteredQuantity)
-//                            val newLineId = response?.get("line_id") as? Int
-//                            if (newLineId != null) {
-//                                // If expiration date is required, call the function to handle this with the new line ID
-//                                promptForNewLotExpirationDate(productName, receiptId, productId, lotName, enteredQuantity, newLineId)
-//                                dialog.dismiss()
-//                            } else {
-//                                withContext(Dispatchers.Main) {
-//                                    showRedToast("Failed to create new move line or retrieve line ID.")
-//                                }
-//                            }
-//                        } else {
-//                            // Otherwise, create the move line immediately
-//                            try {
-//                                val response = odooXmlRpcClient.createMoveLineForReceiving(receiptId, productId, lotName, enteredQuantity)
-//                                val newLineId = response?.get("line_id") as? Int
-//                                if (newLineId != null) {
-//                                    updateProductMatchState(newLineId, receiptId, true)
-//                                    withContext(Dispatchers.Main) {
-//                                        dialog.dismiss()
-//                                        showGreenToast("Lot quantity updated and match state set.")
-//                                    }
-//                                } else {
-//                                    withContext(Dispatchers.Main) {
-//                                        showRedToast("Failed to create new move line or retrieve line ID.")
-//                                    }
-//                                }
-//                            } catch (e: Exception) {
-//                                withContext(Dispatchers.Main) {
-//                                    Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
-//                                    showRedToast("Error in creating move line.")
-//                                }
-//                            }
-//                        }
-//                    }
-//                } else {
-//                    Toast.makeText(this@ProductsActivity, "Invalid quantity entered. Please try again.", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//
-//            dialog.show()
-//        }
-//    }
-private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, productName: String, lineId: Int, trackingType: String, lotName: String, usesExpirationDate: Boolean?) {
-    // Fetch the latest data first, ensure UI updates post-fetch are on the main thread
-    fetchProductsForReceipt(receiptId)
-
-    withContext(Dispatchers.Main) {
-        val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_lot_quantity_input, null)
-        val textEnterLotQuantityMessage = dialogView.findViewById<TextView>(R.id.textEnterLotQuantityMessage)
-        val editTextLotQuantity = dialogView.findViewById<EditText>(R.id.editTextLotQuantity)
-        val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmQuantity)
-        editTextLotQuantity.setHintTextColor(Color.WHITE)
-
-        textEnterLotQuantityMessage.text = "Enter quantity for lot: $lotName"
-
-        val dialog = AlertDialog.Builder(this@ProductsActivity)
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-
-        buttonConfirmQuantity.setOnClickListener {
-            val enteredQuantity = editTextLotQuantity.text.toString().toDoubleOrNull()
-            if (enteredQuantity != null) {
-                coroutineScope.launch {
-                    if (usesExpirationDate == true) {
-                        // No need to call createMoveLineWithExpirationForReceiving here
-                        // Just call the promptForNewLotExpirationDate function directly
-                        promptForNewLotExpirationDate(productName, receiptId, productId, lotName, enteredQuantity, lineId)
-                        dialog.dismiss()
-                    } else {
-                        // Otherwise, create the move line immediately
-                        try {
-                            val response = odooXmlRpcClient.createMoveLineForReceiving(receiptId, productId, lotName, enteredQuantity)
-                            val newLineId = response?.get("line_id") as? Int
-                            if (newLineId != null) {
-                                updateProductMatchState(newLineId, receiptId, true)
-                                withContext(Dispatchers.Main) {
-                                    dialog.dismiss()
-                                    showGreenToast("Lot quantity updated and match state set.")
-                                }
-                            } else {
-                                withContext(Dispatchers.Main) {
-                                    showRedToast("Failed to create new move line or retrieve line ID.")
-                                }
-                            }
-                        } catch (e: Exception) {
-                            withContext(Dispatchers.Main) {
-                                Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
-                                showRedToast("Error in creating move line.")
-                            }
-                        }
-                    }
-                }
-            } else {
-                Toast.makeText(this@ProductsActivity, "Invalid quantity entered. Please try again.", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        dialog.show()
-    }
-}
-
-
-
-
-
-//    private fun promptForNewLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotName: String, quantity: Double, lineId: Int) {
-//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_expiration_date, null)
-//
-//        val textDialogTitle = dialogView.findViewById<TextView>(R.id.textDialogTitle)
-//        val textDialogMessage = dialogView.findViewById<TextView>(R.id.textDialogMessage)
-//        textDialogMessage.text = "Enter the expiration date for the lot of $productName."
-//
-//        val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
-//        setupDateInputField(editTextExpirationDate) // Sets up a listener for proper date formatting
-//        editTextExpirationDate.setHintTextColor(Color.WHITE)
-//
-//        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
-//        val buttonOk = dialogView.findViewById<Button>(R.id.buttonOk)
-//
-//        val dialog = AlertDialog.Builder(this)
-//            .setView(dialogView)
-//            .create()
-//
-//        buttonOk.setOnClickListener {
-//            val enteredExpirationDate = editTextExpirationDate.text.toString().trim()
-//            val convertedDate = convertToFullDateTime(enteredExpirationDate) // Converts to "yyyy-MM-dd"
-//            if (isValidDateFormat(convertedDate)) {
+//        buttonConfirmLot.setOnClickListener {
+//            val enteredLotNumber = editTextLotNumber.text.toString().trim()
+//            if (enteredLotNumber.isNotEmpty()) {
 //                coroutineScope.launch {
-//                    odooXmlRpcClient.createMoveLineWithExpirationForReceiving(receiptId, productId, lotName, quantity, convertedDate).also {
-//                        updateProductMatchState(lineId, receiptId, matched = true)
-//                        confirmedLines.add(lineId)
-//                        fetchProductsForReceipt(receiptId)
+//                    val key = ProductReceiptKey(productId, receiptId)
+//                    val lotList = productLotNumbers.getOrPut(key) { mutableListOf() }
+//
+//                    if (!lotList.contains(enteredLotNumber)) {
+//                        lotList.add(enteredLotNumber)  // Add the new lot number to the list
 //                        withContext(Dispatchers.Main) {
-//                            showGreenToast("Lot expiration date updated")
 //                            dialog.dismiss()
+//                            showNewLotQuantityDialog(receiptId, productId, productName, lineId, trackingType, enteredLotNumber, usesExpirationDate)
+//                        }
+//                    } else {
+//                        withContext(Dispatchers.Main) {
+//                            Toast.makeText(this@ProductsActivity, "Lot number already entered for $productName. Please enter a different number.", Toast.LENGTH_LONG).show()
+//                            editTextLotNumber.setText("")
+//                            editTextLotNumber.requestFocus()
 //                        }
 //                    }
 //                }
 //            } else {
-//                    showRedToast("Invalid expiration date entered. Please use the format DD/MM/YYYY")
+//                Toast.makeText(this, "Please enter a lot number.", Toast.LENGTH_SHORT).show()
+//                editTextLotNumber.requestFocus()
 //            }
 //        }
 //
-//        buttonCancel.setOnClickListener {
+//        buttonCancelLot.setOnClickListener {
 //            dialog.dismiss()
 //        }
 //
 //        dialog.show()
+//        editTextLotNumber.requestFocus()
+//        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//        imm.showSoftInput(editTextLotNumber, InputMethodManager.SHOW_IMPLICIT)
 //    }
-//    private fun promptForNewLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotName: String, quantity: Double, lineId: Int) {
-//        // Move UI-related operations to the main thread
-//        coroutineScope.launch {
-//            withContext(Dispatchers.Main) {
-//                val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_expiration_date, null)
-//
-//                val textDialogMessage = dialogView.findViewById<TextView>(R.id.textDialogMessage)
-//                textDialogMessage.text = "Enter the expiration date for the lot of $productName."
-//
-//                val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
-//                setupDateInputField(editTextExpirationDate) // Assumes this method is thread-safe or also switched to main thread
-//                editTextExpirationDate.setHintTextColor(Color.WHITE)
-//
-//                val dialog = AlertDialog.Builder(this@ProductsActivity)
-//                    .setView(dialogView)
-//                    .create()
-//
-//                dialogView.findViewById<Button>(R.id.buttonOk).setOnClickListener {
-//                    val enteredExpirationDate = editTextExpirationDate.text.toString().trim()
-//                    val convertedDate = convertToFullDateTime(enteredExpirationDate) // Ensure this method is thread-safe
-//                    if (isValidDateFormat(convertedDate)) {
-//                        // Perform network request on IO Dispatcher
-//                        coroutineScope.launch(Dispatchers.IO) {
-//                            odooXmlRpcClient.createMoveLineWithExpirationForReceiving(receiptId, productId, lotName, quantity, convertedDate).also {
-//                                updateProductMatchState(lineId, receiptId, matched = true)
-//                                confirmedLines.add(lineId)
-//                                fetchProductsForReceipt(receiptId)
-//                            }
-//                            withContext(Dispatchers.Main) {
-//                                showGreenToast("Lot expiration date updated")
-//                                dialog.dismiss()
-//                            }
-//                        }
-//                    } else {
-//
-//                            showRedToast("Invalid expiration date entered. Please use the format DD/MM/YYYY")
-//
-//                    }
-//                }
-//
-//                dialogView.findViewById<Button>(R.id.buttonCancel).setOnClickListener {
-//                    dialog.dismiss()
-//                }
-//
-//                dialog.show()
-//            }
-//        }
-//    }
-    //latest
-//    private fun promptForNewLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotName: String, quantity: Double, lineId: Int) {
-//        // Move UI-related operations to the main thread
-//        coroutineScope.launch {
-//            withContext(Dispatchers.Main) {
-//                val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_expiration_date, null)
-//
-//                val textDialogMessage = dialogView.findViewById<TextView>(R.id.textDialogMessage)
-//                textDialogMessage.text = "Enter the expiration date for the lot of $productName."
-//
-//                val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
-//                setupDateInputField(editTextExpirationDate) // Assumes this method is thread-safe or also switched to main thread
-//                editTextExpirationDate.setHintTextColor(Color.WHITE)
-//
-//                val dialog = AlertDialog.Builder(this@ProductsActivity)
-//                    .setView(dialogView)
-//                    .create()
-//
-//                var lastClickTime = 0L
-//                dialogView.findViewById<Button>(R.id.buttonOk).setOnClickListener {
-//                    Log.d("PromptExpirationDate", "OK button clicked.")
-//                    if (System.currentTimeMillis() - lastClickTime < 1000) {
-//                        Log.d("PromptExpirationDate", "Click debounced.")
-//                        return@setOnClickListener // Debounce time of 1 second
-//                    }
-//                    lastClickTime = System.currentTimeMillis()
-//
-//                    val enteredExpirationDate = editTextExpirationDate.text.toString().trim()
-//                    val convertedDate = convertToFullDateTime(enteredExpirationDate) // Ensure this method is thread-safe
-//                    if (isValidDateFormat(convertedDate)) {
-//                        Log.d("PromptExpirationDate", "Valid date format: $convertedDate")
-//                        // Perform network request on IO Dispatcher
-//                        coroutineScope.launch(Dispatchers.IO) {
-//                            Log.d("PromptExpirationDate", "Creating move line with expiration.")
-//                                odooXmlRpcClient.createMoveLineWithExpirationForReceiving(receiptId, productId, lotName, quantity, convertedDate).also {
-//                                updateProductMatchState(lineId, receiptId, matched = true)
-//                                confirmedLines.add(lineId)
-//                                fetchProductsForReceipt(receiptId)
-//                            }
-//                            withContext(Dispatchers.Main) {
-//                                showGreenToast("Lot expiration date updated")
-//                                dialog.dismiss()
-//                            }
-//                        }
-//                    } else {
-//
-//                            showRedToast("Invalid expiration date entered. Please use the format DD/MM/YYYY")
-//
-//                    }
-//                }
-//
-//                dialogView.findViewById<Button>(R.id.buttonCancel).setOnClickListener {
-//                    Log.d("PromptExpirationDate", "Cancel button clicked.")
-//                    dialog.dismiss()
-//                }
-//
-//                dialog.show()
-//                Log.d("PromptExpirationDate", "Dialog shown.")
-//            }
-//        }
-//    }
+private fun promptForNewLotNumber(productName: String, receiptId: Int, productId: Int, lineId: Int, trackingType: String, usesExpirationDate: Boolean?) {
+    val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_number_input, null)
+    val editTextLotNumber = dialogView.findViewById<EditText>(R.id.editTextLotNumber)
+    val textEnterLotMessage = dialogView.findViewById<TextView>(R.id.textEnterLotMessage)
+    val buttonCancelLot = dialogView.findViewById<Button>(R.id.buttonCancelLot)
+    val buttonConfirmLot = dialogView.findViewById<Button>(R.id.buttonConfirmLot)
+    editTextLotNumber.setHintTextColor(Color.WHITE)
+    textEnterLotMessage.text = "Enter the lot number for $productName:"
 
+    val dialog = AlertDialog.Builder(this)
+        .setView(dialogView)
+        .setCancelable(false)
+        .create()
+
+    buttonConfirmLot.setOnClickListener {
+        val enteredLotNumber = editTextLotNumber.text.toString().trim()
+        if (enteredLotNumber.isNotEmpty()) {
+            coroutineScope.launch {
+                val lotList = pickLotNumbers.getOrPut(receiptId) { mutableListOf() }
+
+                if (!lotList.contains(enteredLotNumber)) {
+                    lotList.add(enteredLotNumber)
+                    withContext(Dispatchers.Main) {
+                        dialog.dismiss()
+                        showNewLotQuantityDialog(receiptId, productId, productName, lineId, trackingType, enteredLotNumber, usesExpirationDate)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ProductsActivity, "Lot number already entered for this picking operation. Please enter a different number.", Toast.LENGTH_LONG).show()
+                        editTextLotNumber.setText("")
+                        editTextLotNumber.requestFocus()
+                    }
+                }
+            }
+        } else {
+            Toast.makeText(this, "Please enter a lot number.", Toast.LENGTH_SHORT).show()
+            editTextLotNumber.requestFocus()
+        }
+    }
+
+    buttonCancelLot.setOnClickListener {
+        dialog.dismiss()
+    }
+
+    dialog.show()
+    editTextLotNumber.requestFocus()
+    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    imm.showSoftInput(editTextLotNumber, InputMethodManager.SHOW_IMPLICIT)
+}
+
+
+    private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, productName: String, lineId: Int, trackingType: String, lotName: String, usesExpirationDate: Boolean?) {
+        // Fetch the latest data first, ensure UI updates post-fetch are on the main thread
+        withContext(Dispatchers.IO) {
+            fetchProductsForReceipt(receiptId)
+        }
+
+        withContext(Dispatchers.Main) {
+            val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_lot_quantity_input, null)
+            val textEnterLotQuantityMessage = dialogView.findViewById<TextView>(R.id.textEnterLotQuantityMessage)
+            val editTextLotQuantity = dialogView.findViewById<EditText>(R.id.editTextLotQuantity)
+            val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmQuantity)
+            editTextLotQuantity.setHintTextColor(Color.WHITE)
+
+            textEnterLotQuantityMessage.text = "Enter quantity for lot: $lotName"
+
+            val dialog = AlertDialog.Builder(this@ProductsActivity)
+                .setView(dialogView)
+                .setCancelable(false)
+                .create()
+
+            buttonConfirmQuantity.setOnClickListener {
+                val enteredQuantity = editTextLotQuantity.text.toString().toDoubleOrNull()
+                if (enteredQuantity != null) {
+                    coroutineScope.launch {
+                        if (usesExpirationDate == true) {
+                            // No need to call createMoveLineWithExpirationForReceiving here
+                            // Just call the promptForNewLotExpirationDate function directly
+                            promptForNewLotExpirationDate(productName, receiptId, productId, lotName, enteredQuantity, lineId)
+                            dialog.dismiss()
+                        } else {
+                            // Otherwise, create the move line immediately
+                            try {
+                                val response = odooXmlRpcClient.createMoveLineForReceiving(receiptId, productId, lotName, enteredQuantity)
+                                val newLineId = response?.get("line_id") as? Int
+                                if (newLineId != null) {
+                                    updateProductMatchState(newLineId, receiptId, true)
+                                    withContext(Dispatchers.Main) {
+                                        dialog.dismiss()
+                                        showGreenToast("Lot quantity updated and match state set.")
+                                    }
+                                } else {
+                                    withContext(Dispatchers.Main) {
+                                        showRedToast("Failed to create new move line or retrieve line ID.")
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
+                                    showRedToast("Error in creating move line.")
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Toast.makeText(this@ProductsActivity, "Invalid quantity entered. Please try again.", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            dialog.show()
+        }
+    }
+//    private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, productName: String, lineId: Int, trackingType: String, lotName: String, usesExpirationDate: Boolean?) {
+//        fetchProductsForReceipt(receiptId)
+//        withContext(Dispatchers.Main) {
+//            val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_lot_quantity_input, null)
+//            val textEnterLotQuantityMessage = dialogView.findViewById<TextView>(R.id.textEnterLotQuantityMessage)
+//            val editTextLotQuantity = dialogView.findViewById<EditText>(R.id.editTextLotQuantity)
+//            val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmQuantity)
+//            editTextLotQuantity.setHintTextColor(Color.WHITE)
+//
+//            textEnterLotQuantityMessage.text = "Enter quantity for lot: $lotName"
+//
+//            val dialog = AlertDialog.Builder(this@ProductsActivity).setView(dialogView).setCancelable(false).create()
+//
+//            buttonConfirmQuantity.setOnClickListener {
+//                val enteredQuantity = editTextLotQuantity.text.toString().toDoubleOrNull()
+//                if (enteredQuantity != null) {
+//                    coroutineScope.launch {
+//                        if (usesExpirationDate == true) {
+//                            promptForNewLotExpirationDate(productName, receiptId, productId, lotName, enteredQuantity)
+//                        } else {
+//                            try {
+//                                val response = odooXmlRpcClient.createMoveLineForReceiving(receiptId, productId, lotName, enteredQuantity)
+//                                val newLineId = response?.get("line_id") as? Int
+//                                if (newLineId != null) {
+//                                    updateProductMatchState(newLineId, receiptId, true)
+//                                    withContext(Dispatchers.Main) {
+//                                        dialog.dismiss()
+//                                        showGreenToast("Lot quantity updated and match state set.")
+//                                    }
+//                                } else {
+//                                    withContext(Dispatchers.Main) {
+//                                        showRedToast("Failed to create new move line or retrieve line ID.")
+//                                    }
+//                                }
+//                            } catch (e: Exception) {
+//                                withContext(Dispatchers.Main) {
+//                                    Log.e("OdooXmlRpcClient", "Error creating move line for receiving: ${e.localizedMessage}", e)
+//                                    showRedToast("Error in creating move line.")
+//                                }
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    Toast.makeText(this@ProductsActivity, "Invalid quantity entered. Please try again.", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//
+//            dialog.show()
+//        }
+//    }
 
     private fun promptForNewLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotName: String, quantity: Double, lineId: Int) {
         // Move UI-related operations to the main thread
@@ -1024,10 +801,174 @@ private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, pro
             }
         }
     }
+//private fun promptForNewLotExpirationDate(productName: String, receiptId: Int, productId: Int, lotName: String, quantity: Double) {
+//    coroutineScope.launch {
+//        withContext(Dispatchers.Main) {
+//            val dialogView = LayoutInflater.from(this@ProductsActivity).inflate(R.layout.dialog_expiration_date, null)
+//            val textDialogMessage = dialogView.findViewById<TextView>(R.id.textDialogMessage)
+//            textDialogMessage.text = "Enter the expiration date for the lot of $productName."
+//
+//            val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
+//            setupDateInputField(editTextExpirationDate)
+//            editTextExpirationDate.setHintTextColor(Color.WHITE)
+//
+//            val dialog = AlertDialog.Builder(this@ProductsActivity).setView(dialogView).create()
+//
+//            dialogView.findViewById<Button>(R.id.buttonOk).setOnClickListener {
+//                val enteredExpirationDate = editTextExpirationDate.text.toString().trim()
+//                val convertedDate = convertToFullDateTime(enteredExpirationDate)
+//                if (isValidDateFormat(convertedDate)) {
+//                    coroutineScope.launch(Dispatchers.IO) {
+//                        try {
+//                            val response = odooXmlRpcClient.createMoveLineWithExpirationForReceiving(receiptId, productId, lotName, quantity, convertedDate)
+//                            val newLineId = response?.get("line_id") as? Int
+//                            if (newLineId != null) {
+//                                updateProductMatchState(newLineId, receiptId, true)
+//                                fetchProductsForReceipt(receiptId)
+//                                withContext(Dispatchers.Main) {
+//                                    showGreenToast("Lot expiration date updated")
+//                                    dialog.dismiss()
+//                                }
+//                            } else {
+//                                withContext(Dispatchers.Main) {
+//                                    showRedToast("Failed to create new move line or retrieve line ID.")
+//                                }
+//                            }
+//                        } catch (e: Exception) {
+//                            withContext(Dispatchers.Main) {
+//                                Log.e("OdooXmlRpcClient", "Error creating move line with expiration: ${e.localizedMessage}", e)
+//                                showRedToast("Error in creating move line with expiration.")
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    showRedToast("Invalid expiration date entered. Please use the format DD/MM/YYYY")
+//                }
+//            }
+//
+//            dialogView.findViewById<Button>(R.id.buttonCancel).setOnClickListener {
+//                dialog.dismiss()
+//            }
+//
+//            dialog.show()
+//        }
+//    }
+//}
 
 
+//    private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
+//        // Inflate the custom layout for the dialog
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_number_input, null)
+//        val editTextLotNumber = dialogView.findViewById<EditText>(R.id.editTextLotNumber)
+//        val textEnterLotMessage = dialogView.findViewById<TextView>(R.id.textEnterLotMessage)
+//        val buttonCancelLot = dialogView.findViewById<Button>(R.id.buttonCancelLot)
+//        val buttonConfirmLot = dialogView.findViewById<Button>(R.id.buttonConfirmLot)
+//
+//        textEnterLotMessage.text = "Enter the lot number for $productName."
+//        editTextLotNumber.setHintTextColor(Color.WHITE)
+//
+//        val dialog = AlertDialog.Builder(this)
+//            .setView(dialogView)
+//            .setCancelable(false) // This disables dismissing the dialog by clicking outside it.
+//            .create()
+//
+//        // Handle the Cancel button
+//        buttonCancelLot.setOnClickListener {
+//            dialog.dismiss()
+//        }
+//
+//        // Handle the Confirm button
+//        buttonConfirmLot.setOnClickListener {
+//            val enteredLotNumber = editTextLotNumber.text.toString().trim()
+//            if (enteredLotNumber.isNotEmpty()) {
+//                coroutineScope.launch {
+//                    val product = productsAdapter.moveLines.find { it.productId == productId }
+//                    if (product?.useExpirationDate == true) {
+//                        withContext(Dispatchers.Main) {
+//                            // Assuming promptForLotQuantity is correctly defined elsewhere to handle these parameters
+//                            promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, true, lineId)
+//                        }
+//                    } else {
+//                        withContext(Dispatchers.Main) {
+//                            // Assuming promptForLotQuantity is correctly defined elsewhere to handle these parameters
+//                            promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, false, lineId)
+//                        }
+//                    }
+//                }
+//            } else {
+//                showRedToast("Please enter a lot number.")
+//            }
+//            dialog.dismiss()
+//        }
+//
+//        // Request focus and show the keyboard when the dialog is shown
+//        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+//        dialog.setOnShowListener {
+//            editTextLotNumber.requestFocus()
+//            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//            imm.showSoftInput(editTextLotNumber, InputMethodManager.SHOW_IMPLICIT)
+//        }
+//
+//        dialog.show()
+//    }
+//private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
+//    val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_number_input, null)
+//    val editTextLotNumber = dialogView.findViewById<EditText>(R.id.editTextLotNumber)
+//    val textEnterLotMessage = dialogView.findViewById<TextView>(R.id.textEnterLotMessage)
+//    val buttonCancelLot = dialogView.findViewById<Button>(R.id.buttonCancelLot)
+//    val buttonConfirmLot = dialogView.findViewById<Button>(R.id.buttonConfirmLot)
+//
+//    textEnterLotMessage.text = "Enter the lot number for $productName."
+//    editTextLotNumber.setHintTextColor(Color.WHITE)
+//
+//    val dialog = AlertDialog.Builder(this)
+//        .setView(dialogView)
+//        .setCancelable(false)
+//        .create()
+//
+//    buttonConfirmLot.setOnClickListener {
+//        val enteredLotNumber = editTextLotNumber.text.toString().trim()
+//        if (enteredLotNumber.isNotEmpty()) {
+//            coroutineScope.launch {
+//                val product = productsAdapter.moveLines.find { it.productId == productId }
+//                val key = ProductReceiptKey(productId, receiptId)
+//                val lotList = productLotNumbers.getOrPut(key) { mutableListOf() }
+//
+//                if (!lotList.contains(enteredLotNumber)) {
+//                    lotList.add(enteredLotNumber)  // Add the new lot number to the list
+//                    withContext(Dispatchers.Main) {
+//                        dialog.dismiss()
+//                        if (product?.useExpirationDate == true) {
+//                            promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, true, lineId)
+//                        } else {
+//                            promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, false, lineId)
+//                        }
+//                    }
+//                } else {
+//                    withContext(Dispatchers.Main) {
+//                        Toast.makeText(this@ProductsActivity, "Lot number already entered for $productName.", Toast.LENGTH_SHORT).show()
+//                        editTextLotNumber.setText("")
+//                        editTextLotNumber.requestFocus()
+//                    }
+//                }
+//            }
+//        } else {
+//            Toast.makeText(this, "Please enter a lot number.", Toast.LENGTH_SHORT).show()
+//            editTextLotNumber.requestFocus()
+//        }
+//    }
+//
+//    buttonCancelLot.setOnClickListener {
+//        dialog.dismiss()
+//    }
+//
+//    dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
+//    dialog.show()
+//    editTextLotNumber.requestFocus()
+//    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//    imm.showSoftInput(editTextLotNumber, InputMethodManager.SHOW_IMPLICIT)
+//}
     private fun promptForLotNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
-        // Inflate the custom layout for the dialog
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_number_input, null)
         val editTextLotNumber = dialogView.findViewById<EditText>(R.id.editTextLotNumber)
         val textEnterLotMessage = dialogView.findViewById<TextView>(R.id.textEnterLotMessage)
@@ -1039,48 +980,46 @@ private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, pro
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
-            .setCancelable(false) // This disables dismissing the dialog by clicking outside it.
+            .setCancelable(false)
             .create()
 
-        // Handle the Cancel button
-        buttonCancelLot.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        // Handle the Confirm button
         buttonConfirmLot.setOnClickListener {
             val enteredLotNumber = editTextLotNumber.text.toString().trim()
             if (enteredLotNumber.isNotEmpty()) {
                 coroutineScope.launch {
-                    val product = productsAdapter.moveLines.find { it.productId == productId }
-                    if (product?.useExpirationDate == true) {
+                    val lotList = pickLotNumbers.getOrPut(receiptId) { mutableListOf() }
+
+                    if (!lotList.contains(enteredLotNumber)) {
+                        lotList.add(enteredLotNumber)
                         withContext(Dispatchers.Main) {
-                            // Assuming promptForLotQuantity is correctly defined elsewhere to handle these parameters
-                            promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, true, lineId)
+                            dialog.dismiss()
+                            promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, productsAdapter.moveLines.find { it.productId == productId }?.useExpirationDate == true, lineId)
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            // Assuming promptForLotQuantity is correctly defined elsewhere to handle these parameters
-                            promptForLotQuantity(productName, receiptId, productId, enteredLotNumber, false, lineId)
+                            Toast.makeText(this@ProductsActivity, "Lot number already entered for this picking operation.", Toast.LENGTH_SHORT).show()
+                            editTextLotNumber.setText("")
+                            editTextLotNumber.requestFocus()
                         }
                     }
                 }
             } else {
-                showRedToast("Please enter a lot number.")
+                Toast.makeText(this, "Please enter a lot number.", Toast.LENGTH_SHORT).show()
+                editTextLotNumber.requestFocus()
             }
+        }
+
+        buttonCancelLot.setOnClickListener {
             dialog.dismiss()
         }
 
-        // Request focus and show the keyboard when the dialog is shown
-        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
-        dialog.setOnShowListener {
-            editTextLotNumber.requestFocus()
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(editTextLotNumber, InputMethodManager.SHOW_IMPLICIT)
-        }
-
         dialog.show()
+        editTextLotNumber.requestFocus()
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.showSoftInput(editTextLotNumber, InputMethodManager.SHOW_IMPLICIT)
     }
+
+
 
     private fun promptForLotQuantity(productName: String, receiptId: Int, productId: Int, lotNumber: String, requiresExpirationDate: Boolean, lineId: Int) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_quantity_input, null)
@@ -1144,6 +1083,8 @@ private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, pro
         val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
         setupDateInputField(editTextExpirationDate)  // Assuming this sets up a listener for proper date formatting
 
+        editTextExpirationDate.setHintTextColor(Color.WHITE)
+
         val buttonOk = dialogView.findViewById<Button>(R.id.buttonOk)
         val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
 
@@ -1180,76 +1121,208 @@ private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, pro
         dialog.show()
     }
 
-    private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
-        val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
-        val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
-        val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
-        val productMessage = dialogView.findViewById<TextView>(R.id.ProductMessage)
-        serialNumberInput.setHintTextColor(Color.WHITE)
-        // Set the message dynamically
-        productMessage.text = "Product: $productName."
+//    private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
+//        val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
+//        val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
+//        val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
+//        val productMessage = dialogView.findViewById<TextView>(R.id.ProductMessage)
+//        serialNumberInput.setHintTextColor(Color.WHITE)
+//        // Set the message dynamically
+//        productMessage.text = "Product: $productName."
+//
+//        val dialog = AlertDialog.Builder(this)
+//            .setView(dialogView)
+//            .setCancelable(false)  // Disable dismissing the dialog by pressing back or clicking outside
+//            .create()
+//
+//        // Now set the positive button separately to have access to 'dialog' variable
+//        buttonConfirmSN.setOnClickListener {
+//                val enteredSerialNumber = serialNumberInput.text.toString().trim()
+//                if (enteredSerialNumber.isNotEmpty()) {
+//                    coroutineScope.launch {
+//                        val product = productsAdapter.moveLines.find { it.productId == productId }
+//                        val key = ProductReceiptKey(productId, receiptId)
+//                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+//
+//                        if (!serialList.contains(enteredSerialNumber)) {
+//                            if (product?.useExpirationDate == true) {
+//                                withContext(Dispatchers.Main) {
+//                                    dialog.dismiss() // Correctly reference 'dialog' here
+//                                    promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber, lineId)
+//                                }
+//                            } else {
+//                                odooXmlRpcClient.updateMoveLineSerialNumber(lineId, receiptId, productId, enteredSerialNumber)
+//                                serialList.add(enteredSerialNumber)
+//                                updateProductMatchState(lineId, receiptId, true)
+//                                confirmedLines.add(lineId)
+//                                fetchProductsForReceipt(receiptId)
+//                                withContext(Dispatchers.Main) {
+//                                    showGreenToast("Serial number added for $productName.")
+//                                    dialog.dismiss()
+//                                }
+//                            }
+//                        } else {
+//                            withContext(Dispatchers.Main) {
+//                                showRedToast("Serial number already entered for $productName")
+//                                serialNumberInput.setText("")
+//                                serialNumberInput.requestFocus()
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    showRedToast("Please enter a serial number")
+//                    serialNumberInput.setText("")
+//                    serialNumberInput.requestFocus()
+//                }
+//
+//        }
+//
+//        buttonCancelSN.setOnClickListener {
+//            dialog.dismiss()
+//        }
+//
+//        dialog.show()
+//        serialNumberInput.requestFocus()
+//        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//        imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
+//    }
+//private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
+//    val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
+//    val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
+//    val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
+//    val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
+//    val productMessage = dialogView.findViewById<TextView>(R.id.ProductMessage)
+//    serialNumberInput.setHintTextColor(Color.WHITE)
+//    productMessage.text = "Product: $productName."
+//
+//    val dialog = AlertDialog.Builder(this)
+//        .setView(dialogView)
+//        .setCancelable(false)
+//        .create()
+//
+//    buttonConfirmSN.setOnClickListener {
+//        val enteredSerialNumber = serialNumberInput.text.toString().trim()
+//        if (enteredSerialNumber.isNotEmpty()) {
+//            coroutineScope.launch {
+//                val serialList = pickSerialNumbers.getOrPut(receiptId) { mutableListOf() }
+//                if (!serialList.contains(enteredSerialNumber)) {
+//                    serialList.add(enteredSerialNumber)
+//                    withContext(Dispatchers.IO) { // Ensure network call is on IO Dispatcher
+//                        val updateResult = odooXmlRpcClient.updateMoveLineSerialNumber(lineId, receiptId, productId, enteredSerialNumber)
+//                        withContext(Dispatchers.Main) { // Switch back to Main for UI updates
+//                            if (updateResult) {
+//                                updateProductMatchState(lineId, receiptId, true)
+//                                confirmedLines.add(lineId)
+//                                coroutineScope.launch { fetchProductsForReceipt(receiptId) }
+//
+//                                showGreenToast("Serial number added for $productName.")
+//                                dialog.dismiss()
+//                            } else {
+//                                showRedToast("Failed to update serial number.")
+//                            }
+//                        }
+//                    }
+//                } else {
+//                    withContext(Dispatchers.Main) {
+//                        showRedToast("Serial number already entered for this picking operation")
+//                        serialNumberInput.setText("")
+//                        serialNumberInput.requestFocus()
+//                    }
+//                }
+//            }
+//        } else {
+//            showRedToast("Please enter a serial number")
+//            serialNumberInput.setText("")
+//            serialNumberInput.requestFocus()
+//        }
+//    }
+//
+//    buttonCancelSN.setOnClickListener {
+//        dialog.dismiss()
+//    }
+//
+//    dialog.show()
+//    serialNumberInput.requestFocus()
+//    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//    imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
+//}
+private fun promptForSerialNumber(productName: String, receiptId: Int, productId: Int, lineId: Int) {
+    val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
+    val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
+    val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
+    val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
+    val productMessage = dialogView.findViewById<TextView>(R.id.ProductMessage)
+    serialNumberInput.setHintTextColor(Color.WHITE)
+    productMessage.text = "Product: $productName."
 
-        var actionExecuted = false
+    val dialog = AlertDialog.Builder(this)
+        .setView(dialogView)
+        .setCancelable(false)  // Disable dismissing the dialog by pressing back or clicking outside
+        .create()
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)  // Disable dismissing the dialog by pressing back or clicking outside
-            .create()
-
-        // Now set the positive button separately to have access to 'dialog' variable
-        buttonConfirmSN.setOnClickListener {
-            if (!actionExecuted) {
-                actionExecuted = true
-                val enteredSerialNumber = serialNumberInput.text.toString().trim()
-                if (enteredSerialNumber.isNotEmpty()) {
-                    coroutineScope.launch {
-                        val product = productsAdapter.moveLines.find { it.productId == productId }
-                        val key = ProductReceiptKey(productId, receiptId)
-                        val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
-
-                        if (!serialList.contains(enteredSerialNumber)) {
-                            if (product?.useExpirationDate == true) {
-                                withContext(Dispatchers.Main) {
-                                    dialog.dismiss() // Correctly reference 'dialog' here
-                                    promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber, lineId)
-                                }
-                            } else {
-                                odooXmlRpcClient.updateMoveLineSerialNumber(lineId, receiptId, productId, enteredSerialNumber)
-                                serialList.add(enteredSerialNumber)
-                                updateProductMatchState(lineId, receiptId, true)
-                                confirmedLines.add(lineId)
-                                fetchProductsForReceipt(receiptId)
-                                withContext(Dispatchers.Main) {
-                                    showGreenToast("Serial number added for $productName.")
-                                    dialog.dismiss()
-                                }
+    buttonConfirmSN.setOnClickListener {
+        val enteredSerialNumber = serialNumberInput.text.toString().trim()
+        if (enteredSerialNumber.isNotEmpty()) {
+            coroutineScope.launch {
+                val product = productsAdapter.moveLines.find { it.productId == productId }
+                if (product != null) {
+                    val serialList = pickSerialNumbers.getOrPut(receiptId) { mutableListOf() }
+                    if (!serialList.contains(enteredSerialNumber)) {
+                        if (product?.useExpirationDate == true) {
+                            withContext(Dispatchers.Main) {
+                                dialog.dismiss()
+                                promptForExpirationDate(productName, receiptId, productId, enteredSerialNumber, lineId)
                             }
                         } else {
-                            withContext(Dispatchers.Main) {
-                                showRedToast("Serial number already entered for $productName")
-                                serialNumberInput.setText("")
-                                serialNumberInput.requestFocus()
+                            withContext(Dispatchers.IO) {
+                                val updateResult = odooXmlRpcClient.updateMoveLineSerialNumber(lineId, receiptId, productId, enteredSerialNumber)
+                                withContext(Dispatchers.Main) {
+                                    if (updateResult) {
+                                        serialList.add(enteredSerialNumber)
+                                        updateProductMatchState(lineId, receiptId, true)
+                                        confirmedLines.add(lineId)
+                                        coroutineScope.launch { fetchProductsForReceipt(receiptId) }
+                                        showGreenToast("Serial number added for $productName.")
+                                        dialog.dismiss()
+                                    } else {
+                                        showRedToast("Failed to update serial number.")
+                                    }
+                                }
                             }
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            showRedToast("Serial number already entered for this picking operation")
+                            serialNumberInput.setText("")
+                            serialNumberInput.requestFocus()
                         }
                     }
                 } else {
-                    showRedToast("Please enter a serial number")
-                    serialNumberInput.setText("")
-                    serialNumberInput.requestFocus()
+                    withContext(Dispatchers.Main) {
+                        showRedToast("Product details not found.")
+                    }
                 }
             }
+        } else {
+            showRedToast("Please enter a serial number")
+            serialNumberInput.setText("")
+            serialNumberInput.requestFocus()
         }
-
-        buttonCancelSN.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialog.show()
-        serialNumberInput.requestFocus()
-        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
     }
+
+    buttonCancelSN.setOnClickListener {
+        dialog.dismiss()
+    }
+
+    dialog.show()
+    serialNumberInput.requestFocus()
+    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+    imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
+}
+
+
+
 
     private fun setupDateInputField(editText: EditText) {
         editText.addTextChangedListener(object : TextWatcher {
@@ -1287,58 +1360,102 @@ private suspend fun showNewLotQuantityDialog(receiptId: Int, productId: Int, pro
         })
     }
 
-    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String, lineId: Int) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_expiration_date, null)
-        val textDialogMessage = dialogView.findViewById<TextView>(R.id.textDialogMessage)
-        textDialogMessage.text = "Enter the expiration date for $productName."
-        val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
-        setupDateInputField(editTextExpirationDate)
+//    private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String, lineId: Int) {
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_expiration_date, null)
+//        val textDialogMessage = dialogView.findViewById<TextView>(R.id.textDialogMessage)
+//        textDialogMessage.text = "Enter the expiration date for $productName."
+//        val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
+//        setupDateInputField(editTextExpirationDate)
+//
+//        // Setting the hint color to white
+//        editTextExpirationDate.setHintTextColor(ContextCompat.getColor(this, android.R.color.white))
+//
+//        val buttonOk = dialogView.findViewById<Button>(R.id.buttonOk)
+//        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
+//
+//        val dialog = AlertDialog.Builder(this)
+//            .setView(dialogView)
+//            .create()
+//
+//        buttonOk.setOnClickListener {
+//            val enteredExpirationDate = editTextExpirationDate.text.toString().trim()
+//            val convertedDate = convertToFullDateTime(enteredExpirationDate)
+//            if (isValidDateFormat(convertedDate)) {
+//                coroutineScope.launch {
+////                    val key = ProductReceiptKey(lineId, receiptId)
+////                    val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
+//                    val serialList = pickSerialNumbers.getOrPut(receiptId) { mutableListOf() }
+//                    if (!serialList.contains(serialNumber)) {
+//                        serialList.add(serialNumber)
+//                        odooXmlRpcClient.updateMoveLineSerialExpirationDate(lineId, receiptId, productId, serialNumber, convertedDate)
+//                        confirmedLines.add(lineId)
+////                        val isMatched = serialList.size == productsAdapter.moveLines.find { it.productId == productId }?.quantity?.toInt()
+//                        updateProductMatchState(lineId, receiptId, matched = true)
+//                        fetchProductsForReceipt(receiptId)
+//                        withContext(Dispatchers.Main) {
+//                            showGreenToast("Serial number added for $productName.")
+//                            dialog.dismiss()
+//                        }
+//                    } else {
+//                        withContext(Dispatchers.Main) {
+//                            showRedToast("Serial number already entered for $productName")
+//                        }
+//                    }
+//                }
+//            } else {
+//                showRedToast("Invalid expiration date entered. Please use the format DD/MM/YYYY")
+//            }
+//        }
+//
+//        buttonCancel.setOnClickListener {
+//            dialog.dismiss()
+//        }
+//
+//        dialog.show()
+//    }
+private fun promptForExpirationDate(productName: String, receiptId: Int, productId: Int, serialNumber: String, lineId: Int) {
+    val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_expiration_date, null)
+    val textDialogMessage = dialogView.findViewById<TextView>(R.id.textDialogMessage)
+    textDialogMessage.text = "Enter the expiration date for $productName."
+    val editTextExpirationDate = dialogView.findViewById<EditText>(R.id.editTextExpirationDate)
+    setupDateInputField(editTextExpirationDate) // Assumes this method setups date picker or similar
 
-        // Setting the hint color to white
-        editTextExpirationDate.setHintTextColor(ContextCompat.getColor(this, android.R.color.white))
+    // Setting the hint color to white
+    editTextExpirationDate.setHintTextColor(ContextCompat.getColor(this, android.R.color.white))
 
-        val buttonOk = dialogView.findViewById<Button>(R.id.buttonOk)
-        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
+    val buttonOk = dialogView.findViewById<Button>(R.id.buttonOk)
+    val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
+    val dialog = AlertDialog.Builder(this)
+        .setView(dialogView)
+        .create()
 
-        buttonOk.setOnClickListener {
-            val enteredExpirationDate = editTextExpirationDate.text.toString().trim()
-            val convertedDate = convertToFullDateTime(enteredExpirationDate)
-            if (isValidDateFormat(convertedDate)) {
-                coroutineScope.launch {
-                    val key = ProductReceiptKey(lineId, receiptId)
-                    val serialList = productSerialNumbers.getOrPut(key) { mutableListOf() }
-                    if (!serialList.contains(serialNumber)) {
-                        serialList.add(serialNumber)
-                        odooXmlRpcClient.updateMoveLineSerialExpirationDate(lineId, receiptId, productId, serialNumber, convertedDate)
-                        confirmedLines.add(lineId)
-                        val isMatched = serialList.size == productsAdapter.moveLines.find { it.productId == productId }?.quantity?.toInt()
-                        updateProductMatchState(lineId, receiptId, isMatched)
-                        fetchProductsForReceipt(receiptId)
-                        withContext(Dispatchers.Main) {
-                            showGreenToast("Serial number added for $productName.")
-                            dialog.dismiss()
-                        }
-                    } else {
-                        withContext(Dispatchers.Main) {
-                            showRedToast("Serial number already entered for $productName")
-                        }
-                    }
+    buttonOk.setOnClickListener {
+        val enteredExpirationDate = editTextExpirationDate.text.toString().trim()
+        val convertedDate = convertToFullDateTime(enteredExpirationDate) // Assume this correctly formats the date
+        if (isValidDateFormat(convertedDate)) { // Assume this validates the formatted date
+            coroutineScope.launch {
+                odooXmlRpcClient.updateMoveLineSerialExpirationDate(lineId, receiptId, productId, serialNumber, convertedDate)
+                updateProductMatchState(lineId, receiptId, matched = true)
+                confirmedLines.add(lineId)
+                fetchProductsForReceipt(receiptId)
+                withContext(Dispatchers.Main) {
+                    showGreenToast("Expiration date updated and serial number added for $productName.")
+                    dialog.dismiss()
                 }
-            } else {
-                showRedToast("Invalid expiration date entered. Please use the format DD/MM/YYYY")
             }
+        } else {
+                showRedToast("Invalid expiration date entered. Please use the format DD/MM/YYYY")
         }
-
-        buttonCancel.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialog.show()
     }
+
+    buttonCancel.setOnClickListener {
+        dialog.dismiss()
+    }
+
+    dialog.show()
+}
+
 
     private fun isValidDateFormat(value: String): Boolean {
         return try {
@@ -1741,7 +1858,7 @@ private fun updateProductMatchState(lineId: Int, pickId: Int, matched: Boolean =
         }
 
         buttonConfirmQuantity.setOnClickListener {
-            coroutineScope.launch {
+            coroutineScope.launch(Dispatchers.IO) { // Start coroutine in IO Dispatcher for network operations
                 try {
                     when {
                         quantityChanged && lotNameChanged -> {
@@ -1757,13 +1874,19 @@ private fun updateProductMatchState(lineId: Int, pickId: Int, matched: Boolean =
                             odooXmlRpcClient.updateMoveLinesForReceipt(product.id, receiptId, editTextProductLotNumber.text.toString())
                         }
                     }
-                    withContext(Dispatchers.Main) {
-                        fetchProductsForReceipt(receiptId)
+                    // Execute fetching of products on the same background thread
+                    fetchProductsForReceipt(receiptId)
+
+                    withContext(Dispatchers.Main) { // Switch to Main Dispatcher for UI operations
                         dialog.dismiss()
                     }
                 } catch (e: NumberFormatException) {
-                    withContext(Dispatchers.Main) {
+                    withContext(Dispatchers.Main) { // Handle UI updates on the main thread
                         showRedToast("Invalid input. Please enter a valid number.")
+                    }
+                } catch (e: Exception) {
+                    withContext(Dispatchers.Main) {
+                        showRedToast("Error during network operations: ${e.localizedMessage}")
                     }
                 }
             }

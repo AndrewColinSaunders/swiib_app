@@ -118,8 +118,6 @@ class PickProductsAdapter(
         notifyDataSetChanged()
     }
 
-
-
     fun findProductPositionById(productId: Int): Int {
         return lines.indexOfFirst { it.id == productId }
     }
@@ -139,7 +137,7 @@ class PickProductsAdapter(
             pickProductDestLocationView.text = "To Location: ${moveline.locationDestName}"
             pickProductLotView.text = "Lot/Serial Number: ${moveline.lotName}"
 
-            pickProductLotView.visibility = if (moveline.trackingType == "none") View.GONE else View.VISIBLE
+            pickProductLotView.visibility = if (moveline.trackingType == "none" || moveline.lotName.isEmpty()) View.GONE else View.VISIBLE
 
             val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)
             nameTextView.setTextColor(whiteColor)
@@ -153,8 +151,14 @@ class PickProductsAdapter(
                 else ContextCompat.getColor(itemView.context, R.color.cardGrey)
             )
 
-            itemView.setOnClickListener {
-                listener.onProductClick(moveline)
+            if (matches) {
+                itemView.setOnClickListener {
+                    listener.onProductClick(moveline)
+                }
+                itemView.isClickable = true
+            } else {
+                itemView.setOnClickListener(null)
+                itemView.isClickable = false
             }
         }
     }

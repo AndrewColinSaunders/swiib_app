@@ -1,11 +1,10 @@
 package com.example.warehousetet
 
-import IntTransferProducts
-
 data class InternalTransfers(
     val id: Int,
-    val transferName: String,
-    val transferDate: String,
-    val sourceDocument: String,
-    val productDetails: List<IntTransferProducts>
+    val name: String,
+    val date: String,
+    val origin: String,
+    var locationId: String?,
+    var locationDestId: String?
 )

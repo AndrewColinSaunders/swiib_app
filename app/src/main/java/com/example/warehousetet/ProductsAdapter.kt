@@ -134,37 +134,6 @@ class ProductsAdapter(
 
         private val cardView: MaterialCardView = itemView.findViewById(R.id.productItemCard) // Assuming you have MaterialCardView as the root of your item layout
 
-
-//        fun bind(moveLine: ReceiptMoveLine, matches: Boolean) {
-//            nameTextView.text = moveLine.productName
-//            productQuantityTextView.text = "Quantity: ${moveLine.quantity}"
-//            productDestinationLocationTextView.text = "To: ${moveLine.locationDestName}"
-//            productLotSerialNumberTextView.text = "Lot/Serial number: ${moveLine.lotName}"
-//            productUomQtyTextView.text = "Expected Quantity: ${moveLine.expectedQuantity}"
-//            productTotalQuantTextView.text = "Total Current Quantity: ${moveLine.totalQuantity}"
-//
-//            productLotSerialNumberTextView.visibility = if (moveLine.trackingType == "none") View.GONE else View.VISIBLE
-//
-//            // Set text color to white for all TextViews
-//            val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white) // or R.color.white if you have it defined
-//            nameTextView.setTextColor(whiteColor)
-//            quantityTextView.setTextColor(whiteColor)
-//            productQuantityTextView.setTextColor(whiteColor)
-//            productDestinationLocationTextView.setTextColor(whiteColor)
-//            productLotSerialNumberTextView.setTextColor(whiteColor)
-//            productUomQtyTextView.setTextColor(whiteColor)
-//            productTotalQuantTextView.setTextColor(whiteColor)
-//
-//            val context = itemView.context // Use itemView's context to ensure correct resource access
-//            cardView.setCardBackgroundColor(
-//                if (matches) ContextCompat.getColor(context, R.color.success_green) // Use your success_green color
-//                else ContextCompat.getColor(context, R.color.cardGrey) // Default or original card background color
-//            )
-//
-//            itemView.setOnClickListener {
-//                listener.onProductClick(moveLine)
-//            }
-//        }
     fun bind(moveLine: ReceiptMoveLine, matches: Boolean) {
         nameTextView.text = moveLine.productName
         productQuantityTextView.text = "Quantity: ${moveLine.quantity}"
@@ -173,7 +142,7 @@ class ProductsAdapter(
         productUomQtyTextView.text = "Expected Quantity: ${moveLine.expectedQuantity}"
         productTotalQuantTextView.text = "Total Current Quantity: ${moveLine.totalQuantity}"
 
-        productLotSerialNumberTextView.visibility = if (moveLine.trackingType == "none") View.GONE else View.VISIBLE
+        productLotSerialNumberTextView.visibility = if (moveLine.trackingType == "none" || moveLine.lotName.isEmpty()) View.GONE else View.VISIBLE
 
         // Set text color to white for all TextViews
         val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)

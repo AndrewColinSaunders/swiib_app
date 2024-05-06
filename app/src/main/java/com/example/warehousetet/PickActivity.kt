@@ -239,7 +239,6 @@ class PickActivity : AppCompatActivity() {
         }
     }
 
-
     private fun initializeRecyclerView() {
         val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView) // Make sure your layout file for PickActivity includes a RecyclerView with this ID
         recyclerView.layoutManager = LinearLayoutManager(this)

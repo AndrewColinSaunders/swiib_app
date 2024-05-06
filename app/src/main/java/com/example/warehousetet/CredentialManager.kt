@@ -39,7 +39,7 @@ import android.util.Log
 //
 //}
 
-class CredentialManager(context: Context) {
+open class CredentialManager(context: Context) {
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences("OdooPrefs", Context.MODE_PRIVATE)
 
     fun storeUserCredentials(username: String, password: String, userId: Int) {

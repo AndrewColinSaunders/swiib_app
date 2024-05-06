@@ -17,6 +17,8 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 
 class LoginActivity : AppCompatActivity() {
+    lateinit var credentialManager: CredentialManager
+    lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private val coroutineScope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,8 +37,6 @@ class LoginActivity : AppCompatActivity() {
         }
 
         Constants.update(this)
-
-
 
         val loginButton = findViewById<Button>(R.id.login_button)
         val usernameEditText = findViewById<EditText>(R.id.username)
@@ -103,7 +103,6 @@ class LoginActivity : AppCompatActivity() {
         Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
         showRedToast(errorMessage)
     }
-
 
     private fun showRedToast(message: String) {
         val toast = Toast.makeText(this@LoginActivity, message, Toast.LENGTH_SHORT)
