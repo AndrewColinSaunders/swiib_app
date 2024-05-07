@@ -802,6 +802,108 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             )
         }
     }
+    suspend fun updateMoveLinesForReceipt(
+        lineId: Int,
+        pickingId: Int,
+        serialNumber: String
+    ) {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting updateMoveLinesWithoutExpiration."
+            )
+            return
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line", // Ensure this matches the model where your method is defined
+            "write_lot_name_for_receiving", // Use the adjusted method name that excludes expiration date
+            listOf(
+                lineId,
+                pickingId,
+                serialNumber
+            ) // Parameters excluding the expiration date
+        )
+
+        try {
+            val result = client.execute("execute_kw", params) as? Boolean
+            if (result == true) {
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "Successfully updated/created stock.move.line record without expiration date."
+                )
+            } else {
+                Log.e(
+                    "OdooXmlRpcClient",
+                    "Failed to update/create stock.move.line record without expiration date."
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}"
+            )
+        }
+    }
+    suspend fun updateMoveLineQuantityForReceipt(
+        lineId: Int,
+        pickingId: Int,
+        quantity: Int
+    ) {
+        val config = getClientConfig("object")
+        if (config == null) {
+            Log.e(
+                "OdooXmlRpcClient",
+                "Client configuration is null, aborting updateMoveLinesWithoutExpiration."
+            )
+            return
+        }
+
+        val client = XmlRpcClient().also { it.setConfig(config) }
+        val userId = credentialManager.getUserId()
+        val password = credentialManager.getPassword() ?: ""
+
+        val params = listOf(
+            Constants.DATABASE,
+            userId,
+            password,
+            "stock.move.line", // Ensure this matches the model where your method is defined
+            "write_quantity_for_receiving", // Use the adjusted method name that excludes expiration date
+            listOf(
+                lineId,
+                pickingId,
+                quantity
+            ) // Parameters excluding the expiration date
+        )
+
+        try {
+            val result = client.execute("execute_kw", params) as? Boolean
+            if (result == true) {
+                Log.d(
+                    "OdooXmlRpcClient",
+                    "Successfully updated/created stock.move.line record without expiration date."
+                )
+            } else {
+                Log.e(
+                    "OdooXmlRpcClient",
+                    "Failed to update/create stock.move.line record without expiration date."
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(
+                "OdooXmlRpcClient",
+                "Error executing updateMoveLinesWithoutExpiration: ${e.localizedMessage}"
+            )
+        }
+    }
 
     suspend fun updateMoveLinesByPickingWithLot(
         pickingId: Int,

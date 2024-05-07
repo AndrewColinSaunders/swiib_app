@@ -1517,30 +1517,31 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
     }
 
     companion object {
-        private const val CAMERA_REQUEST_CODE = 1001
+        const val CAMERA_REQUEST_CODE = 1001
     }
 
     private fun captureImage(pickId: Int) {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Capture Image?")
-        builder.setMessage("Would you like to capture an image?")
+        // Inflate the custom layout for the dialog
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.capture_image_dialog, null)
 
-        // No button - just dismiss the dialog
-        builder.setNegativeButton("No") { dialog, _ ->
+        // Create and show the dialog
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        // Find buttons and set up click listeners
+        dialogView.findViewById<Button>(R.id.btnNo).setOnClickListener {
             dialog.dismiss()
         }
 
-        // Capture Image button - open the camera
-        builder.setPositiveButton("Capture Image") { dialog, _ ->
+        dialogView.findViewById<Button>(R.id.btnCaptureImage).setOnClickListener {
             dialog.dismiss()
-            openCamera(pickId)  // Pass pickId to ensure it is available after capturing the image
+            openCamera()  // Pass pickId to ensure it is available after capturing the image
         }
-
-        val dialog = builder.create()
         dialog.show()
     }
 
-    private fun openCamera(pickId: Int) {
+    private fun openCamera() {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         if (cameraIntent.resolveActivity(packageManager) != null) {
             startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
@@ -1666,7 +1667,7 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
                 try {
                     odooXmlRpcClient.updateMoveLinesForPick(product.id, pickId, enteredSerialNumber, product.productId)
                     withContext(Dispatchers.Main) {
-                        Log.d("UpdateProduct", "Successfully updated move line for product ID: ${product.id}")
+                        Log.d("UpdateProduct", "Successfully updated move line for product ID: ${product.productId}")
                         fetchProductsForPick(pickId)
                     }
                 } catch (e: Exception) {
@@ -2020,12 +2021,8 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
         val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
         val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
         val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
-<<<<<<< HEAD
         val messageTextView = dialogView.findViewById<TextView>(R.id.ProductMessage)
         messageTextView.text = "Product: $productName"
-=======
-
->>>>>>> 22ce4da8cd1e030ccd93cb2f5be84ba3348e59e3
         serialNumberInput.setHintTextColor(Color.WHITE)
 
         // Set up the editor action listener for the serial number input
@@ -2173,7 +2170,6 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
         saveMatchStateToPreferences(key, quantityMatches[key] == true)
     }
 
-
     private fun checkAndToggleValidateButton(pickId: Int) {
         val allMatched = quantityMatches.filterKeys { it.pickId == pickId }.all { it.value }
         val validateButton = findViewById<Button>(R.id.pickValidateButton)
@@ -2282,7 +2278,6 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
                 }
             }
         }
-
         quantityMatches.clear()
         quantityMatches.putAll(tempQuantityMatches)
 

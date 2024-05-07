@@ -2,8 +2,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="#FFF">
+    android:padding="24dp"
+    android:background="#212d40">
 
     <TextView
         android:id="@+id/tvDialogTitle"
@@ -11,18 +11,21 @@
         android:layout_height="wrap_content"
         android:text="Flag Pick"
         android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:textSize="20sp"
+        android:textColor="@android:color/white"
         android:gravity="center"
         android:padding="8dp"
-        android:textStyle="bold"/>
+        android:layout_marginBottom="16dp"/>
 
     <TextView
         android:id="@+id/tvDialogMessage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Are you sure you want to flag this pick?"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:textSize="18sp"
+        android:textColor="@android:color/white"
         android:gravity="center"
-        android:paddingBottom="16dp"/>
+        android:paddingBottom="20dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -38,17 +41,21 @@
             android:layout_weight="1"
             android:text="Cancel"
             android:textAllCaps="false"
+            android:textSize="20sp"
+            android:textColor="@android:color/white"
             android:backgroundTint="@color/danger_red"
-            android:layout_marginEnd="16dp"/> <!-- Increased margin between buttons -->
+            android:layout_marginEnd="8dp"/>
 
         <Button
             android:id="@+id/btnFlagPick"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Flag Pick"
+            android:text="Flag"
             android:textAllCaps="false"
+            android:textSize="20sp"
+            android:textColor="@android:color/white"
             android:backgroundTint="?attr/colorSecondaryVariant"
-            android:layout_marginStart="16dp"/> <!-- Increased margin between buttons -->
+            android:layout_marginStart="8dp"/>
     </LinearLayout>
 </LinearLayout>
