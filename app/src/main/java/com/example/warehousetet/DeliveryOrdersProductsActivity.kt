@@ -1,11 +1,7 @@
 package com.example.warehousetet
 
+import android.annotation.SuppressLint
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.media.MediaPlayer
 import android.os.Bundle
@@ -20,18 +16,11 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.print.PrintHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.*
-import org.apache.xmlrpc.XmlRpcException
-import java.io.File
-import java.io.FileOutputStream
-import com.google.zxing.common.BitMatrix
-import com.google.zxing.MultiFormatWriter
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.EncodeHintType
+
 
 
 
@@ -42,10 +31,12 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     private var currentProductName: String? = null
     private val deliveryOrdersMoveLines = mutableListOf<DeliveryOrdersMovedLine>()
     private lateinit var barcodeInput: EditText
-    private var shouldShowPrinterIcon = false
     private var lastScannedBarcode = StringBuilder()
     private var lastKeyTime: Long = 0
     private var isScannerInput = false
+    private val usedSerialNumbers = mutableSetOf<String>()
+    private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
+    private val verifiedSerialNumbers = mutableSetOf<String>()
 
 
 
@@ -87,7 +78,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
             if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
                 if (isScannerInput) {
                     val scannedPackageBarcode = lastScannedBarcode.toString()
-                    verifyPackageBarcode(scannedPackageBarcode)
+                    verifyBarcode(scannedPackageBarcode)
                     lastScannedBarcode.clear()
                     isScannerInput = false
                 }
@@ -104,6 +95,40 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         }
         return super.dispatchKeyEvent(event)
     }
+
+
+
+    private fun verifyBarcode(scannedBarcode: String) = lifecycleScope.launch {
+        // First, attempt to verify as a package barcode
+        val matchingPackage = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }
+            .find { it.resultPackageName == scannedBarcode }
+
+        if (matchingPackage != null) {
+            Log.d("DeliveryOrdersProductsActivity", "Package verification successful: Package ID ${matchingPackage.resultPackageId} has been verified.")
+            handlePackageVerificationSuccess(matchingPackage)
+            barcodeInput.text.clear()
+            return@launch  // Exit the function after successful package verification
+        }
+
+        // If no package is found, check as a product barcode but only if it is "Not Packaged"
+        val allMoveLines = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }
+        val matchingMoveLine = allMoveLines.find { moveLine ->
+            moveLine.resultPackageName == "None" && withContext(Dispatchers.IO) {
+                odooXmlRpcClient.fetchProductBarcodeByName(moveLine.productName)
+            } == scannedBarcode
+        }
+
+        if (matchingMoveLine != null) {
+            Log.d("DeliveryOrdersProductsActivity", "Barcode verification successful for product: ${matchingMoveLine.productName}")
+            checkProductTrackingAndHandle(matchingMoveLine)  // Adjust this if you don't need package handling logic here
+            barcodeInput.text.clear()
+        } else {
+            Toast.makeText(this@DeliveryOrdersProductsActivity, "Barcode does not match any known package or product, or is not 'Not Packaged'.", Toast.LENGTH_SHORT).show()
+            Log.e("DeliveryOrdersProductsActivity", "Barcode verification failed. No matching 'Not Packaged' product found.")
+            barcodeInput.selectAll()
+        }
+    }
+
 
 
 
@@ -154,7 +179,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         packConfirmButton.setOnClickListener {
             val typedBarcode = barcodeInput.text.toString()
             if (typedBarcode.isNotEmpty()) {
-                verifyPackageBarcode(typedBarcode)
+                verifyBarcode(typedBarcode)
                 barcodeInput.text.clear()
             } else {
                 Toast.makeText(this, "Please enter or scan a barcode first.", Toast.LENGTH_SHORT).show()
@@ -162,23 +187,12 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         }
     }
 
+
+
     override fun onVerificationStatusChanged(allVerified: Boolean) {
         validateButton.visibility = if (allVerified) View.VISIBLE else View.INVISIBLE
     }
 
-    private fun verifyPackageBarcode(scannedBarcode: String) = lifecycleScope.launch {
-        val matchingPackage = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }
-            .find { it.resultPackageName == scannedBarcode }
-
-        if (matchingPackage != null) {
-            Log.d("DeliveryOrdersProductsActivity", "Package verification successful: Package ID ${matchingPackage.resultPackageId} has been verified.")
-            handlePackageVerificationSuccess(matchingPackage)
-            barcodeInput.text.clear()
-        } else {
-            Toast.makeText(this@DeliveryOrdersProductsActivity, "No matching package found.", Toast.LENGTH_SHORT).show()
-            barcodeInput.selectAll()
-        }
-    }
 
     private fun handlePackageVerificationSuccess(moveLine: MoveLine) {
         Log.d("DeliveryOrdersProductsActivity", "Verified package: ${moveLine.resultPackageName}")
@@ -206,6 +220,8 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
             Log.d("PackProductsActivity", "Fetched move lines: $fetchedMoveLines")
             Log.d("DeliveryOrdersProductsActivity1234556", "Fetched move lines: ${fetchedMoveLines.map { it.productName + ": " + it.quantity }}")
             updateUIForMoveLines(fetchedMoveLines)
+            updateRelevantSerialNumbers(fetchedMoveLines)
+
 
             // Extract unique product names
             val uniqueProductNames = fetchedMoveLines.map { it.productName }.distinct()
@@ -221,6 +237,22 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         }
     }
 
+    private fun updateRelevantSerialNumbers(moveLines: List<MoveLine>) {
+        serialNumberToMoveLineIdMap.clear()
+        moveLines.forEach { moveLine ->
+            if (moveLine.lotName.isNotBlank()) {
+                // Map each serial number to its move line ID
+                serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
+            }
+        }
+        Log.d("PackProductsActivity", "Updated serial numbers to move line IDs: ${serialNumberToMoveLineIdMap.entries.joinToString(", ") { "${it.key}: ${it.value}" }}")
+    }
+
+    // Function to fetch the move line ID based on the serial number
+    private fun fetchMoveLineIdForSerialNumber(serialNumber: String): Int? {
+        return serialNumberToMoveLineIdMap[serialNumber]
+    }
+
 
     private fun updateUIForMoveLines(moveLines: List<MoveLine>) {
         runOnUiThread {
@@ -232,54 +264,6 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         }
     }
 
-
-    /*
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            if (event.keyCode == KeyEvent.KEYCODE_ENTER) {
-                if (isScannerInput) {
-                    barcodeInput.setText(lastScannedBarcode.toString())
-                    verifyProductBarcode(lastScannedBarcode.toString())
-                    lastScannedBarcode.clear()
-                    isScannerInput = false
-                }
-                return true
-            } else {
-                val char = event.unicodeChar.toChar()
-                if (!Character.isISOControl(char)) {
-                    val currentTime = System.currentTimeMillis()
-                    isScannerInput = lastKeyTime != 0L && (currentTime - lastKeyTime) < 50
-                    lastScannedBarcode.append(char)
-                    lastKeyTime = currentTime
-                }
-            }
-        }
-        return super.dispatchKeyEvent(event)
-    }
-
-    private fun verifyProductBarcode(scannedBarcode: String) = lifecycleScope.launch {
-        val matchingMoveLine = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }
-            .find { it.resultPackageName == scannedBarcode }
-
-        if (matchingMoveLine != null) {
-            Log.d("PackProductsActivity", "Barcode verification successful for product: ${matchingMoveLine.productName}")
-            checkProductTrackingAndHandle(matchingMoveLine)
-            barcodeInput.text.clear()
-        } else {
-            Toast.makeText(this@DeliveryOrdersProductsActivity, "Barcode does not match any product.", Toast.LENGTH_SHORT).show()
-            barcodeInput.selectAll()
-        }
-    }
-
-
-
-    private fun handleVerificationFailure(productName: String?, scannedBarcode: String, expectedBarcode: String?) {
-        Toast.makeText(this, "Barcode mismatch for $productName. Expected: $expectedBarcode, Found: $scannedBarcode", Toast.LENGTH_LONG).show()
-        barcodeInput.selectAll() // Select all text in EditText to facilitate correction
-    }
-
-
-     */
 
 
     private fun checkProductTrackingAndHandle(moveLine: MoveLine) = lifecycleScope.launch {
@@ -303,23 +287,150 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     }
 
     private fun handleNoTracking(moveLine: MoveLine) {
-        // Log the handling action
-        Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}.")
+        Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}. Marking as verified.")
 
-        // Call the showInformationDialog to display the packing instructions
+        // Since addVerifiedBarcode now expects a String, convert lineId to String directly.
+        val barcodeIdentifier = moveLine.lineId.toString()
+
+        // Check if the barcode identifier is not empty.
+        if (barcodeIdentifier.isNotEmpty()) {
+            deliveryOrdersProductsAdapter.addVerifiedBarcode(barcodeIdentifier)  // This expects a String.
+            Log.d("VerifyBarcode", "Marking barcode $barcodeIdentifier as verified without tracking.")
+
+            // Find the index of the current moveLine in the flat list of all moveLines.
+            val index = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }.indexOf(moveLine)
+            if (index != -1) {
+                deliveryOrdersProductsAdapter.notifyItemChanged(index)
+                Log.d("AdapterUpdate", "Updated item at index $index as verified.")
+            } else {
+                // If the moveLine wasn't found, force a full refresh of the adapter.
+                deliveryOrdersProductsAdapter.notifyDataSetChanged()
+                Log.d("AdapterUpdate", "Full adapter refresh triggered.")
+            }
+        } else {
+            Log.e("PackProductsActivity", "Invalid identifier for moveLine: ${moveLine.productName}")
+        }
     }
 
 
     private fun handleSerialTracking(moveLine: MoveLine) {
         // Implement logic for products tracked by serial number
         Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLine.productName}.")
+        showDialogScanSerialNumber(moveLine)
     }
 
     private fun handleLotTracking(moveLine: MoveLine) {
         // Implement logic for products tracked by lot
         Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
+        showDialogScanLotNumber(moveLine)
     }
 
+    private fun showDialogScanSerialNumber(moveLine: MoveLine) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_scan_serial, null)
+        val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)
+        val confirmButton = dialogView.findViewById<MaterialButton>(R.id.confirmButton)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        confirmButton.setOnClickListener {
+            val enteredSerial = serialInput.text.toString().trim()
+            if (enteredSerial.isEmpty()) {
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "Please enter a serial number.", Toast.LENGTH_SHORT).show()
+                serialInput.requestFocus()
+                return@setOnClickListener
+            }
+
+            if (usedSerialNumbers.contains(enteredSerial)) {
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "This serial number has already been used. Please enter a different one.", Toast.LENGTH_LONG).show()
+                serialInput.requestFocus() // Focus back to the input for correction
+                return@setOnClickListener
+            }
+
+            val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+            if (moveLineId != null) {
+                usedSerialNumbers.add(enteredSerial)
+
+                // Add serial number to verified list using the adapter's method
+                deliveryOrdersProductsAdapter.addVerifiedSerialNumber(enteredSerial)
+
+                Log.d("VerifySerial", "Adding serial $enteredSerial to verified list")
+
+                // Calculate the index to refresh the correct item
+                val index = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }.indexOfFirst { it.lineId == moveLineId }
+                if (index != -1) {
+                    deliveryOrdersProductsAdapter.notifyItemChanged(index)
+
+                    // Log before updating adapter to see what data is being pushed
+                    Log.d("AdapterUpdate", "Updating adapter at index $index with new verified serials: ${deliveryOrdersProductsAdapter.verifiedSerialNumbers}")
+                }
+
+                Log.d("SerialVerification", "Serial number $enteredSerial has been successfully verified.")
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "Serial number verified successfully.", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            } else {
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "Invalid serial number entered. Please check and try again.", Toast.LENGTH_LONG).show()
+                serialInput.requestFocus()  // Focus back to the input for correction
+            }
+        }
+
+        dialog.show()
+    }
+
+    @SuppressLint("MissingInflatedId")
+    private fun showDialogScanLotNumber(moveLine: MoveLine) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_scan_lot, null)
+        val lotInput = dialogView.findViewById<EditText>(R.id.lotInput)
+        val confirmButton = dialogView.findViewById<MaterialButton>(R.id.confirmButton)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        confirmButton.setOnClickListener {
+            val enteredSerial = lotInput.text.toString().trim()
+            if (enteredSerial.isEmpty()) {
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "Please enter a serial number.", Toast.LENGTH_SHORT).show()
+                lotInput.requestFocus()
+                return@setOnClickListener
+            }
+
+            if (usedSerialNumbers.contains(enteredSerial)) {
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "This serial number has already been used. Please enter a different one.", Toast.LENGTH_LONG).show()
+                lotInput.requestFocus() // Focus back to the input for correction
+                return@setOnClickListener
+            }
+
+            val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+            if (moveLineId != null) {
+                usedSerialNumbers.add(enteredSerial)
+
+                // Add serial number to verified list using the adapter's method
+                deliveryOrdersProductsAdapter.addVerifiedSerialNumber(enteredSerial)
+
+                Log.d("VerifySerial", "Adding serial $enteredSerial to verified list")
+
+                // Calculate the index to refresh the correct item
+                val index = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }.indexOfFirst { it.lineId == moveLineId }
+                if (index != -1) {
+                    deliveryOrdersProductsAdapter.notifyItemChanged(index)
+
+                    // Log before updating adapter to see what data is being pushed
+                    Log.d("AdapterUpdate", "Updating adapter at index $index with new verified serials: ${deliveryOrdersProductsAdapter.verifiedSerialNumbers}")
+                }
+
+                Log.d("SerialVerification", "Serial number $enteredSerial has been successfully verified.")
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "Serial number verified successfully.", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            } else {
+                Toast.makeText(this@DeliveryOrdersProductsActivity, "Invalid serial number entered. Please check and try again.", Toast.LENGTH_LONG).show()
+                lotInput.requestFocus()  // Focus back to the input for correction
+            }
+        }
+
+        dialog.show()
+    }
 
 
     //============================================================================================================
