@@ -1,5 +1,6 @@
 package com.example.warehousetet
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -10,6 +11,7 @@ import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.os.Vibrator
 import android.provider.MediaStore
 import android.text.SpannableString
 import android.text.Spanned
@@ -67,7 +69,6 @@ class PackProductsActivity : AppCompatActivity() {
     private var lastScannedBarcode = StringBuilder()
     private var lastKeyTime: Long = 0
     private var isScannerInput = false
-    //private var isPrintVisible = true
     private var relevantSerialNumbers = mutableListOf<String>()
     private val usedSerialNumbers = mutableSetOf<String>()
     private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
@@ -77,8 +78,6 @@ class PackProductsActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pack_activity_products)
-
-
 
 
         loadPackagedIds()
@@ -106,7 +105,6 @@ class PackProductsActivity : AppCompatActivity() {
         flagItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, R.color.danger_red), PorterDuff.Mode.SRC_ATOP)
 
 
-        //printItem?.isVisible = isPrintVisible  // Control visibility based on your variable
         return true
     }
 
@@ -120,6 +118,7 @@ class PackProductsActivity : AppCompatActivity() {
         validateButton.visibility = View.GONE
         barcodeInput = findViewById(R.id.packBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
+        val clearButton = findViewById<Button>(R.id.packClearButton)
 
         shouldShowPrinterIcon = false
 
@@ -135,11 +134,16 @@ class PackProductsActivity : AppCompatActivity() {
         //                                          Validate Operation
         //============================================================================================================
         validateButton.setOnClickListener {
+            // Log the validation attempt
             Log.d("ValidationAttempt", "Attempting to validate operation for pack ID: $packId")
+
+            // Get the Vibrator service from the system
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            vibrator.vibrate(50) // Vibrate for 50 milliseconds
+
             lifecycleScope.launch {
                 if (odooXmlRpcClient.validateOperation(packId, this@PackProductsActivity)) {
                     Toast.makeText(this@PackProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
-
 
                     //============================================================================================================
                     //                              Plays the sound for the validation button
@@ -153,7 +157,6 @@ class PackProductsActivity : AppCompatActivity() {
                     }
                     //============================================================================================================
 
-
                     // Navigate to PackActivity if validation is successful
                     val intent = Intent(this@PackProductsActivity, PackActivity::class.java)
                     startActivity(intent)
@@ -164,10 +167,15 @@ class PackProductsActivity : AppCompatActivity() {
         }
 
 
+
         //============================================================================================================
         //                       Confirm button for when the user has to type in barcode
         //============================================================================================================
         packConfirmButton.setOnClickListener {
+            // Get the Vibrator service from the system
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            vibrator.vibrate(50) // Vibrate for 50 milliseconds
+
             val typedBarcode = barcodeInput.text.toString()
             if (typedBarcode.isNotEmpty()) {
                 // Logging the barcode to Logcat
@@ -178,6 +186,18 @@ class PackProductsActivity : AppCompatActivity() {
             } else {
                 Toast.makeText(this, "Please enter or scan a barcode first.", Toast.LENGTH_SHORT).show()
             }
+        }
+
+
+        //============================================================================================================
+        //                       Clear button to clear the EditView of text
+        //============================================================================================================
+        clearButton.setOnClickListener {
+            // Get the Vibrator service from the system
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            vibrator.vibrate(50) // Vibrate for 50 milliseconds
+
+            barcodeInput.text.clear() // Clear the text in the barcode input EditText
         }
     }
 
@@ -900,33 +920,54 @@ class PackProductsActivity : AppCompatActivity() {
 
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
         when (item.itemId) {
             android.R.id.home -> {
-                onBackPressed() // This will handle the back action
+                onBackPressed()
+                vibrator.vibrate(50)  // Vibrate for 50 milliseconds
                 return true
             }
             R.id.action_flag -> {
-                showFlagDialog() // Show flag dialog when flag icon is clicked
+                showFlagDialog()
+                vibrator.vibrate(50)
                 return true
+            }
+            R.id.action_print -> {
+                val subMenu = item.subMenu
+                if (subMenu == null || subMenu.size() == 0) {
+                    Toast.makeText(this, "There Is Nothing To Print Right Now", Toast.LENGTH_LONG).show()
+                    vibrator.vibrate(50)  // Vibrate if there's nothing to print
+                    return true
+                } else {
+                    // Add vibration on opening the submenu
+                    vibrator.vibrate(50)
+                }
             }
         }
         return super.onOptionsItemSelected(item)
     }
 
 
+
+
     private fun showFlagDialog() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
         val dialogBuilder = AlertDialog.Builder(this).apply {
             setView(dialogView)
-            setCancelable(false)  // Prevent dialog from being dismissed by back press or outside touches
+            setCancelable(true)  // Prevent dialog from being dismissed by back press or outside touches
         }
         val dialog = dialogBuilder.create()
 
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
         dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            vibrator.vibrate(50) // Vibrate for 50 milliseconds
             dialog.dismiss()  // Dismiss the dialog when "Cancel" is clicked
         }
 
         dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
+            vibrator.vibrate(50)
             lifecycleScope.launch {
                 try {
                     val pickId = this@PackProductsActivity.packId
@@ -973,16 +1014,19 @@ class PackProductsActivity : AppCompatActivity() {
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Capture Image?")
         builder.setMessage("Would you like to capture an image?")
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
         // No button - just dismiss the dialog
         builder.setNegativeButton("No") { dialog, _ ->
+            vibrator.vibrate(50)
             dialog.dismiss()
         }
 
         // Capture Image button - open the camera
         builder.setPositiveButton("Capture Image") { dialog, _ ->
+            vibrator.vibrate(50)
             dialog.dismiss()
-            openCamera(packId)  // Pass pickId to ensure it is available after capturing the image
+            openCamera(packId)  // Pass packId to ensure it is available after capturing the image
         }
 
         val dialog = builder.create()
@@ -1021,9 +1065,6 @@ class PackProductsActivity : AppCompatActivity() {
             }
         }
     }
-
-
-
 
 
 
@@ -1204,23 +1245,23 @@ class PackProductsActivity : AppCompatActivity() {
     override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         super.onPrepareOptionsMenu(menu)
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
-        val printItem = menu?.findItem(R.id.action_print)
         subMenu?.clear()
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
-        val addedPackageNames = mutableSetOf<String>() // Keep track of added package names
+        val addedPackageNames = mutableSetOf<String>()
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
-                val packages =  odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
+                val packages = odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
                 withContext(Dispatchers.Main) {
                     packages.forEach { packageInfo ->
-                        // Add package name only if it hasn't been added before
                         if (!addedPackageNames.contains(packageInfo.name)) {
                             subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
                                 printPackage(packageInfo.name)
+                                vibrator.vibrate(50)  // Vibrate on selecting a submenu item
                                 true
                             }
-                            addedPackageNames.add(packageInfo.name) // Add package name to the set
+                            addedPackageNames.add(packageInfo.name)
                         }
                     }
                 }

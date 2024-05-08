@@ -1,7 +1,9 @@
 package com.example.warehousetet
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.graphics.PorterDuff
 import android.media.MediaPlayer
 import android.os.Bundle
@@ -62,6 +64,48 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
             Log.e("DeliveryOrdersProductsActivity", "Invalid delivery orders ID passed to DeliveryOrdersProductsActivity.")
         }
     }
+
+    override fun onPause() {
+        super.onPause()
+        saveVerificationState()  // Save state when the activity is not visible
+    }
+
+    override fun onResume() {
+        super.onResume()
+        loadVerificationState()  // Load state when the activity returns to the foreground
+    }
+
+    private fun getSharedPreferences(): SharedPreferences {
+        return getSharedPreferences("DeliveryOrderPrefs", Context.MODE_PRIVATE)
+    }
+
+    private fun saveVerificationState() {
+        val verifiedPackages = deliveryOrdersProductsAdapter.verifiedPackages.joinToString(",")
+        val verifiedSerialNumbers = deliveryOrdersProductsAdapter.verifiedSerialNumbers.joinToString(",")
+        val verifiedBarcodes = deliveryOrdersProductsAdapter.verifiedBarcodes.joinToString(",")
+        val isValidateButtonVisible = validateButton.visibility == View.VISIBLE
+
+        getSharedPreferences().edit().apply {
+            putString("verifiedPackages", verifiedPackages)
+            putString("verifiedSerialNumbers", verifiedSerialNumbers)
+            putString("verifiedBarcodes", verifiedBarcodes)
+            putBoolean("validateButtonVisible", isValidateButtonVisible)
+            apply()
+        }
+    }
+
+    private fun loadVerificationState() {
+        val prefs = getSharedPreferences()
+        deliveryOrdersProductsAdapter.verifiedPackages = prefs.getString("verifiedPackages", "")!!.split(",").filterNot { it.isEmpty() }.map { it.toInt() }.toMutableSet()
+        deliveryOrdersProductsAdapter.verifiedSerialNumbers = prefs.getString("verifiedSerialNumbers", "")!!.split(",").filterNot { it.isEmpty() }.toMutableSet()
+        deliveryOrdersProductsAdapter.verifiedBarcodes = prefs.getString("verifiedBarcodes", "")!!.split(",").filterNot { it.isEmpty() }.toMutableSet()
+
+        val isButtonVisible = prefs.getBoolean("validateButtonVisible", false)
+        validateButton.visibility = if (isButtonVisible) View.VISIBLE else View.INVISIBLE
+
+        deliveryOrdersProductsAdapter.notifyDataSetChanged() // Refresh the adapter with the loaded state
+    }
+
 
 
     //Nothing changing here=============================================================================================================================

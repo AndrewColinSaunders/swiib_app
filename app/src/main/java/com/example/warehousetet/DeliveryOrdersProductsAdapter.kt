@@ -14,7 +14,7 @@ import com.google.android.material.card.MaterialCardView
 
 class DeliveryOrdersProductsAdapter(private val verificationListener: VerificationListener) : RecyclerView.Adapter<DeliveryOrdersProductsAdapter.GroupViewHolder>() {
     var sections: List<PackageSection> = listOf()
-    private val verifiedPackages = mutableSetOf<Int>()
+    var verifiedPackages = mutableSetOf<Int>()
     public var verifiedSerialNumbers = mutableSetOf<String>()
     public var verifiedBarcodes = mutableSetOf<String>()  // This will now store lineIds as string for verified barcodes.
 
@@ -77,6 +77,8 @@ class DeliveryOrdersProductsAdapter(private val verificationListener: Verificati
     interface VerificationListener {
         fun onVerificationStatusChanged(allVerified: Boolean)
     }
+
+
 
     class ItemAdapter(private var items: List<MoveLine>, private var isVerified: Boolean, private var verifiedSerialNumbers: Set<String>, private var verifiedBarcodes: Set<String>) : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {

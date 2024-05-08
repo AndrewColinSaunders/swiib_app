@@ -1,5 +1,9 @@
 package com.example.warehousetet
 
+import android.content.Context
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -35,6 +39,14 @@ class PackAdapter(
                 val position = adapterPosition
                 if (position != RecyclerView.NO_POSITION) {
                     onPackClicked(packs[position])
+
+                    // Access the Vibrator service
+                    val vibrator = itemView.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        vibrator.vibrate(50) // Deprecated in API 26
+                    }
                 }
             }
         }
