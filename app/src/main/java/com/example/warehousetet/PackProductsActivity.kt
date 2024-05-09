@@ -59,7 +59,7 @@ import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 
 
-class PackProductsActivity : AppCompatActivity() {
+class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.VerificationListener {
     private lateinit var packProductsAdapter: PackProductsAdapter
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     //private var currentProductName: String? = null
@@ -74,25 +74,29 @@ class PackProductsActivity : AppCompatActivity() {
     private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
     private val packName by lazy {intent.getStringExtra("PACK_NAME")}
+    private lateinit var validateButton: Button
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pack_activity_products)
 
 
-        loadPackagedIds()
-        //loadPrintIconVisibility()
 
         Log.d("PackProductsActivity", "Activity created with pack ID: $packId")
 
         odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
         initializeUI()
+        loadVerificationState()
+        loadPackagedIds()
         if (packId != -1) {
             fetchMoveLinesForPickingId()
         } else {
             Log.e("PackProductsActivity", "Invalid pack ID passed to PackProductsActivity.")
         }
     }
+
+
 
     //============================================================================================================
     //                                          Flag and printer icon code
@@ -109,12 +113,20 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
 
+    override fun onVerificationStatusChanged(allVerified: Boolean) {
+        runOnUiThread {
+            validateButton.visibility = if (allVerified) View.VISIBLE else View.GONE
+            saveVerificationState(allVerified)
+        }
+    }
+
+
     private fun initializeUI() {
         val packName = intent.getStringExtra("PACK_NAME") ?: "Pack"
         supportActionBar?.title = packName
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        val validateButton = findViewById<Button>(R.id.validateOperationButton)
+        validateButton = findViewById<Button>(R.id.validateOperationButton)
         validateButton.visibility = View.GONE
         barcodeInput = findViewById(R.id.packBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
@@ -122,7 +134,7 @@ class PackProductsActivity : AppCompatActivity() {
 
         shouldShowPrinterIcon = false
 
-        packProductsAdapter = PackProductsAdapter(emptyList(), packId, packagedMoveLines)
+        packProductsAdapter = PackProductsAdapter(emptyList(), packId, packagedMoveLines, this)
         findViewById<RecyclerView>(R.id.packProductsRecyclerView).apply {
             layoutManager = LinearLayoutManager(this@PackProductsActivity)
             adapter = packProductsAdapter
@@ -808,6 +820,7 @@ class PackProductsActivity : AppCompatActivity() {
     //============================================================================================================
     //                               Save the state of the activity code
     //============================================================================================================
+
     private fun savePackagedIds() {
         val editor = getSharedPreferences("PackPrefs", MODE_PRIVATE).edit()
         val packagedIds = packagedMoveLines.map { it.moveLineId }.joinToString(",")
@@ -816,21 +829,15 @@ class PackProductsActivity : AppCompatActivity() {
     }
 
     private fun loadPackagedIds() {
-        lifecycleScope.launch {
-            val prefs = getSharedPreferences("PackPrefs", MODE_PRIVATE)
-            val packagedIds = withContext(Dispatchers.IO) {
-                val prefs = getSharedPreferences("PackPrefs", MODE_PRIVATE)
-                prefs.getString("packagedIds", "") ?: ""
-            }
-
-            if (packagedIds.isNotEmpty()) {
-                packagedMoveLines.clear()
-                packagedMoveLines.addAll(packagedIds.split(",").map { PackagedMovedLine(it.toInt()) })
-                updateUIForMoveLines(packProductsAdapter.moveLines) // Update the UI once data is loaded
-
-            }
+        val prefs = getSharedPreferences("PackPrefs", MODE_PRIVATE)
+        val packagedIds = prefs.getString("packagedIds", "") ?: ""
+        if (packagedIds.isNotEmpty()) {
+            packagedMoveLines.clear()
+            packagedMoveLines.addAll(packagedIds.split(",").map { PackagedMovedLine(it.toInt()) })
+            updateUIForMoveLines(packProductsAdapter.moveLines) // Refresh UI after loading state
         }
     }
+
 
     private fun checkAllItemsPackaged() {
         val allPackaged = packProductsAdapter.moveLines.all { moveLine ->
@@ -843,28 +850,31 @@ class PackProductsActivity : AppCompatActivity() {
     fun packageItem(moveLineId: Int) {
         val newPackagedMovedLine = PackagedMovedLine(moveLineId)
         packProductsAdapter.addPackagedMoveLine(newPackagedMovedLine)
+        savePackagedIds()  // Save state whenever an item's packaged status changes
     }
 
 
-//
-//    private fun savePrintIconVisibility() {
-//        val editor = getSharedPreferences("AppPrefs", MODE_PRIVATE).edit()
-//        editor.putBoolean("isPrintVisible", isPrintVisible)
-//        editor.apply()
-//    }
 
-//
-//    private fun loadPrintIconVisibility() {
-//        val prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-//        isPrintVisible = prefs.getBoolean("isPrintVisible", false) // Default to false if not found
-//    }
+    private fun saveVerificationState(isAllVerified: Boolean) {
+        getSharedPreferences("PackProductPrefs_$packId", Context.MODE_PRIVATE).edit().apply {
+            putBoolean("allVerified", isAllVerified)
+            apply()
+        }
+    }
+
+
+    private fun loadVerificationState() {
+        val prefs = getSharedPreferences("PackProductPrefs_$packId", Context.MODE_PRIVATE)
+        val allVerified = prefs.getBoolean("allVerified", false)
+        validateButton.visibility = if (allVerified) View.VISIBLE else View.GONE
+    }
+
+
+
 
     private fun refreshMenu() {
         invalidateOptionsMenu()
     }
-
-
-
 
 
     //================================================================================================================

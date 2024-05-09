@@ -12,7 +12,8 @@ import com.google.android.material.card.MaterialCardView
 class PackProductsAdapter(
     public var moveLines: List<MoveLine>,
     private var packId: Int,
-    var packagedMoveLines: MutableList<PackagedMovedLine>
+    var packagedMoveLines: MutableList<PackagedMovedLine>,
+    private val verificationListener: VerificationListener
 ) : RecyclerView.Adapter<PackProductsAdapter.MoveLineViewHolder>() {
 
     var selectedMoveLineId: Int? = null
@@ -25,10 +26,9 @@ class PackProductsAdapter(
     override fun onBindViewHolder(holder: MoveLineViewHolder, position: Int) {
         val moveLine = moveLines[position]
         val isPackaged = packagedMoveLines.any { it.moveLineId == moveLine.lineId }
-        Log.d("PackProductsAdapter", "Binding position: $position, ID: ${moveLine.lineId}, isPackaged: $isPackaged")
         holder.bind(moveLine, isPackaged)
+        checkAllVerified()
     }
-
 
     override fun getItemCount(): Int = moveLines.size
 
@@ -36,6 +36,7 @@ class PackProductsAdapter(
         moveLines = newMoveLines
         packId = newPackId
         notifyDataSetChanged()
+        checkAllVerified()
     }
 
     class MoveLineViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -45,15 +46,11 @@ class PackProductsAdapter(
 
         fun bind(moveLine: MoveLine, isPackaged: Boolean) {
             Log.d("ViewHolderLog", "Binding move line: ${moveLine.productName}, Packaged: $isPackaged")
-            Log.d("PackProductAdapter", "Binding move line: ${moveLine.productName}") // Keeping logcat entry
             nameTextView.text = moveLine.productName
             quantityTextView.text = "Quantity: ${moveLine.quantity}"
-
             val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)
             nameTextView.setTextColor(whiteColor)
             quantityTextView.setTextColor(whiteColor)
-
-            // Set card background color based on packaging status
             val backgroundColor = if (isPackaged) {
                 ContextCompat.getColor(itemView.context, R.color.success_green)
             } else {
@@ -61,23 +58,28 @@ class PackProductsAdapter(
             }
             cardView.setCardBackgroundColor(backgroundColor)
         }
+
     }
 
     fun addPackagedMoveLine(packagedMovedLine: PackagedMovedLine) {
         if (!packagedMoveLines.any { it.moveLineId == packagedMovedLine.moveLineId }) {
             packagedMoveLines.add(packagedMovedLine)
-            Log.d("AdapterLog", "Added to adapter's packagedMoveLines: ${packagedMovedLine.moveLineId}")
-        } else {
-            Log.d("AdapterLog", "Attempt to add duplicate move line ignored: ${packagedMovedLine.moveLineId}")
+            val index = moveLines.indexOfFirst { it.lineId == packagedMovedLine.moveLineId }
+            if (index != -1) {
+                notifyItemChanged(index)
+            }
         }
-        val index = moveLines.indexOfFirst { it.lineId == packagedMovedLine.moveLineId }
-        if (index != -1) {
-            notifyItemChanged(index)
-            Log.d("AdapterLog", "Notified change at index: $index")
-        } else {
-            Log.d("AdapterLog", "No index found for moveLineId: ${packagedMovedLine.moveLineId}")
-        }
-        Log.d("AdapterLog", "Post-addition adapter state: ${packagedMoveLines.joinToString { it.moveLineId.toString() }}")
+        checkAllVerified()
     }
 
+    private fun checkAllVerified() {
+        val allVerified = moveLines.all { moveLine ->
+            packagedMoveLines.any { it.moveLineId == moveLine.lineId }
+        }
+        verificationListener.onVerificationStatusChanged(allVerified)
+    }
+
+    interface VerificationListener {
+        fun onVerificationStatusChanged(allVerified: Boolean)
+    }
 }
