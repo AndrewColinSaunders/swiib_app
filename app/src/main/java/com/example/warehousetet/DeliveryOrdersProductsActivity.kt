@@ -86,25 +86,27 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         val isValidateButtonVisible = validateButton.visibility == View.VISIBLE
 
         getSharedPreferences().edit().apply {
-            putString("verifiedPackages", verifiedPackages)
-            putString("verifiedSerialNumbers", verifiedSerialNumbers)
-            putString("verifiedBarcodes", verifiedBarcodes)
-            putBoolean("validateButtonVisible", isValidateButtonVisible)
+            putString("verifiedPackages_$deliveryOrdersId", verifiedPackages)
+            putString("verifiedSerialNumbers_$deliveryOrdersId", verifiedSerialNumbers)
+            putString("verifiedBarcodes_$deliveryOrdersId", verifiedBarcodes)
+            putBoolean("validateButtonVisible_$deliveryOrdersId", isValidateButtonVisible)
             apply()
         }
     }
 
+
     private fun loadVerificationState() {
         val prefs = getSharedPreferences()
-        deliveryOrdersProductsAdapter.verifiedPackages = prefs.getString("verifiedPackages", "")!!.split(",").filterNot { it.isEmpty() }.map { it.toInt() }.toMutableSet()
-        deliveryOrdersProductsAdapter.verifiedSerialNumbers = prefs.getString("verifiedSerialNumbers", "")!!.split(",").filterNot { it.isEmpty() }.toMutableSet()
-        deliveryOrdersProductsAdapter.verifiedBarcodes = prefs.getString("verifiedBarcodes", "")!!.split(",").filterNot { it.isEmpty() }.toMutableSet()
+        deliveryOrdersProductsAdapter.verifiedPackages = prefs.getString("verifiedPackages_$deliveryOrdersId", "")!!.split(",").filterNot { it.isEmpty() }.map { it.toInt() }.toMutableSet()
+        deliveryOrdersProductsAdapter.verifiedSerialNumbers = prefs.getString("verifiedSerialNumbers_$deliveryOrdersId", "")!!.split(",").filterNot { it.isEmpty() }.toMutableSet()
+        deliveryOrdersProductsAdapter.verifiedBarcodes = prefs.getString("verifiedBarcodes_$deliveryOrdersId", "")!!.split(",").filterNot { it.isEmpty() }.toMutableSet()
 
-        val isButtonVisible = prefs.getBoolean("validateButtonVisible", false)
+        val isButtonVisible = prefs.getBoolean("validateButtonVisible_$deliveryOrdersId", false)
         validateButton.visibility = if (isButtonVisible) View.VISIBLE else View.INVISIBLE
 
         deliveryOrdersProductsAdapter.notifyDataSetChanged() // Refresh the adapter with the loaded state
     }
+
 
 
 

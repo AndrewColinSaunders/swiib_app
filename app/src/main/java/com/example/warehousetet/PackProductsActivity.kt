@@ -250,29 +250,29 @@ class PackProductsActivity : AppCompatActivity() {
     //============================================================================================================
     //                                          Lot and Serial Number Code
     //============================================================================================================
-        private fun updateRelevantSerialNumbers(moveLines: List<MoveLine>) {
-            serialNumberToMoveLineIdMap.clear()
-            moveLines.forEach { moveLine ->
-                if (moveLine.lotName.isNotBlank()) {
-                    // Map each serial number to its move line ID
-                    serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
-                }
-            }
-            Log.d("PackProductsActivity", "Updated serial numbers to move line IDs: ${serialNumberToMoveLineIdMap.entries.joinToString(", ") { "${it.key}: ${it.value}" }}")
-        }
-
-        // Function to fetch the move line ID based on the serial number
-        private fun fetchMoveLineIdForSerialNumber(serialNumber: String): Int? {
-            return serialNumberToMoveLineIdMap[serialNumber]
-        }
-
-
-        private fun updateUIForMoveLines(moveLines: List<MoveLine>) {
-            runOnUiThread {
-                packProductsAdapter.moveLines = moveLines
-                packProductsAdapter.notifyDataSetChanged()
+    private fun updateRelevantSerialNumbers(moveLines: List<MoveLine>) {
+        serialNumberToMoveLineIdMap.clear()
+        moveLines.forEach { moveLine ->
+            if (moveLine.lotName.isNotBlank()) {
+                // Map each serial number to its move line ID
+                serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
             }
         }
+        Log.d("PackProductsActivity", "Updated serial numbers to move line IDs: ${serialNumberToMoveLineIdMap.entries.joinToString(", ") { "${it.key}: ${it.value}" }}")
+    }
+
+    // Function to fetch the move line ID based on the serial number
+    private fun fetchMoveLineIdForSerialNumber(serialNumber: String): Int? {
+        return serialNumberToMoveLineIdMap[serialNumber]
+    }
+
+
+    private fun updateUIForMoveLines(moveLines: List<MoveLine>) {
+        runOnUiThread {
+            packProductsAdapter.moveLines = moveLines
+            packProductsAdapter.notifyDataSetChanged()
+        }
+    }
 
 
 
