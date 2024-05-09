@@ -4,44 +4,18 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:gravity="center_horizontal"
     android:padding="16dp">
 
     <TextView
+        android:id="@+id/textViewPackage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Package"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large" />
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:layout_gravity="center_horizontal" />
 
-    <EditText
-        android:id="@+id/lotInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter Lot Number"
-        android:inputType="text"
-        android:layout_marginTop="20dp"/>
-
-    <EditText
-        android:id="@+id/packageInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter Package Name"
-        android:inputType="text"
-        android:layout_marginTop="20dp"/>
-
-    <!-- Primary Action Button Directly Below EditText -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/addToPackageButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cornerRadius="4dp"
-        android:textSize="10sp"
-        android:text="Add To Package"
-        android:backgroundTint="@color/toDoBlue"
-        android:layout_marginTop="10dp" />
-
-    <!-- Additional Options in a Separate Layout for Less Emphasis -->
     <LinearLayout
+        android:id="@+id/buttonContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
@@ -55,7 +29,7 @@
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
             app:cornerRadius="4dp"
-            android:textSize="9sp"
+            android:textSize="10sp"
             android:text="Create New"
             android:backgroundTint="@color/success_green" />
 
@@ -66,7 +40,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             app:cornerRadius="4dp"
-            android:textSize="9sp"
+            android:textSize="10sp"
             android:text="Not Packaged"
             android:backgroundTint="@color/cardGrey" />
     </LinearLayout>

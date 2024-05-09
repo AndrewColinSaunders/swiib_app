@@ -14,33 +14,13 @@
         android:textAppearance="@style/TextAppearance.AppCompat.Large" />
 
     <EditText
-        android:id="@+id/lotInput"
+        android:id="@+id/serialInput"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Enter Lot Number"
+        android:hint="Enter Serial Number"
         android:inputType="text"
         android:layout_marginTop="20dp"/>
 
-    <EditText
-        android:id="@+id/packageInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Enter Package Name"
-        android:inputType="text"
-        android:layout_marginTop="20dp"/>
-
-    <!-- Primary Action Button Directly Below EditText -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/addToPackageButton"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:cornerRadius="4dp"
-        android:textSize="10sp"
-        android:text="Add To Package"
-        android:backgroundTint="@color/toDoBlue"
-        android:layout_marginTop="10dp" />
-
-    <!-- Additional Options in a Separate Layout for Less Emphasis -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

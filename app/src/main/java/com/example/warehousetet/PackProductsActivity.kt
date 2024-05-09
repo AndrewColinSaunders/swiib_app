@@ -2,6 +2,7 @@ package com.example.warehousetet
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -26,11 +27,11 @@ import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.print.PrintHelper
@@ -57,30 +58,43 @@ import javax.mail.Session
 import javax.mail.Transport
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
+import android.Manifest
+import android.graphics.PorterDuffColorFilter
+import android.os.Build
+import android.os.Parcelable
+import android.os.VibrationEffect
+import android.window.OnBackInvokedDispatcher
+import androidx.activity.addCallback
+
+
 
 
 class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.VerificationListener {
     private lateinit var packProductsAdapter: PackProductsAdapter
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    //private var currentProductName: String? = null
     private val packagedMoveLines = mutableListOf<PackagedMovedLine>()
     private lateinit var barcodeInput: EditText
     private var shouldShowPrinterIcon = false
     private var lastScannedBarcode = StringBuilder()
     private var lastKeyTime: Long = 0
     private var isScannerInput = false
-    private var relevantSerialNumbers = mutableListOf<String>()
     private val usedSerialNumbers = mutableSetOf<String>()
     private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
     private val packId by lazy { intent.getIntExtra("PACK_ID", -1) }
     private val packName by lazy {intent.getStringExtra("PACK_NAME")}
     private lateinit var validateButton: Button
+    private var classLevelMenu: Menu? = null
+
+
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pack_activity_products)
 
+
+        registerBackPressHandler()
 
 
         Log.d("PackProductsActivity", "Activity created with pack ID: $packId")
@@ -103,14 +117,32 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     //============================================================================================================
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_pack_products, menu)
+        classLevelMenu = menu  // Store the menu reference
+
+        val colorWhite = ContextCompat.getColor(this, android.R.color.white)
+        val colorDangerRed = ContextCompat.getColor(this, R.color.danger_red)
+        val mode = PorterDuff.Mode.SRC_ATOP
+
         val printItem = menu?.findItem(R.id.action_print)
         val flagItem = menu?.findItem(R.id.action_flag)
-        printItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, android.R.color.white), PorterDuff.Mode.SRC_ATOP)
-        flagItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, R.color.danger_red), PorterDuff.Mode.SRC_ATOP)
 
+        printItem?.icon?.let {
+            val coloredDrawable = it.mutate().apply {
+                colorFilter = PorterDuffColorFilter(colorWhite, mode)
+            }
+            printItem.icon = coloredDrawable
+        }
+
+        flagItem?.icon?.let {
+            val coloredDrawable = it.mutate().apply {
+                colorFilter = PorterDuffColorFilter(colorDangerRed, mode)
+            }
+            flagItem.icon = coloredDrawable
+        }
 
         return true
     }
+
 
 
     override fun onVerificationStatusChanged(allVerified: Boolean) {
@@ -150,8 +182,16 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             Log.d("ValidationAttempt", "Attempting to validate operation for pack ID: $packId")
 
             // Get the Vibrator service from the system
-            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            vibrator.vibrate(50) // Vibrate for 50 milliseconds
+            val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
 
             lifecycleScope.launch {
                 if (odooXmlRpcClient.validateOperation(packId, this@PackProductsActivity)) {
@@ -185,8 +225,16 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         //============================================================================================================
         packConfirmButton.setOnClickListener {
             // Get the Vibrator service from the system
-            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            vibrator.vibrate(50) // Vibrate for 50 milliseconds
+            val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
 
             val typedBarcode = barcodeInput.text.toString()
             if (typedBarcode.isNotEmpty()) {
@@ -206,8 +254,16 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         //============================================================================================================
         clearButton.setOnClickListener {
             // Get the Vibrator service from the system
-            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            vibrator.vibrate(50) // Vibrate for 50 milliseconds
+            val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
 
             barcodeInput.text.clear() // Clear the text in the barcode input EditText
         }
@@ -360,8 +416,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
             trackingInfo?.let {
                 when (it.first) {
-                    "none" -> handleNoTracking(moveLine)
-                    "serial" -> handleSerialTracking(moveLine)
+                    "none" -> handleNoTracking(classLevelMenu, moveLine)  // Use the stored menu here
+                    "serial" -> handleSerialTracking(classLevelMenu, moveLine)
                     "lot" -> handleLotTracking(moveLine)
                     else -> Log.e("PackProductsActivity", "Unhandled tracking type: ${it.first}")
                 }
@@ -371,15 +427,34 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
 
-    private fun handleNoTracking(moveLine: MoveLine) {
+
+    private fun handleNoTracking(menu: Menu?, moveLine: MoveLine) {
         Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}.")
-        displayQuantityDialog(moveLine.productName, moveLine.quantity, packId, moveLine.lineId, moveLine)
+
+        // Check for the presence of submenus
+        val subMenu = menu?.findItem(R.id.action_print)?.subMenu
+        if (subMenu != null && subMenu.size() > 0) {
+            // Submenus exist, display the quantity dialog
+            displayQuantityDialog(moveLine.productName, moveLine.quantity, packId, moveLine.lineId, moveLine)
+        } else {
+            // No submenus, log the message to inflate the dialog_prepackage_lot.xml
+            showPrePackageDialogNoTracking(moveLine)
+        }
     }
 
-    private fun handleSerialTracking(moveLine: MoveLine) {
+
+    private fun handleSerialTracking(menu: Menu?,moveLine: MoveLine) {
         Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLine.productName}.")
         //displayQuantityDialogSerial(moveLine.productName, moveLine)
-        showPackageDialogSerial(moveLine)
+        val subMenu = menu?.findItem(R.id.action_print)?.subMenu
+        if (subMenu != null && subMenu.size() > 0) {
+            // Submenus exist, display the quantity dialog
+            showPackageDialogSerial(moveLine)
+        } else {
+            // No submenus, log the message to inflate the dialog_prepackage_lot.xml
+            showPrePackageDialogSerialTracking(moveLine)
+        }
+
     }
 
     private fun handleLotTracking(moveLine: MoveLine) {
@@ -387,6 +462,85 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         displayQuantityDialog(moveLine.productName, moveLine.quantity, packId, moveLine.lineId, moveLine)
         showPackageDialogLot(moveLine)
     }
+
+
+    //============================================================================================================
+    //                                          Dialog Code Pre-packaged (No Tracking)
+    //============================================================================================================
+    private fun showPrePackageDialogNoTracking(moveLine: MoveLine) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_prepackage_no_tracking, null)
+        val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
+        val notPackagedButton = dialogView.findViewById<MaterialButton>(R.id.notPackagedButton)
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        createNewButton.apply {
+            text = "Create New"
+            setBackgroundColor(ContextCompat.getColor(context, R.color.success_green))
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
+                Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLine.lineId}")
+                lifecycleScope.launch {
+                    try {
+                        Log.d("Check what moveline is being parsed", "moveLine ID: $moveLine")
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
+                        if (result) {
+
+                            Log.d("PackageDialog", "Successfully put item in new package.")
+                            Toast.makeText(context, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
+                            packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
+                            val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                            savePackagedIds()
+                            packProductsAdapter.notifyItemChanged(index)
+                            checkAllItemsPackaged()// Notify adapter to update this item
+                            refreshMenu()
+                        } else {
+                            Toast.makeText(context, "Failed to put item in new package.", Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: XmlRpcException) {
+                        val message = when {
+                            e.message?.contains("AlreadyPacked") == true -> "Cannot put item in package as it is already in another package."
+                            else -> "Failed to process the request due to a system error."
+                        }
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        Log.e("PackageDialog", "Error putting item in new package: ${e.message}")
+                    }
+                    dialog.dismiss()
+                }
+            }
+        }
+
+        notPackagedButton.apply {
+            text = "Not Packaged"
+            setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                // Implement the action for not packaging here
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
 
 
 
@@ -398,9 +552,11 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Package Options")
             .setView(dialogView)
             .create()
 
@@ -408,6 +564,14 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             text = "Create New"
             setBackgroundColor(ContextCompat.getColor(context, R.color.success_green))
             setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
                 Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLine.lineId}")
                 lifecycleScope.launch {
                     try {
@@ -449,7 +613,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                             if (result) {
                                 // Add this line to the list of packaged move lines if not already present
                                 if (!packagedMoveLines.any { it.moveLineId == moveLine.lineId }) {
-                                    (packagedMoveLines as MutableList).add(PackagedMovedLine(moveLine.lineId))
+                                    packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
+
                                 }
                                 // Find the index and notify the adapter
                                 val index = packProductsAdapter.moveLines.indexOfFirst { it.lineId == moveLine.lineId }
@@ -479,6 +644,128 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
 
+    //============================================================================================================
+    //                                   Dialog Code Pre-packaged (Serialised)
+    //============================================================================================================
+    private fun showPrePackageDialogSerialTracking(moveLine: MoveLine) {
+        // Inflate your custom dialog layout
+        val dialogView = layoutInflater.inflate(R.layout.dialog_prepackage_serial, null)
+        val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)
+        val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
+        val notPackagedButton = dialogView.findViewById<MaterialButton>(R.id.notPackagedButton)
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+
+        // Create the dialog
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        // Set up the "Create New" button
+        createNewButton.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
+            val enteredSerial = serialInput.text.toString().trim()
+
+            // Check if the serial number has already been used
+            if (usedSerialNumbers.contains(enteredSerial)) {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "This serial number has already been used. Please enter a different one.",
+                    Toast.LENGTH_LONG
+                ).show()
+                serialInput.requestFocus() // Focus back to the input for correction
+                return@setOnClickListener
+            }
+
+            // Attempt to get the moveLineId using the entered serial number
+            val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+            if (moveLineId != null) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(
+                            moveLineId,
+                            this@PackProductsActivity
+                        )
+                        withContext(Dispatchers.Main) {
+                            if (result) {
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Item successfully put into a new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                packageItem(moveLineId)  // Update the adapter
+                                checkAllItemsPackaged()
+                                //isPrintVisible = true
+                                refreshMenu()
+                                usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Failed to put item in new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@PackProductsActivity,
+                                "Error during packaging: ${e.localizedMessage}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            } else {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "Invalid serial number entered. Please check and try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+                serialInput.requestFocus()  // Focus back to the input for correction
+            }
+        }
+
+        // Set up the "Not Packaged" button
+        notPackagedButton.apply {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
+            text = "Not Packaged"
+            setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                // Implement the action for not packaging here
+                dialog.dismiss()
+            }
+        }
+
+        // Show the dialog
+        dialog.show()
+    }
+
 
     //============================================================================================================
     //                                   Dialog Code (Serialised)
@@ -489,13 +776,22 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Package Options")
             .setView(dialogView)
             .create()
 
         createNewButton.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
             val enteredSerial = serialInput.text.toString().trim()
 
             // Check if the serial number has already been used
@@ -561,8 +857,15 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
 
 
-
         addToPackageButton.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
             val packageName = packageInput.text.toString().trim()
             val enteredSerial = serialInput.text.toString().trim()
 
@@ -647,6 +950,114 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
 
     //============================================================================================================
+    //                                   Dialog Code Pre-Packaged (Lot)
+    //============================================================================================================
+    private fun showPrePackageDialogLotTracking(moveLine: MoveLine) {
+        // Inflate your custom dialog layout
+        val dialogView = layoutInflater.inflate(R.layout.dialog_prepackage_lot, null)
+        val lotInput = dialogView.findViewById<EditText>(R.id.lotInput)
+        val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
+        val notPackagedButton = dialogView.findViewById<MaterialButton>(R.id.notPackagedButton)
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+
+        // Create the dialog
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        // Set up the "Create New" button
+        createNewButton.setOnClickListener {
+            val enteredSerial = lotInput.text.toString().trim()
+
+            // Check if the serial number has already been used
+            if (usedSerialNumbers.contains(enteredSerial)) {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "This serial number has already been used. Please enter a different one.",
+                    Toast.LENGTH_LONG
+                ).show()
+                lotInput.requestFocus() // Focus back to the input for correction
+                return@setOnClickListener
+            }
+
+            // Attempt to get the moveLineId using the entered serial number
+            val moveLineId = fetchMoveLineIdForSerialNumber(enteredSerial)
+            if (moveLineId != null) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val result = odooXmlRpcClient.putMoveLineInNewPack(
+                            moveLineId,
+                            this@PackProductsActivity
+                        )
+                        withContext(Dispatchers.Main) {
+                            if (result) {
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Item successfully put into a new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                packageItem(moveLineId)  // Update the adapter
+                                checkAllItemsPackaged()
+                                //isPrintVisible = true
+                                refreshMenu()
+                                usedSerialNumbers.add(enteredSerial)  // Track the used serial numbers
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
+                                dialog.dismiss()
+                            } else {
+                                Toast.makeText(
+                                    this@PackProductsActivity,
+                                    "Failed to put item in new package.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@PackProductsActivity,
+                                "Error during packaging: ${e.localizedMessage}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            } else {
+                Toast.makeText(
+                    this@PackProductsActivity,
+                    "Invalid serial number entered. Please check and try again.",
+                    Toast.LENGTH_LONG
+                ).show()
+                lotInput.requestFocus()  // Focus back to the input for correction
+            }
+        }
+
+        // Set up the "Not Packaged" button
+        notPackagedButton.apply {
+            text = "Not Packaged"
+            setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                } // Haptic feedback
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                // Implement the action for not packaging here
+                dialog.dismiss()
+            }
+        }
+
+        // Show the dialog
+        dialog.show()
+    }
+
+
+
+    //============================================================================================================
     //                                   Dialog Code (Lot)
     //============================================================================================================
     private fun showPackageDialogLot(moveLine: MoveLine) {
@@ -657,7 +1068,6 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
 
         val dialog = AlertDialog.Builder(this)
-            .setTitle("Package Options")
             .setView(dialogView)
             .create()
 
@@ -847,7 +1257,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         savePackagedIds() // This call can also be removed if no other state needs to be saved when checking all items
     }
 
-    fun packageItem(moveLineId: Int) {
+    private fun packageItem(moveLineId: Int) {
         val newPackagedMovedLine = PackagedMovedLine(moveLineId)
         packProductsAdapter.addPackagedMoveLine(newPackagedMovedLine)
         savePackagedIds()  // Save state whenever an item's packaged status changes
@@ -930,28 +1340,57 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
 
         when (item.itemId) {
             android.R.id.home -> {
-                onBackPressed()
-                vibrator.vibrate(50)  // Vibrate for 50 milliseconds
+                registerBackPressHandler()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
                 return true
             }
             R.id.action_flag -> {
                 showFlagDialog()
-                vibrator.vibrate(50)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
                 return true
             }
             R.id.action_print -> {
                 val subMenu = item.subMenu
                 if (subMenu == null || subMenu.size() == 0) {
                     Toast.makeText(this, "There Is Nothing To Print Right Now", Toast.LENGTH_LONG).show()
-                    vibrator.vibrate(50)  // Vibrate if there's nothing to print
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                        vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        // Vibrate for 50 milliseconds on pre-Oreo devices
+                        @Suppress("DEPRECATION")
+                        vibrator?.vibrate(50)
+                    }
                     return true
                 } else {
                     // Add vibration on opening the submenu
-                    vibrator.vibrate(50)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                        vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        // Vibrate for 50 milliseconds on pre-Oreo devices
+                        @Suppress("DEPRECATION")
+                        vibrator?.vibrate(50)
+                    }
                 }
             }
         }
@@ -969,15 +1408,30 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
         val dialog = dialogBuilder.create()
 
-        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
 
         dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-            vibrator.vibrate(50) // Vibrate for 50 milliseconds
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
             dialog.dismiss()  // Dismiss the dialog when "Cancel" is clicked
         }
 
         dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
-            vibrator.vibrate(50)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
             lifecycleScope.launch {
                 try {
                     val pickId = this@PackProductsActivity.packId
@@ -1024,17 +1478,32 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Capture Image?")
         builder.setMessage("Would you like to capture an image?")
-        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
 
         // No button - just dismiss the dialog
         builder.setNegativeButton("No") { dialog, _ ->
-            vibrator.vibrate(50)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
             dialog.dismiss()
         }
 
         // Capture Image button - open the camera
         builder.setPositiveButton("Capture Image") { dialog, _ ->
-            vibrator.vibrate(50)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
             dialog.dismiss()
             openCamera(packId)  // Pass packId to ensure it is available after capturing the image
         }
@@ -1043,17 +1512,49 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         dialog.show()
     }
     private fun openCamera(packId: Int) {
-        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        if (cameraIntent.resolveActivity(packageManager) != null) {
-            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST_CODE)
         } else {
-            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
+            startCameraIntent()
         }
     }
+
+    private fun startCameraIntent() {
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        try {
+            if (cameraIntent.resolveActivity(packageManager) != null) {
+                startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+            } else {
+                // Log and toast that no application can handle the camera intent
+                Log.e("CameraIntent", "No application can handle camera intent.")
+                Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            // Log the exception details if any error occurs during the process
+            Log.e("CameraIntent", "Failed to start camera intent", e)
+            Toast.makeText(this, "Failed to open camera: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_REQUEST_CODE) {
+            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                startCameraIntent()
+            } else {
+                Toast.makeText(this, "Camera permission is necessary to capture images", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-            val imageBitmap = data?.extras?.get("data") as? Bitmap
+            val imageBitmap = intent.parcelable<Bitmap>("data")
+
+
             if (imageBitmap != null) {
                 val byteArrayOutputStream = ByteArrayOutputStream()
                 imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
@@ -1078,6 +1579,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
 
 
+
     //============================================================================================================
     //             Code to display the quantity the user has to pack fro the products (no Tracking)
     //============================================================================================================
@@ -1097,8 +1599,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         spannableString.setSpan(RelativeSizeSpan(1.1f), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
         // Styling for productName
-        val productNameStart = fullText.indexOf("$productName")
-        val productNameEnd = productNameStart + "$productName".length
+        val productNameStart = fullText.indexOf(productName)
+        val productNameEnd = productNameStart + productName.length
         spannableString.setSpan(StyleSpan(Typeface.BOLD), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         spannableString.setSpan(RelativeSizeSpan(1.1f), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
@@ -1124,6 +1626,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     //============================================================================================================
     //             Code to display the quantity the user has to pack fro the products (Serialised)
     //============================================================================================================
+    /*
     private fun displayQuantityDialogSerial(productName: String, moveLine: MoveLine) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
         val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
@@ -1166,7 +1669,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
 
-
+    */
 
 
 
@@ -1256,7 +1759,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         super.onPrepareOptionsMenu(menu)
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
         subMenu?.clear()
-        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
 
         val addedPackageNames = mutableSetOf<String>()
 
@@ -1268,7 +1772,14 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                         if (!addedPackageNames.contains(packageInfo.name)) {
                             subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
                                 printPackage(packageInfo.name)
-                                vibrator.vibrate(50)  // Vibrate on selecting a submenu item
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                                } else {
+                                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                                    @Suppress("DEPRECATION")
+                                    vibrator?.vibrate(50)
+                                }
                                 true
                             }
                             addedPackageNames.add(packageInfo.name)
@@ -1289,11 +1800,27 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     //                        Androids built in back button at the bottom of the screen
     //                             NB!!!!    INCLUDE IN EVERY ACTIVITY    NB!!!!
     //============================================================================================================
-    override fun onBackPressed() {
-        super.onBackPressed()
-        // Create an Intent to start PackActivity
-        val intent = Intent(this, PackActivity::class.java)
-        startActivity(intent)
-        finish()  // Optional: Call finish() if you do not want to return to this activity
+    private fun registerBackPressHandler() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        } else {
+            onBackPressedDispatcher.addCallback(this /* lifecycle owner */) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        }
     }
+
+
+    private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {
+        Build.VERSION.SDK_INT >= 33 -> getParcelableExtra(key, T::class.java)
+        else -> @Suppress("DEPRECATION") getParcelableExtra(key) as? T
+    }
+
+
 }

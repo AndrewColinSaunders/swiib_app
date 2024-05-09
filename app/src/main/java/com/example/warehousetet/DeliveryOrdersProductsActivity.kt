@@ -5,8 +5,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
 import android.view.KeyEvent
 import android.view.Menu
@@ -14,6 +18,8 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
+import android.window.OnBackInvokedDispatcher
+import androidx.activity.addCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -30,15 +36,12 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     private lateinit var deliveryOrdersProductsAdapter: DeliveryOrdersProductsAdapter
     private lateinit var validateButton: MaterialButton
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
-    private var currentProductName: String? = null
-    private val deliveryOrdersMoveLines = mutableListOf<DeliveryOrdersMovedLine>()
     private lateinit var barcodeInput: EditText
     private var lastScannedBarcode = StringBuilder()
     private var lastKeyTime: Long = 0
     private var isScannerInput = false
     private val usedSerialNumbers = mutableSetOf<String>()
     private var serialNumberToMoveLineIdMap = mutableMapOf<String, Int>()
-    private val verifiedSerialNumbers = mutableSetOf<String>()
 
 
 
@@ -48,6 +51,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_delivery_orders_products)
+        registerBackPressHandler()
 
         validateButton = findViewById(R.id.validateOperationButton)
         validateButton.visibility = View.INVISIBLE
@@ -112,9 +116,17 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
 
     //Nothing changing here=============================================================================================================================
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_delivery_orders_products, menu)
+        val color = ContextCompat.getColor(this, R.color.danger_red)
+        val mode = PorterDuff.Mode.SRC_ATOP
         val flagItem = menu?.findItem(R.id.action_flag)
-        flagItem?.icon?.mutate()?.setColorFilter(ContextCompat.getColor(this, R.color.danger_red), PorterDuff.Mode.SRC_ATOP)
+        menuInflater.inflate(R.menu.menu_delivery_orders_products, menu)
+        val icon = flagItem?.icon
+        icon?.let {
+            val coloredDrawable = it.mutate().apply {
+                colorFilter = PorterDuffColorFilter(color, mode)
+            }
+            flagItem.icon = coloredDrawable
+        }
         return true
     }
 
@@ -191,9 +203,19 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         val validateButton = findViewById<Button>(R.id.validateOperationButton)
         barcodeInput = findViewById(R.id.deliveryOrdersBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.deliveryOrdersConfirmButton)
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
 
 
         validateButton.setOnClickListener {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                // Vibrate for 50 milliseconds on pre-Oreo devices
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
             Log.d("ValidationAttempt", "Attempting to validate operation for pack ID: $deliveryOrdersId")
             lifecycleScope.launch {
                 if (odooXmlRpcClient.validateOperation(deliveryOrdersId, this@DeliveryOrdersProductsActivity)) {
@@ -484,12 +506,20 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     //                             NB!!!!    INCLUDE IN EVERY ACTIVITY    NB!!!!
     //============================================================================================================
 
-    override fun onBackPressed() {
-        super.onBackPressed()
-        // Create an Intent to start DeliveryOrdersActivity
-        val intent = Intent(this, DeliveryOrdersActivity::class.java)
-        startActivity(intent)
-        finish()  // Optional: Call finish() if you do not want to return to this activity
+    private fun registerBackPressHandler() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        } else {
+            onBackPressedDispatcher.addCallback(this /* lifecycle owner */) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        }
     }
 
 }
