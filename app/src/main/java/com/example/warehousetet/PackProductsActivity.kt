@@ -418,7 +418,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 when (it.first) {
                     "none" -> handleNoTracking(classLevelMenu, moveLine)  // Use the stored menu here
                     "serial" -> handleSerialTracking(classLevelMenu, moveLine)
-                    "lot" -> handleLotTracking(moveLine)
+                    "lot" -> handleLotTracking(classLevelMenu, moveLine)
                     else -> Log.e("PackProductsActivity", "Unhandled tracking type: ${it.first}")
                 }
             } ?: Log.e("PackProductsActivity", "No tracking info found for product: $productName")
@@ -445,22 +445,23 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
     private fun handleSerialTracking(menu: Menu?,moveLine: MoveLine) {
         Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLine.productName}.")
-        //displayQuantityDialogSerial(moveLine.productName, moveLine)
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
         if (subMenu != null && subMenu.size() > 0) {
-            // Submenus exist, display the quantity dialog
             showPackageDialogSerial(moveLine)
         } else {
-            // No submenus, log the message to inflate the dialog_prepackage_lot.xml
             showPrePackageDialogSerialTracking(moveLine)
         }
 
     }
 
-    private fun handleLotTracking(moveLine: MoveLine) {
+    private fun handleLotTracking(menu: Menu?, moveLine: MoveLine) {
         Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
-        displayQuantityDialog(moveLine.productName, moveLine.quantity, packId, moveLine.lineId, moveLine)
-        showPackageDialogLot(moveLine)
+        val subMenu = menu?.findItem(R.id.action_print)?.subMenu
+        if (subMenu != null && subMenu.size() > 0) {
+            showPackageDialogLot(moveLine)
+        } else {
+            showPrePackageDialogLotTracking(moveLine)
+        }
     }
 
 
@@ -533,11 +534,21 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                     vibrator?.vibrate(50)
                 }
                 Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
-                // Implement the action for not packaging here
+
+                // Simulate adding a packaged move line
+                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                packagedMoveLines.add(packagedMovedLine)
+
+                // Update the UI
+                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                savePackagedIds()
+                packProductsAdapter.notifyItemChanged(index)
+                checkAllItemsPackaged()
+                refreshMenu()
+
                 dialog.dismiss()
             }
         }
-
         dialog.show()
     }
 
@@ -552,6 +563,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
+        val notPackagedButton = dialogView.findViewById<MaterialButton>(R.id.notPackagedButton)
         val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
 
 
@@ -637,6 +649,36 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 }
             } else {
                 Toast.makeText(this@PackProductsActivity, "Please enter a package name.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+
+        notPackagedButton.apply {
+            text = "Not Packaged"
+            setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+
+                // Simulate adding a packaged move line
+                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                packagedMoveLines.add(packagedMovedLine)
+
+                // Update the UI
+                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                savePackagedIds()
+                packProductsAdapter.notifyItemChanged(index)
+                checkAllItemsPackaged()
+                refreshMenu()
+
+                dialog.dismiss()
             }
         }
 
@@ -737,14 +779,6 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
         // Set up the "Not Packaged" button
         notPackagedButton.apply {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
-                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                // Vibrate for 50 milliseconds on pre-Oreo devices
-                @Suppress("DEPRECATION")
-                vibrator?.vibrate(50)
-            }
             text = "Not Packaged"
             setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
             setOnClickListener {
@@ -757,7 +791,18 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                     vibrator?.vibrate(50)
                 }
                 Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
-                // Implement the action for not packaging here
+
+                // Simulate adding a packaged move line
+                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                packagedMoveLines.add(packagedMovedLine)
+
+                // Update the UI
+                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                savePackagedIds()
+                packProductsAdapter.notifyItemChanged(index)
+                checkAllItemsPackaged()
+                refreshMenu()
+
                 dialog.dismiss()
             }
         }
@@ -776,6 +821,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
+        val notPackagedButton = dialogView.findViewById<MaterialButton>(R.id.notPackagedButton)
         val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
 
 
@@ -945,6 +991,36 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 ).show()
             }
         }
+
+        notPackagedButton.apply {
+            text = "Not Packaged"
+            setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+
+                // Simulate adding a packaged move line
+                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                packagedMoveLines.add(packagedMovedLine)
+
+                // Update the UI
+                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                savePackagedIds()
+                packProductsAdapter.notifyItemChanged(index)
+                checkAllItemsPackaged()
+                refreshMenu()
+
+                dialog.dismiss()
+            }
+        }
+
         dialog.show()
     }
 
@@ -1044,9 +1120,20 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                     // Vibrate for 50 milliseconds on pre-Oreo devices
                     @Suppress("DEPRECATION")
                     vibrator?.vibrate(50)
-                } // Haptic feedback
+                }
                 Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
-                // Implement the action for not packaging here
+
+                // Simulate adding a packaged move line
+                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                packagedMoveLines.add(packagedMovedLine)
+
+                // Update the UI
+                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                savePackagedIds()
+                packProductsAdapter.notifyItemChanged(index)
+                checkAllItemsPackaged()
+                refreshMenu()
+
                 dialog.dismiss()
             }
         }
@@ -1066,6 +1153,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val addToPackageButton = dialogView.findViewById<MaterialButton>(R.id.addToPackageButton)
+        val notPackagedButton = dialogView.findViewById<MaterialButton>(R.id.notPackagedButton)
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
 
         val dialog = AlertDialog.Builder(this)
             .setView(dialogView)
@@ -1218,6 +1307,36 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 ).show()
             }
         }
+
+        notPackagedButton.apply {
+            text = "Not Packaged"
+            setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
+            setOnClickListener {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    // Vibrate for 50 milliseconds on Android Oreo (API 26) and above
+                    vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    // Vibrate for 50 milliseconds on pre-Oreo devices
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(50)
+                }
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+
+                // Simulate adding a packaged move line
+                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                packagedMoveLines.add(packagedMovedLine)
+
+                // Update the UI
+                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                savePackagedIds()
+                packProductsAdapter.notifyItemChanged(index)
+                checkAllItemsPackaged()
+                refreshMenu()
+
+                dialog.dismiss()
+            }
+        }
+
         dialog.show()
     }
 
@@ -1291,7 +1410,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     //                                                  FlAG CODE
     //                  Test whether camera opens on another device if it doesn't work on yours
     //================================================================================================================
-    private suspend fun sendEmailToBuyer(buyerEmail: String, buyerName: String, pickName: String?) {
+    private suspend fun sendEmailToBuyer(buyerEmail: String, buyerName: String, packName: String?) {
         withContext(Dispatchers.IO) {
             val props = Properties().apply {
                 put("mail.smtp.host", "mail.dattec.co.za")
@@ -1824,3 +1943,4 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
 
 }
+

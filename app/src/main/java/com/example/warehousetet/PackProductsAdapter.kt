@@ -82,4 +82,7 @@ class PackProductsAdapter(
     interface VerificationListener {
         fun onVerificationStatusChanged(allVerified: Boolean)
     }
+
+
 }
+

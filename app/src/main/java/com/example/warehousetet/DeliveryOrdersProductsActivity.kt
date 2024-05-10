@@ -116,14 +116,15 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
 
     //Nothing changing here=============================================================================================================================
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        val color = ContextCompat.getColor(this, R.color.danger_red)
+        menuInflater.inflate(R.menu.menu_delivery_orders_products, menu)
+
+        val colorDangerRed = ContextCompat.getColor(this, R.color.danger_red)
         val mode = PorterDuff.Mode.SRC_ATOP
         val flagItem = menu?.findItem(R.id.action_flag)
-        menuInflater.inflate(R.menu.menu_delivery_orders_products, menu)
-        val icon = flagItem?.icon
-        icon?.let {
+
+        flagItem?.icon?.let {
             val coloredDrawable = it.mutate().apply {
-                colorFilter = PorterDuffColorFilter(color, mode)
+                colorFilter = PorterDuffColorFilter(colorDangerRed, mode)
             }
             flagItem.icon = coloredDrawable
         }
