@@ -626,12 +626,15 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                                 // Add this line to the list of packaged move lines if not already present
                                 if (!packagedMoveLines.any { it.moveLineId == moveLine.lineId }) {
                                     packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
-
+                                    packageItem(moveLine.lineId) // Update the adapter
+                                    checkAllItemsPackaged() // Check if all items are packaged
+                                    refreshMenu() // Refresh the menu
+                                    //isPrintVisible = true // Set print visibility
                                 }
                                 // Find the index and notify the adapter
                                 val index = packProductsAdapter.moveLines.indexOfFirst { it.lineId == moveLine.lineId }
                                 if (index != -1) {
-                                    packProductsAdapter.notifyItemChanged(index)  // Notify adapter to update this item
+                                    packProductsAdapter.notifyItemChanged(index) // Notify adapter to update this item
                                 }
                                 addToPackageButton.setBackgroundColor(ContextCompat.getColor(this@PackProductsActivity, R.color.success_green))
                                 Toast.makeText(this@PackProductsActivity, "Package set successfully.", Toast.LENGTH_SHORT).show()
@@ -651,6 +654,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 Toast.makeText(this@PackProductsActivity, "Please enter a package name.", Toast.LENGTH_SHORT).show()
             }
         }
+
 
 
         notPackagedButton.apply {
