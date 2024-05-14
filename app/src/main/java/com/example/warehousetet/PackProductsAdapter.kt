@@ -10,13 +10,13 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
 class PackProductsAdapter(
-    public var moveLines: List<MoveLine>,
+    var moveLines: List<MoveLine>,
     private var packId: Int,
     var packagedMoveLines: MutableList<PackagedMovedLine>,
     private val verificationListener: VerificationListener
 ) : RecyclerView.Adapter<PackProductsAdapter.MoveLineViewHolder>() {
 
-    var selectedMoveLineId: Int? = null
+    //var selectedMoveLineId: Int? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MoveLineViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.pack_product_item, parent, false)
@@ -32,12 +32,14 @@ class PackProductsAdapter(
 
     override fun getItemCount(): Int = moveLines.size
 
+    /*
     fun updateMoveLines(newMoveLines: List<MoveLine>, newPackId: Int) {
         moveLines = newMoveLines
         packId = newPackId
         notifyDataSetChanged()
         checkAllVerified()
     }
+    */
 
     class MoveLineViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val nameTextView: TextView = itemView.findViewById(R.id.packProductNameTextView)
