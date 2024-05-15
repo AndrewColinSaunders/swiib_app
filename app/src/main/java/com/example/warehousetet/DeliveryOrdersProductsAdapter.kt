@@ -12,9 +12,9 @@ import com.google.android.material.card.MaterialCardView
 
 class DeliveryOrdersProductsAdapter(private val verificationListener: VerificationListener) : RecyclerView.Adapter<DeliveryOrdersProductsAdapter.GroupViewHolder>() {
     var sections: List<PackageSection> = listOf()
-    private val verifiedPackages = mutableSetOf<Int>()
-    private val verifiedSerialNumbers = mutableSetOf<String>()
-    private val verifiedBarcodes = mutableSetOf<String>()
+    var verifiedPackages = mutableSetOf<Int>()
+    var verifiedSerialNumbers = mutableSetOf<String>()
+    var verifiedBarcodes = mutableSetOf<String>()
 
     override fun getItemCount(): Int = sections.size
 
@@ -76,7 +76,7 @@ class DeliveryOrdersProductsAdapter(private val verificationListener: Verificati
     }
 
     class ItemAdapter(
-        private val items: List<MoveLine>,
+        private val items: List<MoveLineOutgoing>,
         private val isVerified: Boolean,
         private val verifiedSerialNumbers: Set<String>,
         private val verifiedBarcodes: Set<String>
@@ -100,9 +100,9 @@ class DeliveryOrdersProductsAdapter(private val verificationListener: Verificati
             private val quantityTextView: TextView = view.findViewById(R.id.deliveryOrdersProductQuantityTextView)
             private val cardView: MaterialCardView = view as MaterialCardView
 
-            fun bind(moveLine: MoveLine, isVerified: Boolean) {
+            fun bind(moveLine: MoveLineOutgoing, isVerified: Boolean) {
                 nameTextView.text = moveLine.productName
-                quantityTextView.text = "Quantity: ${moveLine.quantity}"
+                quantityTextView.text = itemView.context.getString(R.string.quantity_text, moveLine.quantity.toString())
                 nameTextView.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.white))
                 quantityTextView.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.white))
                 cardView.setCardBackgroundColor(if (isVerified) ContextCompat.getColor(itemView.context, R.color.success_green) else ContextCompat.getColor(itemView.context, R.color.cardGrey))

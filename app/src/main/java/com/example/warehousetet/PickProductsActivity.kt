@@ -46,7 +46,7 @@ class PickProductsActivity : AppCompatActivity() {
 
     //    private var productBarcodes = hashMapOf<String, String>()
     private var productSerialNumbers = hashMapOf<ProductPickKey, MutableList<String>>()
-    val lotQuantities: MutableMap<ProductPickKey, Int> = mutableMapOf()
+    private val lotQuantities: MutableMap<ProductPickKey, Int> = mutableMapOf()
     private var quantityMatches = mutableMapOf<ProductPickKey, Boolean>()
     private var barcodeToProductIdMap = mutableMapOf<String, Int>()
 

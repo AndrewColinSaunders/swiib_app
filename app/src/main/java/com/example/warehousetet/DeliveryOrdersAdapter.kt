@@ -4,16 +4,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 
-// Define the PickAdapter class, which extends RecyclerView.Adapter
 class DeliveryOrdersAdapter(
-    private var deliveryOrders: List<DeliveryOrders>, // List of Pick items
-    private val onDeliveryOrdersClicked: (DeliveryOrders) -> Unit // Lambda function to handle click events
+    private var deliveryOrders: List<DeliveryOrders>,
+    private val onDeliveryOrdersClicked: (DeliveryOrders) -> Unit
 ) : RecyclerView.Adapter<DeliveryOrdersAdapter.ViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        // Inflate the layout for a delivery order item view
         val view = LayoutInflater.from(parent.context).inflate(R.layout.delivery_orders_item, parent, false)
         return ViewHolder(view, onDeliveryOrdersClicked)
     }
@@ -24,7 +23,6 @@ class DeliveryOrdersAdapter(
 
     override fun getItemCount(): Int = deliveryOrders.size
 
-    // ViewHolder class to hold references to views within each item
     inner class ViewHolder(itemView: View, private val onDeliveryOrdersClicked: (DeliveryOrders) -> Unit) : RecyclerView.ViewHolder(itemView) {
         private val deliveryOrdersNameTextView: TextView = itemView.findViewById(R.id.deliveryOrdersNameTextView)
         private val deliveryOrdersDateTextView: TextView = itemView.findViewById(R.id.deliveryOrdersDateTextView)
@@ -47,7 +45,28 @@ class DeliveryOrdersAdapter(
     }
 
     fun updateDeliveryOrders(newDeliveryOrders: List<DeliveryOrders>) {
+        val diffCallback = DeliveryOrdersDiffCallback(deliveryOrders, newDeliveryOrders)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+
         deliveryOrders = newDeliveryOrders
-        notifyDataSetChanged()
+        diffResult.dispatchUpdatesTo(this)
+    }
+
+    class DeliveryOrdersDiffCallback(
+        private val oldList: List<DeliveryOrders>,
+        private val newList: List<DeliveryOrders>
+    ) : DiffUtil.Callback() {
+
+        override fun getOldListSize(): Int = oldList.size
+
+        override fun getNewListSize(): Int = newList.size
+
+        override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            return oldList[oldItemPosition].id == newList[newItemPosition].id
+        }
+
+        override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
+            return oldList[oldItemPosition] == newList[newItemPosition]
+        }
     }
 }

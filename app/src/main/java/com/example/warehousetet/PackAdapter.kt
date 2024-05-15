@@ -1,6 +1,5 @@
 package com.example.warehousetet
 
-import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -8,6 +7,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 
 // Define the PickAdapter class, which extends RecyclerView.Adapter
@@ -33,6 +33,7 @@ class PackAdapter(
         private val packNameTextView: TextView = itemView.findViewById(R.id.packNameTextView)
         private val packDateTextView: TextView = itemView.findViewById(R.id.packDateTextView)
         private val packOriginTextView: TextView = itemView.findViewById(R.id.packOriginTextView)
+        private val vibrator = ContextCompat.getSystemService(itemView.context, Vibrator::class.java)
 
         init {
             itemView.setOnClickListener {
@@ -41,11 +42,12 @@ class PackAdapter(
                     onPackClicked(packs[position])
 
                     // Access the Vibrator service
-                    val vibrator = itemView.context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        vibrator.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                        vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
                     } else {
-                        vibrator.vibrate(50) // Deprecated in API 26
+                        // Vibrate for 50 milliseconds on pre-Oreo devices
+                        @Suppress("DEPRECATION")
+                        vibrator?.vibrate(50)
                     }
                 }
             }
@@ -58,8 +60,38 @@ class PackAdapter(
         }
     }
 
+
     fun updatePack(newPacks: List<Pack>) {
+        // Find the differences between the old and new pack lists
+        val oldPacks = packs
         packs = newPacks
-        notifyDataSetChanged()
+
+        // Handle additions, removals, and updates in a more efficient manner
+        val oldSize = oldPacks.size
+        val newSize = newPacks.size
+
+        if (oldSize == newSize) {
+            for (i in newPacks.indices) {
+                if (oldPacks[i] != newPacks[i]) {
+                    notifyItemChanged(i)
+                }
+            }
+        } else {
+            // Handle cases where sizes are different (e.g., additions or removals)
+            val minSize = minOf(oldSize, newSize)
+            for (i in 0 until minSize) {
+                if (oldPacks[i] != newPacks[i]) {
+                    notifyItemChanged(i)
+                }
+            }
+
+            if (oldSize > newSize) {
+                // Items have been removed
+                notifyItemRangeRemoved(newSize, oldSize - newSize)
+            } else {
+                // Items have been added
+                notifyItemRangeInserted(oldSize, newSize - oldSize)
+            }
+        }
     }
 }

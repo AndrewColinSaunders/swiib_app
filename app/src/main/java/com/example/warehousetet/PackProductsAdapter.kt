@@ -10,9 +10,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
 class PackProductsAdapter(
-    var moveLines: List<MoveLine>,
-    private var packId: Int,
-    var packagedMoveLines: MutableList<PackagedMovedLine>,
+    var moveLines: List<MoveLineOutgoing>,
+    private var packId: Int,  // This packId is being used so please ignore the warning. Being used in PackProductsActivity
+    private var packagedMoveLines: MutableList<PackagedMovedLine>,
     private val verificationListener: VerificationListener
 ) : RecyclerView.Adapter<PackProductsAdapter.MoveLineViewHolder>() {
 
@@ -32,24 +32,16 @@ class PackProductsAdapter(
 
     override fun getItemCount(): Int = moveLines.size
 
-    /*
-    fun updateMoveLines(newMoveLines: List<MoveLine>, newPackId: Int) {
-        moveLines = newMoveLines
-        packId = newPackId
-        notifyDataSetChanged()
-        checkAllVerified()
-    }
-    */
 
     class MoveLineViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val nameTextView: TextView = itemView.findViewById(R.id.packProductNameTextView)
         private val quantityTextView: TextView = itemView.findViewById(R.id.packProductQuantityTextView)
         private val cardView: MaterialCardView = itemView.findViewById(R.id.packProductItemCard)
 
-        fun bind(moveLine: MoveLine, isPackaged: Boolean) {
+        fun bind(moveLine: MoveLineOutgoing, isPackaged: Boolean) {
             Log.d("ViewHolderLog", "Binding move line: ${moveLine.productName}, Packaged: $isPackaged")
             nameTextView.text = moveLine.productName
-            quantityTextView.text = "Quantity: ${moveLine.quantity}"
+            quantityTextView.text = itemView.context.getString(R.string.quantity_text, moveLine.quantity.toString())
             val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)
             nameTextView.setTextColor(whiteColor)
             quantityTextView.setTextColor(whiteColor)
@@ -60,6 +52,7 @@ class PackProductsAdapter(
             }
             cardView.setCardBackgroundColor(backgroundColor)
         }
+
 
     }
 

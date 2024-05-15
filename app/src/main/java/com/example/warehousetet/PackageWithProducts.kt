@@ -2,6 +2,6 @@ package com.example.warehousetet
 
 data class PackageWithProducts(
     val packageName: String,
-    val products: List<MoveLine>
+    val products: List<MoveLineOutgoing>
 )
 

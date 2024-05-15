@@ -1,11 +1,14 @@
 package com.example.warehousetet
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.LinearLayout
+import android.window.OnBackInvokedDispatcher
+import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -32,6 +35,8 @@ class DeliveryOrdersActivity : AppCompatActivity() {
         initializeRecyclerView()
         fetchDeliveryOrdersAndDisplay()
         startPeriodicRefresh()
+
+        registerBackPressHandler()
     }
 
     override fun onResume() {
@@ -45,10 +50,9 @@ class DeliveryOrdersActivity : AppCompatActivity() {
     }
 
     private fun initializeRecyclerView() {
-        val recyclerView: RecyclerView = findViewById(R.id.deliveryOrdersRecyclerView) // Make sure your layout file for PickActivity includes a RecyclerView with this ID
+        val recyclerView: RecyclerView = findViewById(R.id.deliveryOrdersRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         deliveryOrdersAdapter = DeliveryOrdersAdapter(listOf()) { deliveryOrders ->
-            // Launch ProductsActivity with pick ID, similar to how it's done with receipts
             Intent(this, DeliveryOrdersProductsActivity::class.java).also { intent ->
                 Log.d("DeliveryOrdersActivity", "Sending data to DeliveryOrdersProductsActivity: ID=${deliveryOrders.id}, Name=${deliveryOrders.name}, Origin=${deliveryOrders.origin}, Location=${deliveryOrders.locationId}, DestLocation=${deliveryOrders.locationDestId}")
                 intent.putExtra("DELIVERY_ORDERS_ID", deliveryOrders.id)
@@ -65,7 +69,7 @@ class DeliveryOrdersActivity : AppCompatActivity() {
     private fun fetchDeliveryOrdersAndDisplay() {
         coroutineScope.launch {
             try {
-                val deliveryOrders = odooXmlRpcClient.fetchDeliveryOrders() // Implement this method in OdooXmlRpcClient
+                val deliveryOrders = odooXmlRpcClient.fetchDeliveryOrders()
                 withContext(Dispatchers.Main) {
                     if (deliveryOrders.isEmpty()) {
                         findViewById<RecyclerView>(R.id.deliveryOrdersRecyclerView).visibility = View.GONE
@@ -82,13 +86,12 @@ class DeliveryOrdersActivity : AppCompatActivity() {
         }
     }
 
-
     private fun startPeriodicRefresh() {
-        refreshJob?.cancel() // Cancel any existing job to avoid duplicates
+        refreshJob?.cancel()
         refreshJob = coroutineScope.launch {
             while (isActive) {
                 fetchDeliveryOrdersAndDisplay()
-                delay(5000) // Refresh every 5 seconds
+                delay(5000)
             }
         }
     }
@@ -100,7 +103,7 @@ class DeliveryOrdersActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                onBackPressed()
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
         }
@@ -113,16 +116,20 @@ class DeliveryOrdersActivity : AppCompatActivity() {
         coroutineScope.cancel()
     }
 
-    //============================================================================================================
-    //                        Androids built in back button at the bottom of the screen
-    //                             NB!!!!    INCLUDE IN EVERY ACTIVITY    NB!!!!
-    //============================================================================================================
-
-    override fun onBackPressed() {
-        super.onBackPressed()
-        // Create an Intent to start HomePageActivity
-        val intent = Intent(this, HomePageActivity::class.java)
-        startActivity(intent)
-        finish()  // Optional: Call finish() if you do not want to return to this activity
+    // Handle the back button press
+    private fun registerBackPressHandler() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        } else {
+            onBackPressedDispatcher.addCallback(this /* lifecycle owner */) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        }
     }
 }

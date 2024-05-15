@@ -80,7 +80,6 @@ class HomePageActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.btnInternalTransfers).setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            Intent(this, InternalTransfersActivity::class.java).also { startActivity(it) }
         }
 
         findViewById<Button>(R.id.btnPick).setOnClickListener {

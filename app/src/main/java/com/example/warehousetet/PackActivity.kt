@@ -1,12 +1,14 @@
 package com.example.warehousetet
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.MenuItem
 import android.view.View
 import android.widget.LinearLayout
-import android.widget.TextView
+import android.window.OnBackInvokedDispatcher
+import androidx.activity.addCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -23,6 +25,7 @@ class PackActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pack)
+        registerBackPressHandler()
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
@@ -102,7 +105,7 @@ class PackActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                onBackPressed()
+                registerBackPressHandler()
                 return true
             }
         }
@@ -120,11 +123,19 @@ class PackActivity : AppCompatActivity() {
     //                        Androids built in back button at the bottom of the screen
     //                             NB!!!!    INCLUDE IN EVERY ACTIVITY    NB!!!!
     //============================================================================================================
-    override fun onBackPressed() {
-        super.onBackPressed()
-        // Create an Intent to start HomePageActivity
-        val intent = Intent(this, HomePageActivity::class.java)
-        startActivity(intent)
-        finish()  // Optional: Call finish() if you do not want to return to this activity
+    private fun registerBackPressHandler() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT
+            ) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        } else {
+            onBackPressedDispatcher.addCallback(this /* lifecycle owner */) {
+                // Back is pressed... Finishing the activity
+                finish()
+            }
+        }
     }
 }
