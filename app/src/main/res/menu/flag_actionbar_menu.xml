@@ -2,7 +2,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
     <item
         android:id="@+id/action_flag"
-        android:icon="@drawable/flag_solid"
+        android:icon="@drawable/flag_solid1"
         android:title="Flag"
         app:showAsAction="ifRoom|withText" />
 </menu>

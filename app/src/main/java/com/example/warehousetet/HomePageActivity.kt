@@ -90,7 +90,15 @@ class HomePageActivity : AppCompatActivity() {
         it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
 //        Intent(this, PackActivity::class.java).also { startActivity(it) }
     }
+    findViewById<Button>(R.id.btnPack).setOnClickListener {
+        it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        Intent(this, PackActivity::class.java).also { startActivity(it) }
+    }
 
+    findViewById<Button>(R.id.btnDeliveryOrders).setOnClickListener {
+        it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+        Intent(this, DeliveryOrdersActivity::class.java).also { startActivity(it) }
+    }
 
 
     }

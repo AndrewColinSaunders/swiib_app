@@ -3,6 +3,11 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-feature android:name="android.hardware.camera" />
+    <uses-feature android:name="android.hardware.camera.autofocus" />
 
     <application
         android:allowBackup="true"
@@ -14,6 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.WarehouseTet"
         tools:targetApi="31">
+
         <activity
             android:name=".PickActivity"
             android:exported="false"
@@ -29,6 +35,7 @@
             android:exported="false"
             android:label="Internal Transfers"
             android:theme="@style/Theme.WarehouseTet" />
+
         <activity
             android:name=".InternalTransfersActivity"
             android:exported="false"
@@ -40,17 +47,20 @@
             android:exported="false"
             android:label="Products"
             android:theme="@style/Theme.WarehouseTet" />
+
         <activity
             android:name=".ReceiptsActivity"
             android:exported="false"
             android:label="Receipts"
             android:theme="@style/Theme.WarehouseTet" />
+
         <activity
             android:name=".PickProductsActivity"
             android:exported="false"
             android:label="Products"
             android:windowSoftInputMode="adjustPan"
             android:theme="@style/Theme.WarehouseTet" />
+
         <activity
             android:name=".HomePageActivity"
             android:exported="false"
@@ -62,12 +72,41 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".DeliveryOrdersProductsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".DeliveryOrdersActivity"
+            android:exported="false"
+            android:label="Delivery Orders"
+            android:theme="@style/Theme.WarehouseTet" />
+
+        <activity
+            android:name=".PackProductsActivity"
+            android:exported="false"
+            android:label="Internal Transfers"
+            android:theme="@style/Theme.WarehouseTet" />
+
+        <activity
+            android:name=".PackActivity"
+            android:exported="false"
+            android:label="Packs"
+            android:theme="@style/Theme.WarehouseTet" />
+
     </application>
+
     <queries>
+        <!--
+        The <queries> element in AndroidManifest.xml declares direct package accesses for
+        compatibility with Android 11 (API level 30) and later. Here, we declare access to
+        the camera app via the "android.media.action.IMAGE_CAPTURE" intent action, allowing
+        our app to initiate image capture directly.
+        -->
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
