@@ -55,18 +55,6 @@ class LoginActivity : AppCompatActivity() {
             val username = usernameEditText.text.toString()
             val password = passwordEditText.text.toString()
 
-//            coroutineScope.launch {
-//                val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
-//                val userId = odooXmlRpcClient.login(username, password)
-//
-//                withContext(Dispatchers.Main) {
-//                    if (userId > 0) {
-//                        handleLoginSuccess(username, password, userId)
-//                    } else {
-//                        handleLoginFailure("Invalid username or password.")
-//                    }
-//                }
-//            }
             coroutineScope.launch {
                 val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
                 val userId = odooXmlRpcClient.login(username, password)
@@ -90,8 +78,7 @@ class LoginActivity : AppCompatActivity() {
         Log.d("LoginActivity", "Login success with UserId: $userId")
         val credentialManager = CredentialManager(this)
         credentialManager.storeUserCredentials(username, password, userId)
-        showGreenToast("Login successful")
-//        Toast.makeText(this, "Login successful.", Toast.LENGTH_LONG).show()
+        Toast.makeText(this, "Login successful.", Toast.LENGTH_LONG).show()
         val intent = Intent(this, HomePageActivity::class.java).apply {
             putExtra("USER_ID", userId)
         }
@@ -101,41 +88,6 @@ class LoginActivity : AppCompatActivity() {
 
     private fun handleLoginFailure(errorMessage: String) {
         Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
-        showRedToast(errorMessage)
-    }
-
-    private fun showRedToast(message: String) {
-        val toast = Toast.makeText(this@LoginActivity, message, Toast.LENGTH_SHORT)
-        val view = toast.view
-
-        // Get the TextView of the default Toast view
-        val text = view?.findViewById<TextView>(android.R.id.message)
-
-        // Set the background color of the Toast view
-        view?.background?.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
-
-        // Set the text color to be more visible on the red background, if needed
-        text?.setTextColor(Color.WHITE)
-
-        toast.show()
-    }
-    private fun showGreenToast(message: String) {
-        val toast = Toast.makeText(this@LoginActivity, message, Toast.LENGTH_SHORT)
-        val view = toast.view
-
-        // Get the TextView of the default Toast view
-        val text = view?.findViewById<TextView>(android.R.id.message)
-
-        // Retrieve the success_green color from resources
-        val successGreen = ContextCompat.getColor(this@LoginActivity, R.color.success_green)
-
-        // Set the background color of the Toast view to success_green
-        view?.background?.setColorFilter(successGreen, PorterDuff.Mode.SRC_IN)
-
-        // Set the text color to be more visible on the green background, if needed
-        text?.setTextColor(Color.WHITE)
-
-        toast.show()
     }
 
     override fun onDestroy() {

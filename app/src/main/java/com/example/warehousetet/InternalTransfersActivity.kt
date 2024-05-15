@@ -84,17 +84,6 @@ class InternalTransfersActivity : AppCompatActivity() {
         if (isSearching) stopPeriodicRefresh() else startPeriodicRefresh()
     }
 
-//    private fun initializeRecyclerView() {
-//        val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView)
-//        recyclerView.layoutManager = LinearLayoutManager(this)
-//        internalTransfersAdapter = InternalTransfersAdapter(listOf()) { transfer ->
-//            Intent(this, IntTransferProductsActivity::class.java).apply {
-//                putExtra("TRANSFER_ID", transfer.id)
-//                startActivity(this)
-//            }
-//        }
-//        recyclerView.adapter = internalTransfersAdapter
-//    }
 private fun initializeRecyclerView() {
     val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView) // Ensure this ID matches your layout file
     recyclerView.layoutManager = LinearLayoutManager(this)
@@ -145,7 +134,7 @@ private fun initializeRecyclerView() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         if (item.itemId == android.R.id.home) {
-            onBackPressed()
+            onBackPressedDispatcher.onBackPressed()
             return true
         }
         return super.onOptionsItemSelected(item)

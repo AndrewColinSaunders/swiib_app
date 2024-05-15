@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.PorterDuff
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.MediaStore
@@ -20,6 +19,7 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
@@ -28,12 +28,13 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -56,16 +57,12 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
     private lateinit var odooXmlRpcClient: OdooXmlRpcClient
     private lateinit var barcodeInput: EditText
     private lateinit var confirmButton: Button
-    private lateinit var constants: Constants
-
+    private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
 
     //    private var productBarcodes = hashMapOf<String, String>()
-    private var productSerialNumbers = hashMapOf<ProductPickKey, MutableList<String>>()
-    val lotQuantities: MutableMap<ProductPickKey, Double> = mutableMapOf()
     private var quantityMatches = mutableMapOf<ProductPickKey, Boolean>()
     private var barcodeToProductIdMap = mutableMapOf<String, Int>()
     // Assuming this is declared at the class level
-    private val accumulatedQuantities: MutableMap<Int, Double> = mutableMapOf()
     private val confirmedLines = mutableSetOf<Int>()
     private var transferId: Int = -1
 
@@ -85,7 +82,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         transferName = intent.getStringExtra("TRANSFER_NAME") ?: "Transfer"
 
 
-        val locationName = intent.getStringExtra("LOCATION")
+//        val locationName = intent.getStringExtra("LOCATION")
 
 
         destLocationName = intent.getStringExtra("DEST_LOCATION")
@@ -112,9 +109,40 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
             findViewById<EditText>(R.id.pickBarcodeInput).text.clear()
         }
 
+        cameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                handleCameraResult(result.data)
+            } else {
+                Toast.makeText(this, "Image capture failed or cancelled.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        val enterManuallyButton: Button = findViewById(R.id.pickManualEntryButton)
+        val confirmButton: Button = findViewById(R.id.pickConfirmButton)
+        val clearButton: Button = findViewById(R.id.pickClearButton)
+        val barcodeInput: EditText = findViewById(R.id.pickBarcodeInput)
+
+        enterManuallyButton.setOnClickListener {
+            confirmButton.visibility = View.VISIBLE
+            clearButton.visibility = View.VISIBLE
+            enterManuallyButton.visibility = View.GONE
+            barcodeInput.apply {
+                setBackgroundColor(ContextCompat.getColor(context, android.R.color.white))
+                setTextColor(ContextCompat.getColor(context, android.R.color.black))
+                isCursorVisible = true
+                requestFocus()
+                setBackgroundResource(R.drawable.edittext_border)
+                hint = "Enter Barcode"
+                val layoutParams = this.layoutParams
+                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                this.layoutParams = layoutParams
+            }
+        }
+
+
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         setupBarcodeVerification(transferId)
-//        restoreButtonVisibility(pickId)
+        restoreButtonVisibility(transferId)
         loadMatchStatesFromPreferences(transferId)
         restoreButtonVisibility(transferId)
     }
@@ -125,19 +153,19 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
-                onBackPressed() // This will handle the back action
+                onBackPressedDispatcher.onBackPressed()
                 return true
             }
             R.id.action_flag -> {
                 showFlagDialog()
-                true
+                return true  // Ensure to return true after handling the action
             }
         }
         return super.onOptionsItemSelected(item)
     }
 
     private fun showFlagDialog() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, findViewById(android.R.id.content), false)
         val dialogBuilder = AlertDialog.Builder(this).apply {
             setView(dialogView)
             setCancelable(false)  // Prevent dialog from being dismissed by back press or outside touches
@@ -151,11 +179,12 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
             coroutineScope.launch {
                 try {
-                    val pickId = this@IntTransferProductsActivity.transferId
                     val pickName = this@IntTransferProductsActivity.transferName ?: run {
                         withContext(Dispatchers.Main) {
                             Log.e("PickProductsActivity", "Pick name is null")
-                            showRedToast("Invalid pick details")
+                            Toast.makeText(this@IntTransferProductsActivity, "Invalid pick details", Toast.LENGTH_SHORT).show()
+                            barcodeInput.setText("")
+                            barcodeInput.requestFocus()
                         }
                         return@launch
                     }
@@ -164,25 +193,31 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                     if (buyerDetails != null) {
                         withContext(Dispatchers.Main) {
                             // Capture image before sending the email
-                            captureImage(pickId)
+                            captureImage()
                         }
 
                         // Ensure email is sent after image capture dialog completion
                         sendEmailToBuyer(buyerDetails.login, buyerDetails.name, pickName)
                         withContext(Dispatchers.Main) {
                             Log.d("PickProductsActivity", "Pick flagged and buyer notified via email.")
-                            showRedToast("Pick flagged")
+                            Toast.makeText(this@IntTransferProductsActivity, "Pick flagged", Toast.LENGTH_SHORT).show()
+                            barcodeInput.setText("")
+                            barcodeInput.requestFocus()
                         }
                     } else {
                         withContext(Dispatchers.Main) {
                             Log.e("PickProductsActivity", "Failed to fetch buyer details or flag the pick.")
-                            showRedToast("Failed to flag pick")
+                            Toast.makeText(this@IntTransferProductsActivity, "Failed to flag pick", Toast.LENGTH_SHORT).show()
+                            barcodeInput.setText("")
+                            barcodeInput.requestFocus()
                         }
                     }
                 } catch (e: Exception) {
                     withContext(Dispatchers.Main) {
                         Log.e("PickProductsActivity", "Error in flagging process: ${e.localizedMessage}", e)
-                        showRedToast("Error during flagging")
+                        Toast.makeText(this@IntTransferProductsActivity, "Error during flagging", Toast.LENGTH_SHORT).show()
+                        barcodeInput.setText("")
+                        barcodeInput.requestFocus()
                     }
                 }
                 dialog.dismiss()  // Dismiss the dialog once the operations are complete
@@ -192,61 +227,113 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         dialog.show()  // Show the dialog
     }
 
-    companion object {
-        const val CAMERA_REQUEST_CODE = 1001
-    }
+//    companion object {
+//        const val CAMERA_REQUEST_CODE = 1001
+//    }
+    private fun captureImage() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("Capture Image?")
+        builder.setMessage("Would you like to capture an image?")
 
-    private fun captureImage(pickId: Int) {
-        // Inflate the custom layout for the dialog
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.capture_image_dialog, null)
-
-        // Create and show the dialog
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .create()
-
-        // Find buttons and set up click listeners
-        dialogView.findViewById<Button>(R.id.btnNo).setOnClickListener {
+        builder.setNegativeButton("No") { dialog, _ ->
             dialog.dismiss()
         }
 
-        dialogView.findViewById<Button>(R.id.btnCaptureImage).setOnClickListener {
+        builder.setPositiveButton("Capture Image") { dialog, _ ->
             dialog.dismiss()
-            openCamera()  // Pass pickId to ensure it is available after capturing the image
+            openCamera()
         }
+
+        val dialog = builder.create()
         dialog.show()
     }
 
     private fun openCamera() {
         val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
         if (cameraIntent.resolveActivity(packageManager) != null) {
-            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+            cameraLauncher.launch(cameraIntent)
         } else {
             Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
+            barcodeInput.setText("")
+            barcodeInput.requestFocus()
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-            val imageBitmap = data?.extras?.get("data") as? Bitmap
-            if (imageBitmap != null) {
-                val byteArrayOutputStream = ByteArrayOutputStream()
-                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-                val byteArray = byteArrayOutputStream.toByteArray()
-                val encodedImage = Base64.encodeToString(byteArray, Base64.DEFAULT)
+    @Suppress("DEPRECATION")
+    private fun handleCameraResult(data: Intent?) {
+        val imageBitmap = data?.extras?.get("data") as? Bitmap
+        if (imageBitmap != null) {
+            val byteArrayOutputStream = ByteArrayOutputStream()
+            imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+            val byteArray = byteArrayOutputStream.toByteArray()
+            val encodedImage = Base64.encodeToString(byteArray, Base64.DEFAULT)
 
-                Log.d("CaptureImage", "Encoded image: $encodedImage") // Log the encoded string or its length
+            Log.d("CaptureImage", "Encoded image: $encodedImage")
 
-                coroutineScope.launch {
-                    val updateResult = odooXmlRpcClient.updatePickingImage(transferId, encodedImage)
-                    Log.d("OdooUpdate", "Update result: $updateResult") // Log the result from the server
-                }
-            } else {
-                Log.e("CaptureImage", "Failed to capture image")
+            coroutineScope.launch {
+                val updateResult = odooXmlRpcClient.updatePickingImage(transferId, encodedImage)
+                Log.d("OdooUpdate", "Update result: $updateResult")
+                barcodeInput.setText("")
+                barcodeInput.requestFocus()
             }
+        } else {
+            Log.e("CaptureImage", "Failed to capture image")
+            barcodeInput.setText("")
+            barcodeInput.requestFocus()
         }
     }
+
+//    private fun captureImage() {
+//        // Inflate the custom layout for the dialog
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.capture_image_dialog, null)
+//
+//        // Create and show the dialog
+//        val dialog = AlertDialog.Builder(this)
+//            .setView(dialogView)
+//            .create()
+//
+//        // Find buttons and set up click listeners
+//        dialogView.findViewById<Button>(R.id.btnNo).setOnClickListener {
+//            dialog.dismiss()
+//        }
+//
+//        dialogView.findViewById<Button>(R.id.btnCaptureImage).setOnClickListener {
+//            dialog.dismiss()
+//            openCamera()  // Pass pickId to ensure it is available after capturing the image
+//        }
+//        dialog.show()
+//    }
+//
+//    private fun openCamera() {
+//        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+//        if (cameraIntent.resolveActivity(packageManager) != null) {
+//            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
+//        } else {
+//            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
+//        }
+//    }
+
+//    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+//        super.onActivityResult(requestCode, resultCode, data)
+//        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
+//            val imageBitmap = data?.extras?.get("data") as? Bitmap
+//            if (imageBitmap != null) {
+//                val byteArrayOutputStream = ByteArrayOutputStream()
+//                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+//                val byteArray = byteArrayOutputStream.toByteArray()
+//                val encodedImage = Base64.encodeToString(byteArray, Base64.DEFAULT)
+//
+//                Log.d("CaptureImage", "Encoded image: $encodedImage") // Log the encoded string or its length
+//
+//                coroutineScope.launch {
+//                    val updateResult = odooXmlRpcClient.updatePickingImage(transferId, encodedImage)
+//                    Log.d("OdooUpdate", "Update result: $updateResult") // Log the result from the server
+//                }
+//            } else {
+//                Log.e("CaptureImage", "Failed to capture image")
+//            }
+//        }
+//    }
 
     override fun onResume() {
         super.onResume()
@@ -293,10 +380,10 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
 
         // Set values to the TextViews
         textProductName.text = product.productName
-        textProductQuantity.text = "Quantity: ${product.quantity}"
-        textProductFromLocation.text = "From Location: ${product.locationName}"
-        textProductToLocation.text = "To Location: ${product.locationDestName}"
-        textProductLotNumber.text = "${product.lotName}"
+        textProductQuantity.text = getString(R.string.product_quantity, product.quantity)
+        textProductFromLocation.text = getString(R.string.from_location, product.locationName)
+        textProductToLocation.text = getString(R.string.to_location, product.locationDestName)
+        textProductLotNumber.text = product.lotName
 
         // Determine the product's tracking type
         coroutineScope.launch {
@@ -345,58 +432,28 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                         withContext(Dispatchers.Main) {
                             Log.d("UpdateProduct", "Successfully updated move line for product ID: ${product.productId}")
                             fetchProductsForPick(transferId)
+
                         }
                     } catch (e: Exception) {
                         withContext(Dispatchers.Main) {
                             Log.e("UpdateProduct", "Failed to update move line: ${e.localizedMessage}")
-                            // Handle errors, possibly showing a dialog to the user or retrying the operation
+
                         }
                     }
                 }
             }
             dialog.dismiss()
+            barcodeInput.setText("")
+            barcodeInput.requestFocus()
         }
         buttonCancel.setOnClickListener {
             dialog.dismiss()
+            barcodeInput.setText("")
+            barcodeInput.requestFocus()
         }
 
         dialog.show()
     }
-
-    private fun showRedToast(message: String) {
-        val toast = Toast.makeText(this@IntTransferProductsActivity, message, Toast.LENGTH_SHORT)
-        val view = toast.view
-
-        // Get the TextView of the default Toast view
-        val text = view?.findViewById<TextView>(android.R.id.message)
-
-        // Set the background color of the Toast view
-        view?.background?.setColorFilter(Color.RED, PorterDuff.Mode.SRC_IN)
-
-        // Set the text color to be more visible on the red background, if needed
-        text?.setTextColor(Color.WHITE)
-
-        toast.show()
-    }
-    private fun showGreenToast(message: String) {
-        val toast = Toast.makeText(this@IntTransferProductsActivity, message, Toast.LENGTH_SHORT)
-        val view = toast.view
-
-        // Get the TextView of the default Toast view
-        val text = view?.findViewById<TextView>(android.R.id.message)
-
-        // Retrieve the success_green color from resources
-        val successGreen = ContextCompat.getColor(this@IntTransferProductsActivity, R.color.success_green)
-
-        // Set the background color of the Toast view to success_green
-        view?.background?.setColorFilter(successGreen, PorterDuff.Mode.SRC_IN)
-
-        // Set the text color to be more visible on the green background, if needed
-        text?.setTextColor(Color.WHITE)
-
-        toast.show()
-    }
-
     private fun fetchProductsForPick(pickId: Int) {
         coroutineScope.launch {
             try {
@@ -414,7 +471,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
 
                         moveLine.copy(
                             barcode = barcode,
-                            trackingType = trackingAndExpiration?.first ?: "none"
+                            trackingType = trackingAndExpiration.first ?: "none"
                         )
                     }
                 }
@@ -448,8 +505,8 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         Log.d("PickProductsActivity", "Adapter updated with new products and match states.")
     }
 
-    private fun fetchBarcodesForProducts(moveLine: List<MoveLine>) {
-        moveLine.forEach { moveLine ->
+    private fun fetchBarcodesForProducts(moveLines: List<MoveLine>) {
+        moveLines.forEach { moveLine ->
             coroutineScope.launch {
                 val barcode = odooXmlRpcClient.fetchProductBarcodeByName(moveLine.productName)
                 barcode?.let {
@@ -462,16 +519,40 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         }
     }
 
+//    private fun setupBarcodeVerification(pickId: Int) {
+//        confirmButton.setOnClickListener {
+//            val enteredBarcode = barcodeInput.text.toString().trim()
+//            verifyBarcode(enteredBarcode, pickId)
+//            hideKeyboard()
+//        }
+//
+//        barcodeInput.setOnEditorActionListener { _, actionId, event ->
+//            if (actionId == EditorInfo.IME_ACTION_DONE || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+//                confirmButton.performClick()
+//                true
+//            } else false
+//        }
+//    }
     private fun setupBarcodeVerification(pickId: Int) {
-        confirmButton.setOnClickListener {
+        fun performBarcodeVerification() {
             val enteredBarcode = barcodeInput.text.toString().trim()
             verifyBarcode(enteredBarcode, pickId)
             hideKeyboard()
+            barcodeInput.setText("")
+        }
+
+        confirmButton.setOnClickListener {
+            performBarcodeVerification()
         }
 
         barcodeInput.setOnEditorActionListener { _, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_DONE || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
-                confirmButton.performClick()
+            if (actionId == EditorInfo.IME_ACTION_DONE ||
+                (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+                if (confirmButton.visibility == View.GONE || confirmButton.visibility == View.INVISIBLE) {
+                    performBarcodeVerification()
+                } else {
+                    confirmButton.performClick()
+                }
                 true
             } else false
         }
@@ -496,7 +577,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                     val trackingType = trackingAndExpiration?.first ?: "none"
 
                     withContext(Dispatchers.Main) {
-                        showSourceLocationDialog(productLine.productName, productLine.quantity, pickId, productLine.id, productLine.locationName, trackingType,productLine.productId, productLine.locationId, productLine.lotName)
+                        showSourceLocationDialog(productLine.productName, productLine.quantity, pickId, productLine.id, productLine.locationName, trackingType,productLine.productId, productLine.lotName)
                     }
                 }
             } else if (packagingProductInfo != null) {
@@ -504,6 +585,8 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
             } else {
                 withContext(Dispatchers.Main) {
                     Log.d("verifyBarcode", "Barcode not found in product.template or product.packaging models")
+                    barcodeInput.setText("")
+                    barcodeInput.requestFocus()
                 }
             }
         }
@@ -512,7 +595,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
     private fun showSourceLocationDialog(
         productName: String, quantity: Double, pickId: Int, lineId: Int,
         locationName: String, trackingType: String, productId: Int,
-        locationId: Int, lotName: String
+        lotName: String
     ) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_scan_source_location, null)
         val sourceLocationInput = dialogView.findViewById<EditText>(R.id.sourceLocationInput)
@@ -520,7 +603,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         locationNameTextView.text = locationName
 
         sourceLocationInput.setHintTextColor(Color.WHITE)
-        sourceLocationInput.setOnEditorActionListener { v, actionId, event ->
+        sourceLocationInput.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
                 dialogView.findViewById<Button>(R.id.confirmButton).performClick()
                 true
@@ -541,10 +624,10 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                     if (enteredLocation == locationName) {
                         // If the entered location matches the expected location
                         withContext(Dispatchers.Main) {
-                            showGreenToast("Source location confirmed: $enteredLocation")
+                            Toast.makeText(this@IntTransferProductsActivity, "Source location confirmed: $enteredLocation", Toast.LENGTH_SHORT).show()
                             dialog.dismiss()
                             when (trackingType) {
-                                "serial" -> promptForSerialNumber(productName, pickId, productId, locationId, lineId)
+                                "serial" -> promptForSerialNumber(productName, pickId, productId, lineId)
                                 "lot" -> promptConfirmLotQuantity(productName, lotName, quantity, locationName, lineId, pickId)
                                 "none" -> displayQuantityDialog(productName, quantity, pickId, lineId)
                                 else -> Log.d("verifyBarcode", "Tracking Type: Other - $trackingType")
@@ -553,44 +636,88 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                     } else {
                         // If the entered location does not match
                         withContext(Dispatchers.Main) {
-                            showRedToast("Incorrect location, please re-enter.")
+                            Toast.makeText(this@IntTransferProductsActivity, "Incorrect location, please re-enter.", Toast.LENGTH_SHORT).show()
                             sourceLocationInput.text.clear() // Clear the input for re-entry
                         }
                     }
                 }
             } else {
-                showRedToast("Please enter a source location.")
+                Toast.makeText(this@IntTransferProductsActivity, "Please enter a source location.", Toast.LENGTH_SHORT).show()
             }
         }
 
         dialogView.findViewById<Button>(R.id.cancelButton).setOnClickListener {
             dialog.dismiss()
+            barcodeInput.setText("")
+            barcodeInput.requestFocus()
         }
 
         dialog.show() // Display the dialog
         sourceLocationInput.requestFocus() // Autofocus on the source location input field when the dialog shows
     }
 
+//    private fun displayQuantityDialog(productName: String, expectedQuantity: Double, pickId: Int, lineId: Int) {
+//
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
+//        val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
+//        val buttonConfirm = dialogView.findViewById<Button>(R.id.buttonConfirm)
+//        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
+//
+//        val fullText = "Confirm the quantity of $expectedQuantity for $productName has been picked."
+//        val spannableString = SpannableString(fullText)
+//
+//        // Styling for expectedQuantity
+//        val quantityStart = fullText.indexOf("$expectedQuantity")
+//        val quantityEnd = quantityStart + "$expectedQuantity".length
+//        spannableString.setSpan(StyleSpan(Typeface.BOLD), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+//        spannableString.setSpan(RelativeSizeSpan(1.1f), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) // 10% larger
+//
+//        // Styling for productName
+//        val productNameStart = fullText.indexOf(productName)
+//        val productNameEnd = productNameStart + productName.length
+//        spannableString.setSpan(StyleSpan(Typeface.BOLD), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+//        spannableString.setSpan(RelativeSizeSpan(1.1f), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) // 10% larger
+//
+//        textViewConfirmation.text = spannableString
+//
+//        val alertDialog = AlertDialog.Builder(this).apply {
+//            setView(dialogView)
+//            create()
+//        }.show()
+//
+//        buttonConfirm.setOnClickListener {
+//            // Pass the lineId to match state update function
+//            updateProductMatchState(lineId, pickId)
+//            confirmedLines.add(lineId)
+//            alertDialog.dismiss()  // Close the dialog after confirmation
+//        }
+//
+//        buttonCancel.setOnClickListener {
+//            alertDialog.dismiss()  // Close the dialog when cancel is clicked
+//        }
+//    }
+
     private fun displayQuantityDialog(productName: String, expectedQuantity: Double, pickId: Int, lineId: Int) {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
+        val rootView = findViewById<ViewGroup>(android.R.id.content)  // Use root view to resolve layout parameters
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, rootView, false)
         val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
         val buttonConfirm = dialogView.findViewById<Button>(R.id.buttonConfirm)
         val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
 
-        val fullText = "Confirm the quantity of $expectedQuantity for $productName has been picked."
+        val fullText = getString(R.string.confirm_quantity_message, expectedQuantity, productName)
         val spannableString = SpannableString(fullText)
 
         // Styling for expectedQuantity
         val quantityStart = fullText.indexOf("$expectedQuantity")
         val quantityEnd = quantityStart + "$expectedQuantity".length
         spannableString.setSpan(StyleSpan(Typeface.BOLD), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        spannableString.setSpan(RelativeSizeSpan(1.1f), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) // 10% larger
+        spannableString.setSpan(RelativeSizeSpan(1.1f), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
         // Styling for productName
-        val productNameStart = fullText.indexOf("$productName")
-        val productNameEnd = productNameStart + "$productName".length
+        val productNameStart = fullText.indexOf(productName)
+        val productNameEnd = productNameStart + productName.length
         spannableString.setSpan(StyleSpan(Typeface.BOLD), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        spannableString.setSpan(RelativeSizeSpan(1.1f), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) // 10% larger
+        spannableString.setSpan(RelativeSizeSpan(1.1f), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
         textViewConfirmation.text = spannableString
 
@@ -600,23 +727,27 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         }.show()
 
         buttonConfirm.setOnClickListener {
-            // Pass the lineId to match state update function
             updateProductMatchState(lineId, pickId)
             confirmedLines.add(lineId)
-            alertDialog.dismiss()  // Close the dialog after confirmation
+            alertDialog.dismiss()
+            barcodeInput.setText("")
+            barcodeInput.requestFocus()
         }
 
         buttonCancel.setOnClickListener {
-            alertDialog.dismiss()  // Close the dialog when cancel is clicked
+            alertDialog.dismiss()
+            barcodeInput.setText("")
+            barcodeInput.requestFocus()
         }
     }
 
+
     private fun promptConfirmLotQuantity(productName: String, lotName: String, quantity: Double, locationName: String, lineId: Int, pickId: Int) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_quantity, null)
-        dialogView.findViewById<TextView>(R.id.textProductInfo).text = "Product: $productName"
-        dialogView.findViewById<TextView>(R.id.textQuantityInfo).text = "Quantity: $quantity"
-        dialogView.findViewById<TextView>(R.id.textLotInfo).text = "LOT: $lotName"
-        dialogView.findViewById<TextView>(R.id.textSourceLocationInfo).text = "Pick From: $locationName"
+        dialogView.findViewById<TextView>(R.id.textProductInfo).text = getString(R.string.product_message, productName)
+        dialogView.findViewById<TextView>(R.id.textQuantityInfo).text = getString(R.string.product_quantity, quantity)
+        dialogView.findViewById<TextView>(R.id.textLotInfo).text = getString(R.string.lot_info, lotName)
+        dialogView.findViewById<TextView>(R.id.textSourceLocationInfo).text = getString(R.string.source_location_info, locationName)
 
         val confirmButton = dialogView.findViewById<Button>(R.id.confirmButton)
         val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
@@ -627,19 +758,76 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
 
         confirmButton.setOnClickListener {
             confirmLotNumber(productName, quantity, lotName, lineId, pickId)
-            showGreenToast("Quantity confirmed for $productName.")
+            Toast.makeText(this@IntTransferProductsActivity, "Quantity confirmed for $productName.", Toast.LENGTH_SHORT).show()
             alertDialog.dismiss()  // Close the dialog after confirmation
+            barcodeInput.requestFocus()
         }
         buttonCancel.setOnClickListener {
-            alertDialog.dismiss()  // Close the dialog when cancel is clicked
+            alertDialog.dismiss()
+            barcodeInput.requestFocus()// Close the dialog when cancel is clicked
         }
 
         alertDialog.show()
     }
 
+//    private fun confirmLotNumber(productName: String, quantity: Double, lotName: String, lineId: Int, pickId: Int) {
+//        // Inflate the custom layout for the dialog
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_entry, null)
+//        val textProductInfo: TextView = dialogView.findViewById(R.id.textProductInfo)
+//        val textLotInfo: TextView = dialogView.findViewById(R.id.textLotInfo)
+//        val editText: EditText = dialogView.findViewById(R.id.editLotNumber)
+//        editText.setHintTextColor(Color.WHITE)
+//        val textQuantityInfo: TextView = dialogView.findViewById(R.id.textQuantityInfo)
+//        val confirmButton: Button = dialogView.findViewById(R.id.confirmButton)
+//        val buttonCancel: Button = dialogView.findViewById(R.id.buttonCancel)
+//
+//        // Set the texts for TextViews
+//        textProductInfo.text = getString(R.string.product_message, productName)
+//        textQuantityInfo.text = getString(R.string.product_quantity, quantity)
+//        textLotInfo.text = getString(R.string.lot_info, lotName)
+//
+//        // Configure and show AlertDialog
+//        val alertDialog = AlertDialog.Builder(this).apply {
+//            setView(dialogView)
+//            setCancelable(false)
+//            create()
+//        }.show()
+//
+//        // Set up the confirm button action
+//        confirmButton.setOnClickListener {
+//            val enteredLotNumber = editText.text.toString()
+//            if (enteredLotNumber == lotName) {
+//                showGreenToast("Correct LOT number confirmed for $productName.")
+//                updateProductMatchState(lineId, pickId)
+//                confirmedLines.add(lineId)
+//                alertDialog.dismiss()  // Close the dialog when the correct number is confirmed
+//            } else {
+//                showRedToast("Incorrect LOT number entered.")
+//            }
+//        }
+//        buttonCancel.setOnClickListener {
+//            alertDialog.dismiss()  // Close the dialog when cancel is clicked
+//        }
+//
+//        // Set up the editor action listener for the enter key
+//        editText.setOnEditorActionListener { v, actionId, event ->
+//            if (actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
+//                confirmButton.performClick()
+//                true
+//            } else {
+//                false
+//            }
+//        }
+//
+//        // Automatically show keyboard when dialog appears
+//        editText.requestFocus()
+//        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+//        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+//    }
+
     private fun confirmLotNumber(productName: String, quantity: Double, lotName: String, lineId: Int, pickId: Int) {
-        // Inflate the custom layout for the dialog
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_entry, null)
+        val rootView = findViewById<ViewGroup>(android.R.id.content)  // Use root view to resolve layout parameters
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_entry, rootView, false)
         val textProductInfo: TextView = dialogView.findViewById(R.id.textProductInfo)
         val textLotInfo: TextView = dialogView.findViewById(R.id.textLotInfo)
         val editText: EditText = dialogView.findViewById(R.id.editLotNumber)
@@ -648,36 +836,36 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         val confirmButton: Button = dialogView.findViewById(R.id.confirmButton)
         val buttonCancel: Button = dialogView.findViewById(R.id.buttonCancel)
 
-        // Set the texts for TextViews
-        textProductInfo.text = "Product: $productName"
-        textQuantityInfo.text = "Quantity: $quantity"
-        textLotInfo.text = "LOT: $lotName"
+        // Set the texts for TextViews using string resources
+        textProductInfo.text = getString(R.string.product_message, productName)
+        textQuantityInfo.text = getString(R.string.product_quantity, quantity)
+        textLotInfo.text = getString(R.string.lot_info, lotName)
 
-        // Configure and show AlertDialog
         val alertDialog = AlertDialog.Builder(this).apply {
             setView(dialogView)
             setCancelable(false)
             create()
         }.show()
 
-        // Set up the confirm button action
         confirmButton.setOnClickListener {
             val enteredLotNumber = editText.text.toString()
             if (enteredLotNumber == lotName) {
-                showGreenToast("Correct LOT number confirmed for $productName.")
+                Toast.makeText(this@IntTransferProductsActivity, getString(R.string.correct_lot_number, productName), Toast.LENGTH_SHORT).show()
                 updateProductMatchState(lineId, pickId)
                 confirmedLines.add(lineId)
-                alertDialog.dismiss()  // Close the dialog when the correct number is confirmed
+                alertDialog.dismiss()
+                barcodeInput.requestFocus()
             } else {
-                showRedToast("Incorrect LOT number entered.")
+                Toast.makeText(this@IntTransferProductsActivity, getString(R.string.incorrect_lot_number), Toast.LENGTH_SHORT).show()
+                barcodeInput.requestFocus()
             }
         }
         buttonCancel.setOnClickListener {
-            alertDialog.dismiss()  // Close the dialog when cancel is clicked
+            alertDialog.dismiss()
+            barcodeInput.requestFocus()
         }
 
-        // Set up the editor action listener for the enter key
-        editText.setOnEditorActionListener { v, actionId, event ->
+        editText.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
                 confirmButton.performClick()
                 true
@@ -686,23 +874,23 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
             }
         }
 
-        // Automatically show keyboard when dialog appears
         editText.requestFocus()
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
     }
 
-    private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int, locationId: Int, lineId: Int) {
+
+    private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int, lineId: Int) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
         val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
         val buttonConfirmSN = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
         val buttonCancelSN = dialogView.findViewById<Button>(R.id.buttonCancelSN)
         val messageTextView = dialogView.findViewById<TextView>(R.id.ProductMessage)
-        messageTextView.text = "Product: $productName"
+        messageTextView.text = getString(R.string.product_message, productName)
         serialNumberInput.setHintTextColor(Color.WHITE)
 
         // Set up the editor action listener for the serial number input
-        serialNumberInput.setOnEditorActionListener { v, actionId, event ->
+        serialNumberInput.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_DONE || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
                 buttonConfirmSN.performClick()
                 true
@@ -729,7 +917,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                 coroutineScope.launch {
                     if (savedSerials.contains(enteredSerialNumber)) {
                         withContext(Dispatchers.Main) {
-                            showRedToast("Serial number already added. Please enter a different serial number.")
+                            Toast.makeText(this@IntTransferProductsActivity, "Serial number already added. Please enter a different serial number.", Toast.LENGTH_SHORT).show()
                             serialNumberInput.setText("")
                             serialNumberInput.requestFocus()
                         }
@@ -737,19 +925,27 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                         val serialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
 
                         if (serialNumbers?.contains(enteredSerialNumber) == true) {
-                            savedSerials.add(enteredSerialNumber)
-                            sharedPrefs.edit().putStringSet(key, savedSerials).apply()
+                            // Create a new HashSet based on the existing savedSerials set
+                            val newSavedSerials = HashSet(savedSerials)
+                            newSavedSerials.add(enteredSerialNumber)
+
+                            // Save the new set to SharedPreferences
+                            sharedPrefs.edit().putStringSet(key, newSavedSerials).apply()
+
                             odooXmlRpcClient.updateMoveLinesForPick(lineId, pickId, enteredSerialNumber, productId)
+
                             withContext(Dispatchers.Main) {
                                 updateProductMatchState(lineId, pickId)
                                 confirmedLines.add(lineId)
-                                showGreenToast("Serial number added for $productName.")
+                                Toast.makeText(this@IntTransferProductsActivity, "Serial number added for $productName.", Toast.LENGTH_SHORT).show()
                                 dialog.dismiss()
                                 fetchProductsForPick(pickId)
+                                barcodeInput.requestFocus()
                             }
-                        } else {
+                        }
+                         else {
                             withContext(Dispatchers.Main) {
-                                showRedToast("Serial number does not exist. Please enter a valid serial number.")
+                                Toast.makeText(this@IntTransferProductsActivity, "Serial number does not exist. Please enter a valid serial number.", Toast.LENGTH_SHORT).show()
                                 serialNumberInput.setText("")
                                 serialNumberInput.requestFocus()
                             }
@@ -757,7 +953,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                     }
                 }
             } else {
-                showRedToast("Please enter a serial number.")
+                Toast.makeText(this@IntTransferProductsActivity, "Please enter a serial number.", Toast.LENGTH_SHORT).show()
                 serialNumberInput.setText("")
                 serialNumberInput.requestFocus()
             }
@@ -766,6 +962,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         // Set up the cancel button action
         buttonCancelSN.setOnClickListener {
             dialog.dismiss()  // Dismiss the dialog
+            barcodeInput.requestFocus()
         }
 
         dialog.show()
@@ -815,8 +1012,10 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
             }
             Transport.send(message)
             Log.d("EmailSender", "Email sent successfully to $buyerEmail.")
+            barcodeInput.requestFocus()
         } catch (e: MessagingException) {
             Log.e("EmailSender", "Failed to send email.", e)
+            barcodeInput.requestFocus()
         }
     }
 
@@ -866,6 +1065,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                             finish()  // Optionally call finish() if you want to remove this activity from the back stack
                         } else {
                             Toast.makeText(applicationContext, "Failed to validate picking.\nPlease flag or recount quantities", Toast.LENGTH_SHORT).show()
+                            barcodeInput.requestFocus()
                         }
                     }
                 }
@@ -905,6 +1105,7 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                         finish()  // Optionally call finish() if you want to remove this activity from the back stack
                     } else {
                         Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
+                        barcodeInput.requestFocus()
                     }
                 }
             }

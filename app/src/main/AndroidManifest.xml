@@ -19,7 +19,7 @@
             android:exported="false"
             android:label="Picks"
             android:theme="@style/Theme.WarehouseTet" />
-        <!-- SetupActivity -->
+
         <activity
             android:name=".SetupActivity"
             android:exported="true" /> <!-- android:theme="@style/Theme.AppCompat.Light.NoActionBar" -->
@@ -33,11 +33,8 @@
             android:name=".InternalTransfersActivity"
             android:exported="false"
             android:label="Internal Transfers"
-            android:theme="@style/Theme.WarehouseTet" /> <!-- <activity -->
-        <!-- android:name=".ProductDetailActivity" -->
-        <!-- android:exported="false" -->
-        <!-- android:label="Product Details" -->
-        <!-- android:theme="@style/Theme.WarehouseTet" /> -->
+            android:theme="@style/Theme.WarehouseTet" />
+
         <activity
             android:name=".ProductsActivity"
             android:exported="false"
@@ -59,15 +56,7 @@
             android:exported="false"
             android:label="Swiib - Warehouse Operations"
             android:theme="@style/Theme.WarehouseTet" /> <!-- android:theme="@style/Theme.AppCompat.NoActionBar" -->
-        <!-- android:theme="@style/Theme.WarehouseTet" /> -->
-        <!-- <activity -->
-        <!-- android:name=".LoginActivity" -->
-        <!-- android:exported="true"> -->
-        <!-- <intent-filter> -->
-        <!-- <action android:name="android.intent.action.MAIN" /> -->
-        <!-- <category android:name="android.intent.category.LAUNCHER" /> -->
-        <!-- </intent-filter> -->
-        <!-- </activity> -->
+
         <activity
             android:name=".LoginActivity"
             android:exported="true">
@@ -78,5 +67,9 @@
             </intent-filter>
         </activity>
     </application>
-
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
 </manifest>
