@@ -39,4 +39,5 @@
     <string name="login">Login</string>
     <string name="not_packaged">Not Packaged</string>
     <string name="create_new">Create New</string>
+    <string name="more_options">More Options</string>
 </resources>

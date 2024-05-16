@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <item android:id="@+id/action_flag"
-        android:title="Flag"
-        android:icon="@drawable/flag_solid"
-        app:showAsAction="ifRoom|withText">
-    </item>
-    <item android:id="@+id/action_print"
-        android:title="Print"
-        android:icon="@drawable/printer_icon"
-        app:showAsAction="ifRoom|withText">
+    <item
+        android:id="@+id/menu_more"
+        android:title="@string/more_options"
+        android:icon="@drawable/ic_menu_burger"
+        app:showAsAction="always">
         <menu>
-            <!-- Submenu items will be added dynamically -->
+            <item
+                android:id="@+id/action_flag"
+                android:title="Flag" />
+            <item
+                android:id="@+id/action_print"
+                android:title="Print package labels" />
         </menu>
     </item>
 </menu>

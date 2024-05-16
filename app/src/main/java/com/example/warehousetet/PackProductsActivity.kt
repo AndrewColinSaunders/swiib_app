@@ -1,6 +1,8 @@
 package com.example.warehousetet
 
 import android.Manifest
+import android.app.Activity
+import android.app.Dialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -29,9 +31,13 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.SubMenu
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import android.window.OnBackInvokedDispatcher
@@ -40,6 +46,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -136,29 +143,6 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_pack_products, menu)
-        classLevelMenu = menu  // Store the menu reference
-
-        val colorWhite = ContextCompat.getColor(this, android.R.color.white)
-        val colorDangerRed = ContextCompat.getColor(this, R.color.danger_red)
-        val mode = PorterDuff.Mode.SRC_ATOP
-
-        val printItem = menu?.findItem(R.id.action_print)
-        val flagItem = menu?.findItem(R.id.action_flag)
-
-        printItem?.icon?.let {
-            val coloredDrawable = it.mutate().apply {
-                colorFilter = PorterDuffColorFilter(colorWhite, mode)
-            }
-            printItem.icon = coloredDrawable
-        }
-
-        flagItem?.icon?.let {
-            val coloredDrawable = it.mutate().apply {
-                colorFilter = PorterDuffColorFilter(colorDangerRed, mode)
-            }
-            flagItem.icon = coloredDrawable
-        }
-
         return true
     }
 
@@ -1472,28 +1456,82 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         printHelper.printBitmap("Print Job - Package Barcode", bitmap)
     }
 
-    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
-        super.onPrepareOptionsMenu(menu)
-        val subMenu = menu?.findItem(R.id.action_print)?.subMenu
-        subMenu?.clear()
-        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
 
-        val addedPackageNames = mutableSetOf<String>()
+
+//    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+//        super.onPrepareOptionsMenu(menu)
+//        val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
+//        subMenu?.clear()
+//
+//        // Add static menu items
+//        subMenu?.add(Menu.NONE, R.id.action_flag, Menu.NONE, "Flag")
+//        val printItem = subMenu?.add(Menu.NONE, R.id.action_print, Menu.NONE, "Print Package Labels")
+//
+//        // Using a flag to check if items are already added
+//        val addedPackageNames = mutableSetOf<String>()
+//
+//        printItem?.setOnMenuItemClickListener {
+//            if (addedPackageNames.isEmpty()) { // Check if items are already added
+//                populatePackageItems(subMenu, addedPackageNames)
+//            }
+//            true // Return true to indicate that the menu item click has been handled
+//        }
+//
+//        return true
+//    }
+//
+//    private fun populatePackageItems(subMenu: SubMenu?, addedPackageNames: MutableSet<String>) {
+//        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+//        lifecycleScope.launch(Dispatchers.IO) {
+//            try {
+//                val packages = odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
+//                withContext(Dispatchers.Main) {
+//                    packages.forEach { packageInfo ->
+//                        if (addedPackageNames.add(packageInfo.name)) { // Add returns true if this name was not already present
+//                            subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
+//                                printPackage(packageInfo.name)
+//                                vibrateDevice(vibrator)
+//                                true
+//                            }
+//                        }
+//                    }
+//                }
+//            } catch (e: Exception) {
+//                Log.e("PackageMenu", "Error fetching packages: ${e.localizedMessage}")
+//                withContext(Dispatchers.Main) {
+//                    Toast.makeText(this@PackProductsActivity, "Failed to fetch packages", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
+override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+    super.onPrepareOptionsMenu(menu)
+    val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
+    subMenu?.clear()
+
+    // Add static menu items
+    subMenu?.add(Menu.NONE, R.id.action_flag, Menu.NONE, "Flag")
+    val printItem = subMenu?.add(Menu.NONE, R.id.action_print, Menu.NONE, "Print Package Labels")
+
+    printItem?.setOnMenuItemClickListener {
+        showPackageDialog()
+        true // Return true to indicate that the menu item click has been handled
+    }
+
+    return true
+}
+    private fun showPackageDialog() {
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+        val packageNames = mutableListOf<String>()  // To hold package names
 
         lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val packages = odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
                 withContext(Dispatchers.Main) {
                     packages.forEach { packageInfo ->
-                        if (!addedPackageNames.contains(packageInfo.name)) {
-                            subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
-                                printPackage(packageInfo.name)
-                                vibrateDevice(vibrator)
-                                true
-                            }
-                            addedPackageNames.add(packageInfo.name)
-                        }
+                        packageNames.add(packageInfo.name)
                     }
+                    displayPackagesDialog(packageNames, vibrator)
                 }
             } catch (e: Exception) {
                 Log.e("PackageMenu", "Error fetching packages: ${e.localizedMessage}")
@@ -1502,8 +1540,74 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 }
             }
         }
-        return true
     }
+
+//    private fun displayPackagesDialog(packageNames: List<String>, vibrator: Vibrator?) {
+//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_packages, null)
+//        val layout = dialogView.findViewById<LinearLayout>(R.id.linear_layout_packages)
+//
+//        packageNames.forEach { packageName ->
+//            // Inflate CardView for each package item
+//            val cardView = LayoutInflater.from(this).inflate(R.layout.package_item, layout, false) as CardView
+//            val textView = cardView.findViewById<TextView>(R.id.package_item_text_view)
+//            textView.text = packageName
+//            textView.setOnClickListener {
+//                printPackage(packageName)
+//                vibrateDevice(vibrator)
+//            }
+//            layout.addView(cardView)
+//        }
+//
+//        // Initialize the dialog before setting up the button listener
+//        val dialog = AlertDialog.Builder(this)
+//            .setView(dialogView)
+//            .create()
+//
+//        val cancelButton = dialogView.findViewById<Button>(R.id.buttonCancelQuantity)
+//        cancelButton.setOnClickListener {
+//            // Properly dismiss the dialog
+//            dialog.dismiss()
+//        }
+//
+//        dialog.show()
+//    }
+    private fun displayPackagesDialog(packageNames: List<String>, vibrator: Vibrator?) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_packages, null)
+        val layout = dialogView.findViewById<LinearLayout>(R.id.linear_layout_packages)
+
+        packageNames.forEach { packageName ->
+            // Inflate CardView for each package item
+            val cardView = LayoutInflater.from(this).inflate(R.layout.package_item, layout, false) as CardView
+            val textView = cardView.findViewById<TextView>(R.id.package_item_text_view)
+            textView.text = packageName
+            textView.setOnClickListener {
+                printPackage(packageName)
+                vibrateDevice(vibrator)
+            }
+            layout.addView(cardView)
+        }
+
+        // Initialize the dialog before setting up the button listener
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        // Show the dialog before setting its width to 90% of the screen
+        dialog.show()
+
+        // Get the current window of the dialog and set the width to 90% of the screen
+        val window = dialog.window
+        val params = window?.attributes
+        params?.width = (resources.displayMetrics.widthPixels * 0.9).toInt()
+        window?.attributes = params
+
+        val cancelButton = dialogView.findViewById<Button>(R.id.buttonCancelQuantity)
+        cancelButton.setOnClickListener {
+            // Properly dismiss the dialog
+            dialog.dismiss()
+        }
+    }
+
 
     private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {
         Build.VERSION.SDK_INT >= 33 -> getParcelableExtra(key, T::class.java)
