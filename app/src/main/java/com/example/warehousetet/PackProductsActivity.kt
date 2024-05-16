@@ -90,8 +90,6 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         super.onCreate(savedInstanceState)
         setContentView(R.layout.pack_activity_products)
 
-        registerBackPressHandler()
-
         cameraLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             if (result.resultCode == RESULT_OK) {
                 val data = result.data
@@ -1216,7 +1214,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
         when (item.itemId) {
             android.R.id.home -> {
-                registerBackPressHandler()
+                onBackPressedDispatcher.onBackPressed()
                 vibrateDevice(vibrator)
                 return true
             }
@@ -1505,20 +1503,6 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             }
         }
         return true
-    }
-
-    private fun registerBackPressHandler() {
-        if (Build.VERSION.SDK_INT >= 33) {
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_DEFAULT
-            ) {
-                finish()
-            }
-        } else {
-            onBackPressedDispatcher.addCallback(this) {
-                finish()
-            }
-        }
     }
 
     private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {

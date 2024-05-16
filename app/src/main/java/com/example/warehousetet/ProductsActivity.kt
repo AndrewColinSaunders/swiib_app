@@ -2311,7 +2311,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
 //            }
 //        }
 //    }
-    private suspend fun fetchProductsForReceipt(pickId: Int) {
+    suspend fun fetchProductsForReceipt(pickId: Int) {
         try {
             Log.d("PickProductsActivity", "Fetching products for pick ID: $pickId")
             val fetchedLines = odooXmlRpcClient.fetchReceiptMoveLinesByPickingId(pickId)

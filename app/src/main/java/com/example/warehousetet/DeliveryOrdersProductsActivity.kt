@@ -71,7 +71,6 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_delivery_orders_products)
-        registerBackPressHandler()
 
         validateButton = findViewById(R.id.validateOperationButton)
         validateButton.visibility = View.INVISIBLE
@@ -597,7 +596,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
 
         when (item.itemId) {
             android.R.id.home -> {
-                registerBackPressHandler()
+                onBackPressedDispatcher.onBackPressed()
                 vibrateDevice(vibrator)
                 return true
             }
@@ -794,18 +793,4 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         else -> @Suppress("DEPRECATION") getParcelableExtra(key) as? T
     }
 
-
-    private fun registerBackPressHandler() {
-        if (Build.VERSION.SDK_INT >= 33) {
-            onBackInvokedDispatcher.registerOnBackInvokedCallback(
-                OnBackInvokedDispatcher.PRIORITY_DEFAULT
-            ) {
-                finish()
-            }
-        } else {
-            onBackPressedDispatcher.addCallback(this) {
-                finish()
-            }
-        }
-    }
 }
