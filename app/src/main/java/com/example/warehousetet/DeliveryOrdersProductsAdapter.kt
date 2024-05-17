@@ -31,8 +31,8 @@ class DeliveryOrdersProductsAdapter(private val verificationListener: Verificati
 
     private fun isSectionVerified(section: PackageSection): Boolean {
         return verifiedPackages.contains(section.packageId) ||
-                section.moveLines.all { verifiedSerialNumbers.contains(it.lotName) || verifiedBarcodes.contains(it.lineId.toString()) } &&
-                section.moveLines.any { it.resultPackageName == "None" }
+                section.moveLineOutGoings.all { verifiedSerialNumbers.contains(it.lotName) || verifiedBarcodes.contains(it.lineId.toString()) } &&
+                section.moveLineOutGoings.any { it.resultPackageName == "None" }
     }
 
     class GroupViewHolder(view: View, private val adapter: DeliveryOrdersProductsAdapter) : RecyclerView.ViewHolder(view) {
@@ -41,9 +41,9 @@ class DeliveryOrdersProductsAdapter(private val verificationListener: Verificati
         private val cardView: LinearLayout = view.findViewById(R.id.linearLayoutInsideCardView)
 
         fun bind(section: PackageSection, isVerified: Boolean) {
-            headerTextView.text = if (section.moveLines.any { it.resultPackageName == "None" }) "Not Packaged" else section.packageName
+            headerTextView.text = if (section.moveLineOutGoings.any { it.resultPackageName == "None" }) "Not Packaged" else section.packageName
             itemsRecyclerView.layoutManager = LinearLayoutManager(itemView.context)
-            itemsRecyclerView.adapter = ItemAdapter(section.moveLines, isVerified, adapter.verifiedSerialNumbers, adapter.verifiedBarcodes)
+            itemsRecyclerView.adapter = ItemAdapter(section.moveLineOutGoings, isVerified, adapter.verifiedSerialNumbers, adapter.verifiedBarcodes)
             val backgroundResource = if (isVerified) R.drawable.bordered_background_success else R.drawable.bordered_background
             cardView.setBackgroundResource(backgroundResource)
         }
@@ -76,7 +76,7 @@ class DeliveryOrdersProductsAdapter(private val verificationListener: Verificati
     }
 
     class ItemAdapter(
-        private val items: List<MoveLineOutgoing>,
+        private val items: List<MoveLineOutGoing>,
         private val isVerified: Boolean,
         private val verifiedSerialNumbers: Set<String>,
         private val verifiedBarcodes: Set<String>
@@ -100,9 +100,9 @@ class DeliveryOrdersProductsAdapter(private val verificationListener: Verificati
             private val quantityTextView: TextView = view.findViewById(R.id.deliveryOrdersProductQuantityTextView)
             private val cardView: MaterialCardView = view as MaterialCardView
 
-            fun bind(moveLine: MoveLineOutgoing, isVerified: Boolean) {
-                nameTextView.text = moveLine.productName
-                quantityTextView.text = itemView.context.getString(R.string.quantity_text, moveLine.quantity.toString())
+            fun bind(moveLineOutGoing: MoveLineOutGoing, isVerified: Boolean) {
+                nameTextView.text = moveLineOutGoing.productName
+                quantityTextView.text = itemView.context.getString(R.string.quantity_text, moveLineOutGoing.quantity.toString())
                 nameTextView.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.white))
                 quantityTextView.setTextColor(ContextCompat.getColor(itemView.context, android.R.color.white))
                 cardView.setCardBackgroundColor(if (isVerified) ContextCompat.getColor(itemView.context, R.color.success_green) else ContextCompat.getColor(itemView.context, R.color.cardGrey))

@@ -10,7 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.card.MaterialCardView
 
 class PackProductsAdapter(
-    var moveLines: List<MoveLineOutgoing>,
+    var moveLineOutGoings: List<MoveLineOutGoing>,
     private var packId: Int,  // This packId is being used so please ignore the warning. Being used in PackProductsActivity
     private var packagedMoveLines: MutableList<PackagedMovedLine>,
     private val verificationListener: VerificationListener
@@ -24,13 +24,13 @@ class PackProductsAdapter(
     }
 
     override fun onBindViewHolder(holder: MoveLineViewHolder, position: Int) {
-        val moveLine = moveLines[position]
+        val moveLine = moveLineOutGoings[position]
         val isPackaged = packagedMoveLines.any { it.moveLineId == moveLine.lineId }
         holder.bind(moveLine, isPackaged)
         checkAllVerified()
     }
 
-    override fun getItemCount(): Int = moveLines.size
+    override fun getItemCount(): Int = moveLineOutGoings.size
 
 
     class MoveLineViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -38,10 +38,10 @@ class PackProductsAdapter(
         private val quantityTextView: TextView = itemView.findViewById(R.id.packProductQuantityTextView)
         private val cardView: MaterialCardView = itemView.findViewById(R.id.packProductItemCard)
 
-        fun bind(moveLine: MoveLineOutgoing, isPackaged: Boolean) {
-            Log.d("ViewHolderLog", "Binding move line: ${moveLine.productName}, Packaged: $isPackaged")
-            nameTextView.text = moveLine.productName
-            quantityTextView.text = itemView.context.getString(R.string.quantity_text, moveLine.quantity.toString())
+        fun bind(moveLineOutGoing: MoveLineOutGoing, isPackaged: Boolean) {
+            Log.d("ViewHolderLog", "Binding move line: ${moveLineOutGoing.productName}, Packaged: $isPackaged")
+            nameTextView.text = moveLineOutGoing.productName
+            quantityTextView.text = itemView.context.getString(R.string.quantity_text, moveLineOutGoing.quantity.toString())
             val whiteColor = ContextCompat.getColor(itemView.context, android.R.color.white)
             nameTextView.setTextColor(whiteColor)
             quantityTextView.setTextColor(whiteColor)
@@ -59,7 +59,7 @@ class PackProductsAdapter(
     fun addPackagedMoveLine(packagedMovedLine: PackagedMovedLine) {
         if (!packagedMoveLines.any { it.moveLineId == packagedMovedLine.moveLineId }) {
             packagedMoveLines.add(packagedMovedLine)
-            val index = moveLines.indexOfFirst { it.lineId == packagedMovedLine.moveLineId }
+            val index = moveLineOutGoings.indexOfFirst { it.lineId == packagedMovedLine.moveLineId }
             if (index != -1) {
                 notifyItemChanged(index)
             }
@@ -68,7 +68,7 @@ class PackProductsAdapter(
     }
 
     private fun checkAllVerified() {
-        val allVerified = moveLines.all { moveLine ->
+        val allVerified = moveLineOutGoings.all { moveLine ->
             packagedMoveLines.any { it.moveLineId == moveLine.lineId }
         }
         verificationListener.onVerificationStatusChanged(allVerified)

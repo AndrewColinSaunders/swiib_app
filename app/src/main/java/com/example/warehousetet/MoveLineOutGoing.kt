@@ -1,6 +1,6 @@
 package com.example.warehousetet
 
-data class MoveLineOutgoing(
+data class MoveLineOutGoing(
     val lineId: Int,
     val productId: Int,
     val productName: String,

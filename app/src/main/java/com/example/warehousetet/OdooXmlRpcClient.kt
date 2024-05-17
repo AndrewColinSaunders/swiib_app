@@ -893,7 +893,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         }
     }
 
-    suspend fun fetchMoveLinesByOperationId(pickingId: Int): List<MoveLineOutgoing> {
+    suspend fun fetchMoveLinesByOperationId(pickingId: Int): List<MoveLineOutGoing> {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchMoveLinesByPickingId.")
@@ -919,7 +919,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         return try {
             val result = client.execute("execute_kw", params) as Array<Any>
             val moveLinesSummary = if (result.isNotEmpty()) (result[0] as Map<String, Any>)["detailed_move_lines"].toString() else ""
-            val moveLines = parseMoveLinesSummary(moveLinesSummary)
+            val moveLines = parseMoveLinesOutgoingSummary(moveLinesSummary)
 
             // Log each MoveLine
             moveLines.forEach { moveLine ->
@@ -938,7 +938,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         }
     }
 
-    private fun parseMoveLinesSummary(summary: String): List<MoveLineOutgoing> {
+    private fun parseMoveLinesOutgoingSummary(summary: String): List<MoveLineOutGoing> {
         return summary.split(", ").mapNotNull { lineString ->
             val parts = lineString.split(":")
             if (parts.size >= 6) {  // Make sure there are at least 6 parts
@@ -955,7 +955,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
                     val resultPackageName = parts[9]
 
 
-                    MoveLineOutgoing(
+                    MoveLineOutGoing(
                         lineId = lineId,
                         productId = productId,
                         productName = productName,

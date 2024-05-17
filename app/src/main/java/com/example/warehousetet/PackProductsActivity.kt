@@ -266,9 +266,9 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
 
-    private fun updateRelevantSerialNumbers(moveLines: List<MoveLineOutgoing>) {
+    private fun updateRelevantSerialNumbers(moveLineOutGoings: List<MoveLineOutGoing>) {
         serialNumberToMoveLineIdMap.clear()
-        moveLines.forEach { moveLine ->
+        moveLineOutGoings.forEach { moveLine ->
             if (moveLine.lotName.isNotBlank()) {
                 serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
             }
@@ -280,12 +280,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         return serialNumberToMoveLineIdMap[serialNumber]
     }
 
-    private fun updateUIForMoveLines(moveLines: List<MoveLineOutgoing>) {
+    private fun updateUIForMoveLines(moveLineOutGoings: List<MoveLineOutGoing>) {
         runOnUiThread {
-            val diffCallback = MoveLineDiffCallback(packProductsAdapter.moveLines, moveLines)
+            val diffCallback = MoveLineDiffCallback(packProductsAdapter.moveLineOutGoings, moveLineOutGoings)
             val diffResult = DiffUtil.calculateDiff(diffCallback)
 
-            packProductsAdapter.moveLines = moveLines
+            packProductsAdapter.moveLineOutGoings = moveLineOutGoings
             diffResult.dispatchUpdatesTo(packProductsAdapter)
         }
     }
@@ -314,7 +314,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
     private fun verifyProductBarcode(scannedBarcode: String) = lifecycleScope.launch {
-        val matchingMoveLine = packProductsAdapter.moveLines.find { moveLine ->
+        val matchingMoveLine = packProductsAdapter.moveLineOutGoings.find { moveLine ->
             val expectedBarcode = withContext(Dispatchers.IO) {
                 odooXmlRpcClient.fetchProductBarcodeByName(moveLine.productName)
             }
@@ -332,8 +332,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
 
-    private fun checkProductTrackingAndHandle(moveLine: MoveLineOutgoing) = lifecycleScope.launch {
-        val productName = moveLine.productName
+    private fun checkProductTrackingAndHandle(moveLineOutGoing: MoveLineOutGoing) = lifecycleScope.launch {
+        val productName = moveLineOutGoing.productName
         try {
             val trackingInfo = withContext(Dispatchers.IO) {
                 odooXmlRpcClient.fetchProductTrackingAndExpirationByName(productName)
@@ -341,9 +341,9 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
 
             trackingInfo?.let {
                 when (it.first) {
-                    "none" -> handleNoTracking(classLevelMenu, moveLine)
-                    "serial" -> handleSerialTracking(classLevelMenu, moveLine)
-                    "lot" -> handleLotTracking(classLevelMenu, moveLine)
+                    "none" -> handleNoTracking(classLevelMenu, moveLineOutGoing)
+                    "serial" -> handleSerialTracking(classLevelMenu, moveLineOutGoing)
+                    "lot" -> handleLotTracking(classLevelMenu, moveLineOutGoing)
                     else -> Log.e("PackProductsActivity", "Unhandled tracking type: ${it.first}")
                 }
             } ?: Log.e("PackProductsActivity", "No tracking info found for product: $productName")
@@ -352,38 +352,38 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
 
-    private fun handleNoTracking(menu: Menu?, moveLine: MoveLineOutgoing) {
-        Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}.")
+    private fun handleNoTracking(menu: Menu?, moveLineOutGoing: MoveLineOutGoing) {
+        Log.d("PackProductsActivity", "Handling no tracking for ${moveLineOutGoing.productName}.")
 
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
         if (subMenu != null && subMenu.size() > 0) {
-            displayQuantityDialog(moveLine.productName, moveLine.quantity, moveLine)
+            displayQuantityDialog(moveLineOutGoing.productName, moveLineOutGoing.quantity, moveLineOutGoing)
         } else {
-            showPrePackageDialogNoTracking(moveLine)
+            showPrePackageDialogNoTracking(moveLineOutGoing)
         }
     }
 
-    private fun handleSerialTracking(menu: Menu?, moveLine: MoveLineOutgoing) {
-        Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLine.productName}.")
+    private fun handleSerialTracking(menu: Menu?, moveLineOutGoing: MoveLineOutGoing) {
+        Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLineOutGoing.productName}.")
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
         if (subMenu != null && subMenu.size() > 0) {
-            showPackageDialogSerial(moveLine)
+            showPackageDialogSerial(moveLineOutGoing)
         } else {
-            showPrePackageDialogSerialTracking(moveLine)
+            showPrePackageDialogSerialTracking(moveLineOutGoing)
         }
     }
 
-    private fun handleLotTracking(menu: Menu?, moveLine: MoveLineOutgoing) {
-        Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
+    private fun handleLotTracking(menu: Menu?, moveLineOutGoing: MoveLineOutGoing) {
+        Log.d("PackProductsActivity", "Handling lot tracking for ${moveLineOutGoing.productName}.")
         val subMenu = menu?.findItem(R.id.action_print)?.subMenu
         if (subMenu != null && subMenu.size() > 0) {
-            showPackageDialogLot(moveLine)
+            showPackageDialogLot(moveLineOutGoing)
         } else {
-            showPrePackageDialogLotTracking(moveLine)
+            showPrePackageDialogLotTracking(moveLineOutGoing)
         }
     }
 
-    private fun showPrePackageDialogNoTracking(moveLine: MoveLineOutgoing) {
+    private fun showPrePackageDialogNoTracking(moveLineOutGoing: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_prepackage_no_tracking, null)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
         val notPackagedButton = dialogView.findViewById<MaterialButton>(R.id.notPackagedButton)
@@ -398,18 +398,18 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             setBackgroundColor(ContextCompat.getColor(context, R.color.success_green))
             setOnClickListener {
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLineOutGoing.lineId}")
                 lifecycleScope.launch {
                     try {
-                        Log.d("Check what moveline is being parsed", "moveLine ID: $moveLine")
+                        Log.d("Check what moveline is being parsed", "moveLine ID: $moveLineOutGoing")
                         val result = withContext(Dispatchers.IO) {
-                            odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
+                            odooXmlRpcClient.putMoveLineInNewPack(moveLineOutGoing.lineId, this@PackProductsActivity)
                         }
                         if (result) {
                             Log.d("PackageDialog", "Successfully put item in new package.")
                             Toast.makeText(context, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
-                            packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
-                            val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                            packagedMoveLines.add(PackagedMovedLine(moveLineOutGoing.lineId))
+                            val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                             savePackagedIds()
                             packProductsAdapter.notifyItemChanged(index)
                             checkAllItemsPackaged()
@@ -435,12 +435,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
             setOnClickListener {
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLineOutGoing.lineId}")
 
-                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                val packagedMovedLine = PackagedMovedLine(moveLineOutGoing.lineId)
                 packagedMoveLines.add(packagedMovedLine)
 
-                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                 savePackagedIds()
                 packProductsAdapter.notifyItemChanged(index)
                 checkAllItemsPackaged()
@@ -452,7 +452,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         dialog.show()
     }
 
-    private fun showPackageDialogNoTracking(moveLine: MoveLineOutgoing) {
+    private fun showPackageDialogNoTracking(moveLineOutGoing: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_package_no_tracking, null)
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
@@ -469,18 +469,18 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             setBackgroundColor(ContextCompat.getColor(context, R.color.success_green))
             setOnClickListener {
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Attempting to put item in new package with MoveLine ID: ${moveLineOutGoing.lineId}")
                 lifecycleScope.launch {
                     try {
-                        Log.d("Check what moveline is being parsed", "moveLine ID: $moveLine")
+                        Log.d("Check what moveline is being parsed", "moveLine ID: $moveLineOutGoing")
                         val result = withContext(Dispatchers.IO) {
-                            odooXmlRpcClient.putMoveLineInNewPack(moveLine.lineId, this@PackProductsActivity)
+                            odooXmlRpcClient.putMoveLineInNewPack(moveLineOutGoing.lineId, this@PackProductsActivity)
                         }
                         if (result) {
                             Log.d("PackageDialog", "Successfully put item in new package.")
                             Toast.makeText(context, "Item successfully put into a new package.", Toast.LENGTH_SHORT).show()
-                            packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
-                            val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                            packagedMoveLines.add(PackagedMovedLine(moveLineOutGoing.lineId))
+                            val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                             savePackagedIds()
                             packProductsAdapter.notifyItemChanged(index)
                             checkAllItemsPackaged()
@@ -506,16 +506,16 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             if (packageName.isNotEmpty()) {
                 lifecycleScope.launch(Dispatchers.IO) {
                     try {
-                        val result = odooXmlRpcClient.setPackageForMoveLine(packId, moveLine.lineId, packageName)
+                        val result = odooXmlRpcClient.setPackageForMoveLine(packId, moveLineOutGoing.lineId, packageName)
                         withContext(Dispatchers.Main) {
                             if (result) {
-                                if (!packagedMoveLines.any { it.moveLineId == moveLine.lineId }) {
-                                    packagedMoveLines.add(PackagedMovedLine(moveLine.lineId))
-                                    packageItem(moveLine.lineId)
+                                if (!packagedMoveLines.any { it.moveLineId == moveLineOutGoing.lineId }) {
+                                    packagedMoveLines.add(PackagedMovedLine(moveLineOutGoing.lineId))
+                                    packageItem(moveLineOutGoing.lineId)
                                     checkAllItemsPackaged()
                                     refreshMenu()
                                 }
-                                val index = packProductsAdapter.moveLines.indexOfFirst { it.lineId == moveLine.lineId }
+                                val index = packProductsAdapter.moveLineOutGoings.indexOfFirst { it.lineId == moveLineOutGoing.lineId }
                                 if (index != -1) {
                                     packProductsAdapter.notifyItemChanged(index)
                                 }
@@ -543,12 +543,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             setBackgroundColor(ContextCompat.getColor(context, R.color.cardGrey))
             setOnClickListener {
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLineOutGoing.lineId}")
 
-                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                val packagedMovedLine = PackagedMovedLine(moveLineOutGoing.lineId)
                 packagedMoveLines.add(packagedMovedLine)
 
-                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                 savePackagedIds()
                 packProductsAdapter.notifyItemChanged(index)
                 checkAllItemsPackaged()
@@ -561,7 +561,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         dialog.show()
     }
 
-    private fun showPrePackageDialogSerialTracking(moveLine: MoveLineOutgoing) {
+    private fun showPrePackageDialogSerialTracking(moveLineOutGoing: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_prepackage_serial, findViewById(android.R.id.content), false)
         val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
@@ -619,7 +619,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                                 checkAllItemsPackaged()
                                 refreshMenu()
                                 usedSerialNumbers.add(enteredSerial)
-                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLineOutGoing.lineId, 1)
                                 dialog.dismiss()
                             } else {
                                 Toast.makeText(
@@ -656,12 +656,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 if (!isSerialInputValid()) return@setOnClickListener
 
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLineOutGoing.lineId}")
 
-                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                val packagedMovedLine = PackagedMovedLine(moveLineOutGoing.lineId)
                 packagedMoveLines.add(packagedMovedLine)
 
-                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                 savePackagedIds()
                 packProductsAdapter.notifyItemChanged(index)
                 checkAllItemsPackaged()
@@ -674,7 +674,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         dialog.show()
     }
 
-    private fun showPackageDialogSerial(moveLine: MoveLineOutgoing) {
+    private fun showPackageDialogSerial(moveLineOutGoing: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_package_serial, null)
         val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
@@ -734,7 +734,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                                 checkAllItemsPackaged()
                                 refreshMenu()
                                 usedSerialNumbers.add(enteredSerial)
-                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLineOutGoing.lineId, 1)
                                 dialog.dismiss()
                             } else {
                                 Toast.makeText(
@@ -822,12 +822,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 if (!isSerialInputValid()) return@setOnClickListener
 
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLineOutGoing.lineId}")
 
-                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                val packagedMovedLine = PackagedMovedLine(moveLineOutGoing.lineId)
                 packagedMoveLines.add(packagedMovedLine)
 
-                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                 savePackagedIds()
                 packProductsAdapter.notifyItemChanged(index)
                 checkAllItemsPackaged()
@@ -840,7 +840,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         dialog.show()
     }
 
-    private fun showPrePackageDialogLotTracking(moveLine: MoveLineOutgoing) {
+    private fun showPrePackageDialogLotTracking(moveLineOutGoing: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_prepackage_lot, null)
         val lotInput = dialogView.findViewById<EditText>(R.id.lotInput)
         val createNewButton = dialogView.findViewById<MaterialButton>(R.id.createNewButton)
@@ -897,7 +897,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                                 checkAllItemsPackaged()
                                 refreshMenu()
                                 usedSerialNumbers.add(enteredSerial)
-                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLineOutGoing.lineId, 1)
                                 dialog.dismiss()
                             } else {
                                 Toast.makeText(
@@ -934,12 +934,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 if (!isLotInputValid()) return@setOnClickListener
 
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLineOutGoing.lineId}")
 
-                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                val packagedMovedLine = PackagedMovedLine(moveLineOutGoing.lineId)
                 packagedMoveLines.add(packagedMovedLine)
 
-                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                 savePackagedIds()
                 packProductsAdapter.notifyItemChanged(index)
                 checkAllItemsPackaged()
@@ -952,7 +952,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         dialog.show()
     }
 
-    private fun showPackageDialogLot(moveLine: MoveLineOutgoing) {
+    private fun showPackageDialogLot(moveLineOutGoing: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_package_lot, null)
         val lotInput = dialogView.findViewById<EditText>(R.id.lotInput)
         val packageInput = dialogView.findViewById<EditText>(R.id.packageInput)
@@ -1011,7 +1011,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                                 checkAllItemsPackaged()
                                 refreshMenu()
                                 usedSerialNumbers.add(enteredSerial)
-                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLine.lineId, 1)
+                                odooXmlRpcClient.updateMoveLineQuantityForReceipt(packId, moveLineOutGoing.lineId, 1)
                                 dialog.dismiss()
                             } else {
                                 Toast.makeText(
@@ -1099,12 +1099,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 if (!isLotInputValid()) return@setOnClickListener
 
                 vibrateDevice(vibrator)
-                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLine.lineId}")
+                Log.d("PackageDialog", "Marking as not packaged for MoveLine ID: ${moveLineOutGoing.lineId}")
 
-                val packagedMovedLine = PackagedMovedLine(moveLine.lineId)
+                val packagedMovedLine = PackagedMovedLine(moveLineOutGoing.lineId)
                 packagedMoveLines.add(packagedMovedLine)
 
-                val index = packProductsAdapter.moveLines.indexOf(moveLine)
+                val index = packProductsAdapter.moveLineOutGoings.indexOf(moveLineOutGoing)
                 savePackagedIds()
                 packProductsAdapter.notifyItemChanged(index)
                 checkAllItemsPackaged()
@@ -1130,12 +1130,12 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         if (packagedIds.isNotEmpty()) {
             packagedMoveLines.clear()
             packagedMoveLines.addAll(packagedIds.split(",").map { PackagedMovedLine(it.toInt()) })
-            updateUIForMoveLines(packProductsAdapter.moveLines)
+            updateUIForMoveLines(packProductsAdapter.moveLineOutGoings)
         }
     }
 
     private fun checkAllItemsPackaged() {
-        val allPackaged = packProductsAdapter.moveLines.all { moveLine ->
+        val allPackaged = packProductsAdapter.moveLineOutGoings.all { moveLine ->
             packagedMoveLines.any { it.moveLineId == moveLine.lineId }
         }
         findViewById<Button>(R.id.validateOperationButton).visibility = if (allPackaged) View.VISIBLE else View.GONE
@@ -1363,7 +1363,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     private fun displayQuantityDialog(
         productName: String,
         expectedQuantity: Double,
-        moveLine: MoveLineOutgoing
+        moveLineOutGoing: MoveLineOutGoing
     ) {
         val dialogView = LayoutInflater.from(this).inflate(
             R.layout.dialog_quantity_confirmation,
@@ -1395,7 +1395,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }.show()
 
         buttonConfirm.setOnClickListener {
-            showPackageDialogNoTracking(moveLine)
+            showPackageDialogNoTracking(moveLineOutGoing)
             alertDialog.dismiss()
         }
 
@@ -1527,8 +1527,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
     class MoveLineDiffCallback(
-        private val oldList: List<MoveLineOutgoing>,
-        private val newList: List<MoveLineOutgoing>
+        private val oldList: List<MoveLineOutGoing>,
+        private val newList: List<MoveLineOutGoing>
     ) : DiffUtil.Callback() {
 
         override fun getOldListSize(): Int = oldList.size

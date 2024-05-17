@@ -172,7 +172,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         // Notify changes in the adapter
         val sections = deliveryOrdersProductsAdapter.sections
         sections.forEachIndexed { sectionIndex, section ->
-            section.moveLines.forEachIndexed { _, moveLine ->
+            section.moveLineOutGoings.forEachIndexed { _, moveLine ->
                 val isPackageVerified = oldVerifiedPackages.contains(section.packageId) != verifiedPackages.contains(section.packageId)
                 val isSerialVerified = oldVerifiedSerialNumbers.contains(moveLine.lotName) != verifiedSerialNumbers.contains(moveLine.lotName)
                 val isBarcodeVerified = oldVerifiedBarcodes.contains(moveLine.lineId.toString()) != verifiedBarcodes.contains(moveLine.lineId.toString())
@@ -222,7 +222,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     }
 
     private fun verifyBarcode(scannedBarcode: String) = lifecycleScope.launch {
-        val matchingPackage = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }
+        val matchingPackage = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLineOutGoings }
             .find { it.resultPackageName == scannedBarcode }
 
         if (matchingPackage != null) {
@@ -232,7 +232,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
             return@launch
         }
 
-        val matchingMoveLine = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLines }
+        val matchingMoveLine = deliveryOrdersProductsAdapter.sections.flatMap { it.moveLineOutGoings }
             .find { it.resultPackageName == "None" && withContext(Dispatchers.IO) { odooXmlRpcClient.fetchProductBarcodeByName(it.productName) } == scannedBarcode }
 
         if (matchingMoveLine != null) {
@@ -302,9 +302,9 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         validateButton.visibility = if (allVerified) View.VISIBLE else View.INVISIBLE
     }
 
-    private fun handlePackageVerificationSuccess(moveLine: MoveLineOutgoing) {
-        Log.d("DeliveryOrdersProductsActivity", "Verified package: ${moveLine.resultPackageName}")
-        moveLine.resultPackageId?.let { deliveryOrdersProductsAdapter.verifyPackage(it) }
+    private fun handlePackageVerificationSuccess(moveLineOutGoing: MoveLineOutGoing) {
+        Log.d("DeliveryOrdersProductsActivity", "Verified package: ${moveLineOutGoing.resultPackageName}")
+        moveLineOutGoing.resultPackageId?.let { deliveryOrdersProductsAdapter.verifyPackage(it) }
             ?: Log.e("DeliveryOrdersProductsActivity", "Package ID is null, cannot verify package.")
     }
 
@@ -334,9 +334,9 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         }
     }
 
-    private fun updateRelevantSerialNumbers(moveLines: List<MoveLineOutgoing>) {
+    private fun updateRelevantSerialNumbers(moveLineOutGoings: List<MoveLineOutGoing>) {
         serialNumberToMoveLineIdMap.clear()
-        moveLines.forEach { moveLine ->
+        moveLineOutGoings.forEach { moveLine ->
             if (moveLine.lotName.isNotBlank()) {
                 serialNumberToMoveLineIdMap[moveLine.lotName] = moveLine.lineId
             }
@@ -348,9 +348,9 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         return serialNumberToMoveLineIdMap[serialNumber]
     }
 
-    private fun updateUIForMoveLines(moveLines: List<MoveLineOutgoing>) {
+    private fun updateUIForMoveLines(moveLineOutGoings: List<MoveLineOutGoing>) {
         runOnUiThread {
-            val groupedByPackage = moveLines.groupBy { it.resultPackageName }.map { (packageName, lines) ->
+            val groupedByPackage = moveLineOutGoings.groupBy { it.resultPackageName }.map { (packageName, lines) ->
                 PackageSection(packageName, lines.first().resultPackageId, lines.toMutableList())
             }
 
@@ -374,8 +374,8 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     }
 
 
-    private fun checkProductTrackingAndHandle(moveLine: MoveLineOutgoing) = lifecycleScope.launch {
-        val productName = moveLine.productName
+    private fun checkProductTrackingAndHandle(moveLineOutGoing: MoveLineOutGoing) = lifecycleScope.launch {
+        val productName = moveLineOutGoing.productName
         try {
             val trackingInfo = withContext(Dispatchers.IO) {
                 odooXmlRpcClient.fetchProductTrackingAndExpirationByName(productName)
@@ -383,9 +383,9 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
 
             trackingInfo?.let {
                 when (it.first) {
-                    "none" -> handleNoTracking(moveLine)
-                    "serial" -> handleSerialTracking(moveLine)
-                    "lot" -> handleLotTracking(moveLine)
+                    "none" -> handleNoTracking(moveLineOutGoing)
+                    "serial" -> handleSerialTracking(moveLineOutGoing)
+                    "lot" -> handleLotTracking(moveLineOutGoing)
                     else -> Log.e("PackProductsActivity", "Unhandled tracking type: ${it.first}")
                 }
             } ?: Log.e("PackProductsActivity", "No tracking info found for product: $productName")
@@ -394,30 +394,30 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         }
     }
 
-    private fun handleNoTracking(moveLine: MoveLineOutgoing) {
-        Log.d("PackProductsActivity", "Handling no tracking for ${moveLine.productName}. Marking as verified.")
-        val barcodeIdentifier = moveLine.lineId.toString()
+    private fun handleNoTracking(moveLineOutGoing: MoveLineOutGoing) {
+        Log.d("PackProductsActivity", "Handling no tracking for ${moveLineOutGoing.productName}. Marking as verified.")
+        val barcodeIdentifier = moveLineOutGoing.lineId.toString()
 
         if (barcodeIdentifier.isNotEmpty()) {
             deliveryOrdersProductsAdapter.addVerifiedBarcode(barcodeIdentifier)
             Log.d("VerifyBarcode", "Marking barcode $barcodeIdentifier as verified without tracking.")
-            refreshItemInAdapter(moveLine)
+            refreshItemInAdapter(moveLineOutGoing)
         } else {
-            Log.e("PackProductsActivity", "Invalid identifier for moveLine: ${moveLine.productName}")
+            Log.e("PackProductsActivity", "Invalid identifier for moveLine: ${moveLineOutGoing.productName}")
         }
     }
 
-    private fun handleSerialTracking(moveLine: MoveLineOutgoing) {
-        Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLine.productName}.")
-        showDialogScanSerialNumber(moveLine)
+    private fun handleSerialTracking(moveLineOutGoing: MoveLineOutGoing) {
+        Log.d("PackProductsActivity", "Handling serial number tracking for ${moveLineOutGoing.productName}.")
+        showDialogScanSerialNumber(moveLineOutGoing)
     }
 
-    private fun handleLotTracking(moveLine: MoveLineOutgoing) {
-        Log.d("PackProductsActivity", "Handling lot tracking for ${moveLine.productName}.")
-        showDialogScanLotNumber(moveLine)
+    private fun handleLotTracking(moveLineOutGoing: MoveLineOutGoing) {
+        Log.d("PackProductsActivity", "Handling lot tracking for ${moveLineOutGoing.productName}.")
+        showDialogScanLotNumber(moveLineOutGoing)
     }
 
-    private fun showDialogScanSerialNumber(moveLine: MoveLineOutgoing) {
+    private fun showDialogScanSerialNumber(moveLineOutGoing: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_scan_serial, null)
         val serialInput = dialogView.findViewById<EditText>(R.id.serialInput)
         val confirmButton = dialogView.findViewById<MaterialButton>(R.id.confirmButton)
@@ -445,7 +445,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
                 usedSerialNumbers.add(enteredSerial)
                 deliveryOrdersProductsAdapter.addVerifiedSerialNumber(enteredSerial)
                 Log.d("VerifySerial", "Adding serial $enteredSerial to verified list")
-                refreshItemInAdapter(moveLine)
+                refreshItemInAdapter(moveLineOutGoing)
                 dialog.dismiss()
             } else {
                 Toast.makeText(this@DeliveryOrdersProductsActivity, "Invalid serial number entered. Please check and try again.", Toast.LENGTH_LONG).show()
@@ -457,7 +457,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     }
 
     @SuppressLint("MissingInflatedId")
-    private fun showDialogScanLotNumber(moveLine: MoveLineOutgoing) {
+    private fun showDialogScanLotNumber(moveLine: MoveLineOutGoing) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_scan_lot, null)
         val lotInput = dialogView.findViewById<EditText>(R.id.lotInput)
         val confirmButton = dialogView.findViewById<MaterialButton>(R.id.confirmButton)
@@ -496,13 +496,13 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         dialog.show()
     }
 
-    private fun refreshItemInAdapter(moveLine: MoveLineOutgoing) {
+    private fun refreshItemInAdapter(moveLineOutGoing: MoveLineOutGoing) {
         var cumulativePosition = 0
         var lineFound = false
 
         // First pass: Try to find and update the existing item
         deliveryOrdersProductsAdapter.sections.forEachIndexed { sectionIndex, section ->
-            val lineIndex = section.moveLines.indexOf(moveLine)
+            val lineIndex = section.moveLineOutGoings.indexOf(moveLineOutGoing)
             if (lineIndex != -1) {
                 val positionInAdapter = cumulativePosition + lineIndex + sectionIndex // Add sectionIndex to account for header positions
                 deliveryOrdersProductsAdapter.notifyItemChanged(positionInAdapter)
@@ -510,7 +510,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
                 lineFound = true
                 return@forEachIndexed
             }
-            cumulativePosition += section.moveLines.size + 1 // +1 for the section header
+            cumulativePosition += section.moveLineOutGoings.size + 1 // +1 for the section header
         }
 
         // If not found, assume the move line might have been added
@@ -519,7 +519,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
             cumulativePosition = 0
 
             deliveryOrdersProductsAdapter.sections.forEachIndexed { sectionIndex, section ->
-                val lineIndex = section.moveLines.indexOf(moveLine)
+                val lineIndex = section.moveLineOutGoings.indexOf(moveLineOutGoing)
                 if (lineIndex != -1) {
                     val positionInAdapter = cumulativePosition + lineIndex + sectionIndex // Add sectionIndex to account for header positions
                     deliveryOrdersProductsAdapter.notifyItemInserted(positionInAdapter)
@@ -527,7 +527,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
                     lineFound = true
                     return@forEachIndexed
                 }
-                cumulativePosition += section.moveLines.size + 1 // +1 for the section header
+                cumulativePosition += section.moveLineOutGoings.size + 1 // +1 for the section header
             }
         }
 
