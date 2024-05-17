@@ -122,6 +122,8 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -136,6 +138,7 @@ class ReceiptsActivity : AppCompatActivity() {
     private lateinit var credentialManager: CredentialManager
     private var refreshJob: Job? = null
     private var isSearching = false
+    private lateinit var emptyStateLayout: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,9 +150,21 @@ class ReceiptsActivity : AppCompatActivity() {
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
 
+        emptyStateLayout = findViewById(R.id.emptyStateLayout) // Ensure this ID matches your layout file
+
         initializeRecyclerView()
         fetchReceiptsAndDisplay()
         startPeriodicRefresh()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startPeriodicRefresh()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        stopPeriodicRefresh()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -164,6 +179,7 @@ class ReceiptsActivity : AppCompatActivity() {
 
             override fun onQueryTextChange(newText: String?): Boolean {
                 receiptsAdapter.filter(newText ?: "")
+                toggleEmptyView()
                 return true
             }
         })
@@ -217,6 +233,7 @@ class ReceiptsActivity : AppCompatActivity() {
                 val receipts = odooXmlRpcClient.fetchReceipts()
                 withContext(Dispatchers.Main) {
                     receiptsAdapter.updateReceipts(receipts)
+                    toggleEmptyView()
                 }
             } catch (e: Exception) {
                 Log.e("ReceiptsActivity", "Error fetching receipts: ${e.localizedMessage}")
@@ -238,6 +255,14 @@ class ReceiptsActivity : AppCompatActivity() {
         refreshJob?.cancel()
     }
 
+    private fun toggleEmptyView() {
+        if (receiptsAdapter.itemCount == 0) {
+            emptyStateLayout.visibility = View.VISIBLE
+        } else {
+            emptyStateLayout.visibility = View.GONE
+        }
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             android.R.id.home -> {
@@ -254,3 +279,4 @@ class ReceiptsActivity : AppCompatActivity() {
         coroutineScope.cancel()
     }
 }
+

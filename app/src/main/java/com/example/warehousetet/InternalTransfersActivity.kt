@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -19,16 +21,19 @@ class InternalTransfersActivity : AppCompatActivity() {
     private lateinit var credentialManager: CredentialManager
     private var refreshJob: Job? = null
     private var isSearching = false
+    private lateinit var emptyStateLayout: LinearLayout
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_pick)
+        setContentView(R.layout.activity_pick) // Ensure this is the correct layout file
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
         credentialManager = CredentialManager(this)
         odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
+
+        emptyStateLayout = findViewById(R.id.emptyStateLayout) // Ensure this ID matches your layout file
 
         initializeRecyclerView()
         fetchTransfersAndDisplay()
@@ -54,6 +59,7 @@ class InternalTransfersActivity : AppCompatActivity() {
             override fun onQueryTextSubmit(query: String?): Boolean = false
             override fun onQueryTextChange(newText: String?): Boolean {
                 internalTransfersAdapter.filter(newText ?: "")
+                toggleEmptyView()
                 return true
             }
         })
@@ -84,25 +90,25 @@ class InternalTransfersActivity : AppCompatActivity() {
         if (isSearching) stopPeriodicRefresh() else startPeriodicRefresh()
     }
 
-private fun initializeRecyclerView() {
-    val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView) // Ensure this ID matches your layout file
-    recyclerView.layoutManager = LinearLayoutManager(this)
-    internalTransfersAdapter = InternalTransfersAdapter(listOf()) { transfer ->
-        // Launch IntTransferProductsActivity with transfer ID, similar to how it's done with picks
-        Intent(this, IntTransferProductsActivity::class.java).also { intent ->
-            intent.putExtra("TRANSFER_ID", transfer.id)
-            intent.putExtra("TRANSFER_NAME", transfer.name)
-            intent.putExtra("TRANSFER_ORIGIN", transfer.origin)
-            intent.putExtra("LOCATION", transfer.locationId)
-            intent.putExtra("DEST_LOCATION", transfer.locationDestId)
-            startActivity(intent)
+    private fun initializeRecyclerView() {
+        val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView) // Ensure this ID matches your layout file
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        internalTransfersAdapter = InternalTransfersAdapter(listOf()) { transfer ->
+            // Launch IntTransferProductsActivity with transfer ID, similar to how it's done with picks
+            Intent(this, IntTransferProductsActivity::class.java).also { intent ->
+                intent.putExtra("TRANSFER_ID", transfer.id)
+                intent.putExtra("TRANSFER_NAME", transfer.name)
+                intent.putExtra("TRANSFER_ORIGIN", transfer.origin)
+                intent.putExtra("LOCATION", transfer.locationId)
+                intent.putExtra("DEST_LOCATION", transfer.locationDestId)
+                startActivity(intent)
+            }
+            coroutineScope.launch {
+                odooXmlRpcClient.fetchAndLogBuyerDetails(transfer.name)
+            }
         }
-        coroutineScope.launch {
-            odooXmlRpcClient.fetchAndLogBuyerDetails(transfer.name)
-        }
+        recyclerView.adapter = internalTransfersAdapter
     }
-    recyclerView.adapter = internalTransfersAdapter
-}
 
     private fun fetchTransfersAndDisplay() {
         coroutineScope.launch {
@@ -110,6 +116,7 @@ private fun initializeRecyclerView() {
                 val transfers = odooXmlRpcClient.fetchIntTransfers() // This method needs to be implemented
                 withContext(Dispatchers.Main) {
                     internalTransfersAdapter.updateTransfers(transfers)
+                    toggleEmptyView()
                 }
             } catch (e: Exception) {
                 Log.e("InternalTransfersActivity", "Error fetching transfers: ${e.localizedMessage}")
@@ -130,6 +137,14 @@ private fun initializeRecyclerView() {
     private fun stopPeriodicRefresh() {
         refreshJob?.cancel()
         refreshJob = null
+    }
+
+    private fun toggleEmptyView() {
+        if (internalTransfersAdapter.itemCount == 0) {
+            emptyStateLayout.visibility = View.VISIBLE
+        } else {
+            emptyStateLayout.visibility = View.GONE
+        }
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

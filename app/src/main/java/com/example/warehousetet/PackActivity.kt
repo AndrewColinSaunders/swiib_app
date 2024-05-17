@@ -203,7 +203,7 @@ class PackActivity : AppCompatActivity() {
     }
 
     private fun initializeRecyclerView() {
-        val recyclerView: RecyclerView = findViewById(R.id.packRecyclerView)
+        val recyclerView: RecyclerView = findViewById(R.id.pickRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         packAdapter = PackAdapter(listOf()) { pack ->
             Intent(this, PackProductsActivity::class.java).also { intent ->
@@ -225,11 +225,11 @@ class PackActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     val emptyStateLayout = findViewById<LinearLayout>(R.id.emptyStateLayout)
                     if (packs.isEmpty()) {
-                        findViewById<RecyclerView>(R.id.packRecyclerView).visibility = View.GONE
+                        findViewById<RecyclerView>(R.id.pickRecyclerView).visibility = View.GONE
                         emptyStateLayout.visibility = View.VISIBLE // Show the empty state layout
                     } else {
                         packAdapter.updatePack(packs)
-                        findViewById<RecyclerView>(R.id.packRecyclerView).visibility = View.VISIBLE
+                        findViewById<RecyclerView>(R.id.pickRecyclerView).visibility = View.VISIBLE
                         emptyStateLayout.visibility = View.GONE // Hide the empty state layout
                     }
                 }
