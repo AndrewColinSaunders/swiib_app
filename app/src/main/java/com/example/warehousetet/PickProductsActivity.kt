@@ -1064,6 +1064,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Spannable
@@ -1927,6 +1928,12 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
                     runOnUiThread {
                         if (validationSuccessful) {
                             Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                            // Play the sound
+                            val mediaPlayer: MediaPlayer? = MediaPlayer.create(applicationContext, R.raw.button_pressed)
+                            mediaPlayer?.start()
+                            mediaPlayer?.setOnCompletionListener {
+                                it.release()
+                            }
                             val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
                             startActivity(intent)
                             finish()
@@ -1967,6 +1974,11 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
                 runOnUiThread {
                     if (validationSuccessful) {
                         Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                        val mediaPlayer: MediaPlayer? = MediaPlayer.create(applicationContext, R.raw.button_pressed)
+                        mediaPlayer?.start()
+                        mediaPlayer?.setOnCompletionListener {
+                            it.release()
+                        }
                         val intent = Intent(this@PickProductsActivity, PickActivity::class.java)
                         startActivity(intent)
                         finish()

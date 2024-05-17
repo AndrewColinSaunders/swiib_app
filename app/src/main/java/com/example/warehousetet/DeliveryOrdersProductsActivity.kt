@@ -286,7 +286,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
             lifecycleScope.launch {
                 if (odooXmlRpcClient.validateOperationDO(deliveryOrdersId, this@DeliveryOrdersProductsActivity)) {
                     Toast.makeText(this@DeliveryOrdersProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
-                    MediaPlayer.create(this@DeliveryOrdersProductsActivity, R.raw.validation_sound_effect).apply {
+                    MediaPlayer.create(this@DeliveryOrdersProductsActivity, R.raw.button_pressed).apply {
                         start()
                         setOnCompletionListener { it.release() }
                     }

@@ -187,7 +187,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 if (odooXmlRpcClient.validateOperationDO(packId, this@PackProductsActivity)) {
                     Toast.makeText(this@PackProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
 
-                    MediaPlayer.create(this@PackProductsActivity, R.raw.validation_sound_effect).apply {
+                    MediaPlayer.create(this@PackProductsActivity, R.raw.button_pressed).apply {
                         start()
                         setOnCompletionListener {
                             it.release()

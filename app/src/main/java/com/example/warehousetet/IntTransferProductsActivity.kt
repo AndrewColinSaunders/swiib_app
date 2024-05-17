@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.provider.MediaStore
 import android.text.Spannable
@@ -1094,6 +1095,11 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                     runOnUiThread {
                         if (validationSuccessful) {
                             Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                            val mediaPlayer: MediaPlayer? = MediaPlayer.create(applicationContext, R.raw.button_pressed)
+                            mediaPlayer?.start()
+                            mediaPlayer?.setOnCompletionListener {
+                                it.release()
+                            }
                             // Redirect to PickActivity upon successful validation
                             val intent = Intent(this@IntTransferProductsActivity, InternalTransfersActivity::class.java)
                             startActivity(intent)
@@ -1135,6 +1141,11 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
                 runOnUiThread {
                     if (validationSuccessful) {
                         Toast.makeText(applicationContext, "Picking validated successfully.", Toast.LENGTH_SHORT).show()
+                        val mediaPlayer: MediaPlayer? = MediaPlayer.create(applicationContext, R.raw.button_pressed)
+                        mediaPlayer?.start()
+                        mediaPlayer?.setOnCompletionListener {
+                            it.release()
+                        }
                         val intent = Intent(this@IntTransferProductsActivity, InternalTransfersActivity::class.java)
                         startActivity(intent)
                         finish()  // Optionally call finish() if you want to remove this activity from the back stack
