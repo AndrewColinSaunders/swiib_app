@@ -1336,7 +1336,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
     companion object {
-        private const val CAMERA_REQUEST_CODE = 1001
+        const val CAMERA_REQUEST_CODE = 1001
     }
 
     private fun startCameraIntent() {
