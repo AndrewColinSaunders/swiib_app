@@ -30,6 +30,7 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -181,6 +182,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         barcodeInput = findViewById(R.id.packBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
         val clearButton = findViewById<Button>(R.id.packClearButton)
+        val enterManuallyButton = findViewById<Button>(R.id.enterManuallyButton)
 
         shouldShowPrinterIcon = false
 
@@ -235,6 +237,23 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             vibrateDevice(vibrator)
 
             barcodeInput.text.clear()
+        }
+
+        enterManuallyButton.setOnClickListener {
+            // Change the height of the EditText to wrap_content
+            barcodeInput.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            barcodeInput.requestLayout() // Refresh the layout
+
+            // Make the Confirm and Clear buttons wrap_content
+            packConfirmButton.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            clearButton.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+
+            // Refresh the layout for the buttons
+            packConfirmButton.requestLayout()
+            clearButton.requestLayout()
+
+            // Hide the Enter Manually button
+            enterManuallyButton.visibility = View.INVISIBLE
         }
     }
 

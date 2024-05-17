@@ -10,7 +10,7 @@
     <EditText
         android:id="@+id/packBarcodeInput"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="1dp"
         android:hint="Enter Barcode"
         android:background="@drawable/edittext_border"
         android:inputType="text"
@@ -18,12 +18,21 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"/>
 
+    <Button
+        android:id="@+id/enterManuallyButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter Manually"
+        app:layout_constraintTop_toTopOf="@id/packBarcodeInput"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
     <LinearLayout
         android:id="@+id/packButtonWrapper"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintTop_toBottomOf="@id/packBarcodeInput"
+        app:layout_constraintTop_toBottomOf="@id/enterManuallyButton"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="8dp">
@@ -31,7 +40,7 @@
         <Button
             android:id="@+id/packConfirmButton"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:text="Confirm"
             app:backgroundTint="?attr/colorSecondaryVariant"
             android:layout_marginEnd="4dp"/>
@@ -39,21 +48,18 @@
         <Button
             android:id="@+id/packClearButton"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="0dp"
             android:text="Clear"
             android:backgroundTint="@color/danger_red"
             android:layout_marginStart="4dp"/>
     </LinearLayout>
 
-
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/packProductsRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-
         app:layout_constraintBottom_toTopOf="@+id/validateOperationButton"
         app:layout_constraintEnd_toEndOf="parent"
-
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/packButtonWrapper" />
@@ -70,6 +76,5 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
