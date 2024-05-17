@@ -2105,6 +2105,51 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
 
     }
 
+//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//        menuInflater.inflate(R.menu.menu_products_activity, menu)
+//        return true
+//    }
+//
+//    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+//        super.onPrepareOptionsMenu(menu)
+//        val menuItem = menu.findItem(R.id.action_flag_receipt)
+//        val spanString = SpannableString(menuItem.title).apply {
+//            setSpan(ForegroundColorSpan(ContextCompat.getColor(this@ProductsActivity, R.color.danger_red)), 0, length, 0)
+//            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+//        }
+//        menuItem.title = spanString
+//        return true
+//    }
+//
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        return when (item.itemId) {
+//            R.id.action_flag_receipt -> {
+//                // Inflate the custom layout for the dialog
+//                val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
+//                val dialog = AlertDialog.Builder(this)
+//                    .setView(dialogView)
+//                    .create()
+//
+//                // Find buttons and set up click listeners
+//                dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+//                    dialog.dismiss()
+//                }
+//
+//                dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
+//                    flagReceipt()
+//                    dialog.dismiss()
+//                }
+//
+//                dialog.show()
+//                true
+//            }
+//            android.R.id.home -> {
+//                onBackPressedDispatcher.onBackPressed()
+//                true
+//            }
+//            else -> super.onOptionsItemSelected(item)
+//        }
+//    }
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.menu_products_activity, menu)
         return true
@@ -2124,23 +2169,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_flag_receipt -> {
-                // Inflate the custom layout for the dialog
-                val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
-                val dialog = AlertDialog.Builder(this)
-                    .setView(dialogView)
-                    .create()
-
-                // Find buttons and set up click listeners
-                dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-                    dialog.dismiss()
-                }
-
-                dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
-                    flagReceipt()
-                    dialog.dismiss()
-                }
-
-                dialog.show()
+                showDialogForFlag()
                 true
             }
             android.R.id.home -> {
@@ -2149,6 +2178,23 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+    private fun showDialogForFlag() {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
+            flagReceipt()
+            dialog.dismiss()
+        }
+
+        dialog.show()
     }
 
     private fun flagReceipt() {
@@ -2311,7 +2357,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
 //            }
 //        }
 //    }
-    suspend fun fetchProductsForReceipt(pickId: Int) {
+    private suspend fun fetchProductsForReceipt(pickId: Int) {
         try {
             Log.d("PickProductsActivity", "Fetching products for pick ID: $pickId")
             val fetchedLines = odooXmlRpcClient.fetchReceiptMoveLinesByPickingId(pickId)

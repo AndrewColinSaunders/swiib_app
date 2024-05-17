@@ -8,8 +8,10 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.MediaStore
+import android.text.Spannable
 import android.text.SpannableString
 import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.Base64
@@ -146,23 +148,56 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         loadMatchStatesFromPreferences(transferId)
         restoreButtonVisibility(transferId)
     }
+//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//        menuInflater.inflate(R.menu.flag_menu_item, menu)
+//        return true
+//    }
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        when (item.itemId) {
+//            android.R.id.home -> {
+//                onBackPressedDispatcher.onBackPressed()
+//                return true
+//            }
+//            R.id.action_flag -> {
+//                showFlagDialog()
+//                return true  // Ensure to return true after handling the action
+//            }
+//        }
+//        return super.onOptionsItemSelected(item)
+//    }
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.flag_menu_item, menu)
+        menuInflater.inflate(R.menu.menu_products_activity, menu)
         return true
     }
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
+        return when (item.itemId) {
             android.R.id.home -> {
                 onBackPressedDispatcher.onBackPressed()
-                return true
+                true
             }
-            R.id.action_flag -> {
+            R.id.action_flag_receipt -> {  // Updated ID
                 showFlagDialog()
-                return true  // Ensure to return true after handling the action
+                true  // Ensure to return true after handling the action
             }
+            else -> super.onOptionsItemSelected(item)
         }
-        return super.onOptionsItemSelected(item)
     }
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        // Find the nested "Flag" menu item using its ID.
+        val menuItem = menu.findItem(R.id.action_flag_receipt)
+        // Create a SpannableString with the title of the menu item.
+        val spanString = SpannableString(menuItem.title).apply {
+            // Apply a red color span.
+            setSpan(ForegroundColorSpan(ContextCompat.getColor(this@IntTransferProductsActivity, R.color.danger_red)), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+            // You can also make the text bold if desired.
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+        }
+        // Set the modified SpannableString back as the title of the menu item.
+        menuItem.title = spanString
+        return true
+    }
+
 
     private fun showFlagDialog() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, findViewById(android.R.id.content), false)

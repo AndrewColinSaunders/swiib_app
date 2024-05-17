@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- res/menu/menu_products_activity.xml -->
-<!-- res/menu/menu_products_activity.xml -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"> <!-- Add this line -->
+    xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
-        android:id="@+id/action_flag_receipt"
-        android:title="Flag"
-        android:orderInCategory="100"
-        android:icon="@drawable/flag_regular"
-        app:showAsAction="ifRoom" />
+        android:id="@+id/menu_more"
+        android:title="@string/more_options"
+        android:icon="@drawable/ic_menu_burger"
+        app:showAsAction="always">
+    <menu>
+        <item
+            android:id="@+id/action_flag_receipt"
+            android:title="Flag"
+            android:orderInCategory="100"
+            app:showAsAction="ifRoom" />
+    </menu>
+    </item>
 </menu>
-

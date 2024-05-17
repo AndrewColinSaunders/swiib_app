@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.Typeface
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
@@ -16,6 +17,10 @@ import android.os.Parcelable
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.MediaStore
+import android.text.Spannable
+import android.text.SpannableString
+import android.text.style.ForegroundColorSpan
+import android.text.style.StyleSpan
 import android.util.Base64
 import android.util.Log
 import android.view.KeyEvent
@@ -184,17 +189,20 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
 
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_delivery_orders_products, menu)
+        menuInflater.inflate(R.menu.menu_products_activity, menu)  // Update to use the correct menu file.
 
-        menu?.findItem(R.id.action_flag)?.let { menuItem ->
+        // Setting the icon color if needed, adapt to the new menu item ID.
+        menu?.findItem(R.id.action_flag_receipt)?.let { menuItem ->
             val colorDangerRed = ContextCompat.getColor(this, R.color.danger_red)
             val coloredDrawable = menuItem.icon?.mutate()?.apply {
                 colorFilter = PorterDuffColorFilter(colorDangerRed, PorterDuff.Mode.SRC_ATOP)
             }
             menuItem.icon = coloredDrawable
         }
+
         return true
     }
+
 
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -600,24 +608,30 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
                 vibrateDevice(vibrator)
                 return true
             }
-            R.id.action_flag -> {
+            R.id.action_flag_receipt -> {  // Update the ID to the new one.
                 showFlagDialog()
                 vibrateDevice(vibrator)
                 return true
             }
-            R.id.action_print -> {
-                val subMenu = item.subMenu
-                if (subMenu == null || subMenu.size() == 0) {
-                    Toast.makeText(this, "There Is Nothing To Print Right Now", Toast.LENGTH_LONG).show()
-                    vibrateDevice(vibrator)
-                    return true
-                } else {
-                    vibrateDevice(vibrator)
-                }
-            }
         }
         return super.onOptionsItemSelected(item)
     }
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        // Find the nested "Flag" menu item using its new ID.
+        val menuItem = menu?.findItem(R.id.action_flag_receipt)
+        menuItem?.let {
+            val spanString = SpannableString(it.title).apply {
+                // Apply a red color span using the colorDangerRed.
+                setSpan(ForegroundColorSpan(ContextCompat.getColor(this@DeliveryOrdersProductsActivity, R.color.danger_red)), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+                // Optional: Make the text bold.
+                setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+            }
+            it.title = spanString
+        }
+        return true
+    }
+
 
     private fun vibrateDevice(vibrator: Vibrator?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

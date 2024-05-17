@@ -21,8 +21,10 @@ import android.os.Parcelable
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.provider.MediaStore
+import android.text.Spannable
 import android.text.SpannableString
 import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.Base64
@@ -1461,69 +1463,46 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
 
-
-//    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
-//        super.onPrepareOptionsMenu(menu)
-//        val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
-//        subMenu?.clear()
+//override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+//    super.onPrepareOptionsMenu(menu)
+//    val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
+//    subMenu?.clear()
 //
-//        // Add static menu items
-//        subMenu?.add(Menu.NONE, R.id.action_flag, Menu.NONE, "Flag")
-//        val printItem = subMenu?.add(Menu.NONE, R.id.action_print, Menu.NONE, "Print Package Labels")
+//    // Add static menu items
+//    subMenu?.add(Menu.NONE, R.id.action_flag, Menu.NONE, "Flag")
+//    val printItem = subMenu?.add(Menu.NONE, R.id.action_print, Menu.NONE, "Print Package Labels")
 //
-//        // Using a flag to check if items are already added
-//        val addedPackageNames = mutableSetOf<String>()
-//
-//        printItem?.setOnMenuItemClickListener {
-//            if (addedPackageNames.isEmpty()) { // Check if items are already added
-//                populatePackageItems(subMenu, addedPackageNames)
-//            }
-//            true // Return true to indicate that the menu item click has been handled
-//        }
-//
-//        return true
+//    printItem?.setOnMenuItemClickListener {
+//        showPackageDialog()
+//        true // Return true to indicate that the menu item click has been handled
 //    }
 //
-//    private fun populatePackageItems(subMenu: SubMenu?, addedPackageNames: MutableSet<String>) {
-//        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
-//        lifecycleScope.launch(Dispatchers.IO) {
-//            try {
-//                val packages = odooXmlRpcClient.fetchResultPackagesByPickingId(packId)
-//                withContext(Dispatchers.Main) {
-//                    packages.forEach { packageInfo ->
-//                        if (addedPackageNames.add(packageInfo.name)) { // Add returns true if this name was not already present
-//                            subMenu?.add(Menu.NONE, packageInfo.id, Menu.NONE, packageInfo.name)?.setOnMenuItemClickListener {
-//                                printPackage(packageInfo.name)
-//                                vibrateDevice(vibrator)
-//                                true
-//                            }
-//                        }
-//                    }
-//                }
-//            } catch (e: Exception) {
-//                Log.e("PackageMenu", "Error fetching packages: ${e.localizedMessage}")
-//                withContext(Dispatchers.Main) {
-//                    Toast.makeText(this@PackProductsActivity, "Failed to fetch packages", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
-override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
-    super.onPrepareOptionsMenu(menu)
-    val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
-    subMenu?.clear()
+//    return true
+//}
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
+        subMenu?.clear()
 
-    // Add static menu items
-    subMenu?.add(Menu.NONE, R.id.action_flag, Menu.NONE, "Flag")
-    val printItem = subMenu?.add(Menu.NONE, R.id.action_print, Menu.NONE, "Print Package Labels")
+        // Define the SpannableString with color span for "Flag"
+        val flagTitle = SpannableString("Flag").apply {
+            setSpan(ForegroundColorSpan(ContextCompat.getColor(this@PackProductsActivity, R.color.danger_red)), 0, this.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
 
-    printItem?.setOnMenuItemClickListener {
-        showPackageDialog()
-        true // Return true to indicate that the menu item click has been handled
+        // Add static menu items with styled text
+        subMenu?.add(Menu.NONE, R.id.action_flag, Menu.NONE, flagTitle)
+
+        // Adding "Print Package Labels" item with a click listener
+        val printItem = subMenu?.add(Menu.NONE, R.id.action_print, Menu.NONE, "Print Package Labels")
+        printItem?.setOnMenuItemClickListener {
+            showPackageDialog()
+            true  // Return true to indicate that the menu item click has been handled
+        }
+
+        return true
     }
 
-    return true
-}
+
     private fun showPackageDialog() {
         val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
         val packageNames = mutableListOf<String>()  // To hold package names

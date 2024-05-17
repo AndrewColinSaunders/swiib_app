@@ -1066,8 +1066,10 @@ import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.provider.MediaStore
+import android.text.Spannable
 import android.text.SpannableString
 import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.util.Base64
@@ -1187,84 +1189,53 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
         restoreButtonVisibility(pickId)
     }
 
+//    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+//        menuInflater.inflate(R.menu.flag_menu_item, menu)
+//        return true
+//    }
+//
+//    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+//        when (item.itemId) {
+//            android.R.id.home -> {
+//                onBackPressedDispatcher.onBackPressed()
+//                return true
+//            }
+//            R.id.action_flag -> {
+//                showFlagDialog()
+//                return true
+//            }
+//        }
+//        return super.onOptionsItemSelected(item)
+//    }
+
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.flag_menu_item, menu)
+        menuInflater.inflate(R.menu.menu_products_activity, menu)  // Update this line with the new menu resource.
+        return true
+    }
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            android.R.id.home -> {
+                onBackPressedDispatcher.onBackPressed()
+                true
+            }
+            R.id.action_flag_receipt -> {  // Update the ID used here to the new one.
+                showFlagDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        super.onPrepareOptionsMenu(menu)
+        val menuItem = menu.findItem(R.id.action_flag_receipt)
+        val spanString = SpannableString(menuItem.title).apply {
+            setSpan(ForegroundColorSpan(ContextCompat.getColor(this@PickProductsActivity, R.color.danger_red)), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
+        }
+        menuItem.title = spanString
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                onBackPressedDispatcher.onBackPressed()
-                return true
-            }
-            R.id.action_flag -> {
-                showFlagDialog()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
-//    private fun showFlagDialog() {
-//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, null, false)
-//        val dialogBuilder = AlertDialog.Builder(this).apply {
-//            setView(dialogView)
-//            setCancelable(false)
-//        }
-//        val dialog = dialogBuilder.create()
-//
-//        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-//            dialog.dismiss()
-//        }
-//
-//        dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
-//            coroutineScope.launch {
-//                try {
-//                    val pickName = this@PickProductsActivity.pickName ?: run {
-//                        withContext(Dispatchers.Main) {
-//                            Log.e("PickProductsActivity", "Pick name is null")
-//                            Toast.makeText(this@PickProductsActivity, "Invalid pick details", Toast.LENGTH_SHORT).show()
-//                        }
-//                        return@launch
-//                    }
-//
-//                    val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(pickName)
-//                    if (buyerDetails != null) {
-//                        withContext(Dispatchers.Main) {
-//                            captureImage()
-//                        }
-//
-//                        // Send email on IO thread
-//                        withContext(Dispatchers.IO) {
-//                            sendEmailToBuyer(buyerDetails.login, buyerDetails.name, pickName)
-//                        }
-//
-//                        withContext(Dispatchers.Main) {
-//                            Log.d("PickProductsActivity", "Pick flagged and buyer notified via email.")
-//                            Toast.makeText(this@PickProductsActivity, "Pick flagged", Toast.LENGTH_SHORT).show()
-//                        }
-//                    } else {
-//                        withContext(Dispatchers.Main) {
-//                            Log.e("PickProductsActivity", "Failed to fetch buyer details or flag the pick.")
-//                            Toast.makeText(this@PickProductsActivity, "Failed to flag pick", Toast.LENGTH_SHORT).show()
-//                        }
-//                    }
-//                } catch (e: Exception) {
-//                    withContext(Dispatchers.Main) {
-//                        Log.e("PickProductsActivity", "Error in flagging process: ${e.localizedMessage}", e)
-//                        Toast.makeText(this@PickProductsActivity, "Error during flagging", Toast.LENGTH_SHORT).show()
-//                    }
-//                } finally {
-//                    withContext(Dispatchers.Main) {
-//                        dialog.dismiss()
-//                    }
-//                }
-//            }
-//        }
-//
-//        dialog.show()
-//    }
     private fun showFlagDialog() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, findViewById(android.R.id.content), false)
         val dialogBuilder = AlertDialog.Builder(this).apply {
