@@ -5,6 +5,9 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PorterDuff
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.inputmethod.EditorInfo
@@ -51,27 +54,52 @@ class LoginActivity : AppCompatActivity() {
             } else false
         }
 
+//        loginButton.setOnClickListener {
+//            val username = usernameEditText.text.toString()
+//            val password = passwordEditText.text.toString()
+//
+//            coroutineScope.launch {
+//                val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
+//                val userId = odooXmlRpcClient.login(username, password)
+//                Log.d("OdooXmlRpcClient", "Received UserID from login attempt: $userId")
+//
+//                withContext(Dispatchers.Main) {
+//                    if (userId > 0) {
+//                        Log.d("OdooXmlRpcClient", "Login successful with UserID: $userId before storing in prefs")
+//                        handleLoginSuccess(username, password, userId)
+//                        Log.d("OdooXmlRpcClient", "Stored UserId: ${credentialManager.getUserId()} after login")
+//                    } else {
+//                        handleLoginFailure("Invalid username or password.")
+//                    }
+//                }
+//            }
+//
+//        }
         loginButton.setOnClickListener {
-            val username = usernameEditText.text.toString()
-            val password = passwordEditText.text.toString()
+            if (!isNetworkAvailable(this)) {
+                Toast.makeText(this, "No internet connection available.", Toast.LENGTH_LONG).show()
+            } else {
+                val username = usernameEditText.text.toString()
+                val password = passwordEditText.text.toString()
 
-            coroutineScope.launch {
-                val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
-                val userId = odooXmlRpcClient.login(username, password)
-                Log.d("OdooXmlRpcClient", "Received UserID from login attempt: $userId")
+                coroutineScope.launch {
+                    val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
+                    val userId = odooXmlRpcClient.login(username, password)
+                    Log.d("OdooXmlRpcClient", "Received UserID from login attempt: $userId")
 
-                withContext(Dispatchers.Main) {
-                    if (userId > 0) {
-                        Log.d("OdooXmlRpcClient", "Login successful with UserID: $userId before storing in prefs")
-                        handleLoginSuccess(username, password, userId)
-                        Log.d("OdooXmlRpcClient", "Stored UserId: ${credentialManager.getUserId()} after login")
-                    } else {
-                        handleLoginFailure("Invalid username or password.")
+                    withContext(Dispatchers.Main) {
+                        if (userId > 0) {
+                            Log.d("OdooXmlRpcClient", "Login successful with UserID: $userId before storing in prefs")
+                            handleLoginSuccess(username, password, userId)
+                            Log.d("OdooXmlRpcClient", "Stored UserId: ${credentialManager.getUserId()} after login")
+                        } else {
+                            handleLoginFailure("Invalid username or password.")
+                        }
                     }
                 }
             }
-
         }
+
     }
 
     private fun handleLoginSuccess(username: String, password: String, userId: Int) {
@@ -89,6 +117,21 @@ class LoginActivity : AppCompatActivity() {
     private fun handleLoginFailure(errorMessage: String) {
         Toast.makeText(this, errorMessage, Toast.LENGTH_LONG).show()
     }
+    private fun isNetworkAvailable(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val nw      = connectivityManager.activeNetwork ?: return false
+        val actNw = connectivityManager.getNetworkCapabilities(nw) ?: return false
+        return when {
+            actNw.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> true
+            actNw.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) -> true
+            //for other device how are able to connect with Ethernet
+            actNw.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET) -> true
+            //for check internet over Bluetooth
+            actNw.hasTransport(NetworkCapabilities.TRANSPORT_BLUETOOTH) -> true
+            else -> false
+        }
+    }
+
 
     override fun onDestroy() {
         super.onDestroy()
