@@ -5,16 +5,17 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="@color/backActivityColor"
-    tools:context=".DeliveryOrdersProductsActivity">
+    android:background="#11151c">
 
     <EditText
         android:id="@+id/deliveryOrdersBarcodeInput"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
         android:hint="Enter Delivery Barcode"
-        android:background="@drawable/edittext_border"
+        android:background="@android:color/transparent"
         android:inputType="text"
+        android:textColor="@android:color/transparent"
+        android:cursorVisible="false"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
@@ -30,18 +31,28 @@
         android:layout_marginTop="8dp">
 
         <Button
+            android:id="@+id/enterManuallyButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Enter Manually"
+            app:backgroundTint="?attr/colorPrimary"
+            android:layout_marginEnd="4dp"/>
+
+        <Button
             android:id="@+id/deliveryOrdersConfirmButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Confirm"
-            app:backgroundTint="?attr/colorSecondaryVariant"
-            android:layout_marginEnd="4dp"/>
+            android:visibility="gone"
+        app:backgroundTint="?attr/colorSecondaryVariant"
+        android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/deliveryOrdersClearButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Clear"
+            android:visibility="gone"
             android:backgroundTint="@color/danger_red"
             android:layout_marginStart="4dp"/>
     </LinearLayout>
@@ -51,20 +62,22 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/deliveryOrdersButtonWrapper"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/validateOperationButton" />
-
+        android:layout_marginTop="10dp"/>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/validateOperationButton"
         style="@style/Widget.MaterialComponents.Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:backgroundTint="@color/toDoBlue"
-        android:text="Validate Delivery"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:text="Validate Operation"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:backgroundTint="?attr/colorSecondaryVariant"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

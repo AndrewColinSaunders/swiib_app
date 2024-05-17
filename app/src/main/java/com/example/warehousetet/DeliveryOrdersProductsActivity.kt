@@ -28,6 +28,7 @@ import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -268,7 +269,9 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         validateButton = findViewById(R.id.validateOperationButton)
         barcodeInput = findViewById(R.id.deliveryOrdersBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.deliveryOrdersConfirmButton)
+        val clearButton = findViewById<Button>(R.id.deliveryOrdersClearButton)
         val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+        val enterManuallyButton = findViewById<Button>(R.id.enterManuallyButton)
 
         validateButton.setOnClickListener {
             vibrator?.let {
@@ -301,6 +304,30 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
                 barcodeInput.text.clear()
             } else {
                 Toast.makeText(this, "Please enter or scan a barcode first.", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        clearButton.setOnClickListener {
+            val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+            vibrateDevice(vibrator)
+
+            barcodeInput.text.clear()
+        }
+
+        enterManuallyButton.setOnClickListener {
+            packConfirmButton.visibility = View.VISIBLE
+            clearButton.visibility = View.VISIBLE
+            enterManuallyButton.visibility = View.GONE
+            barcodeInput.apply {
+                setBackgroundColor(ContextCompat.getColor(context, android.R.color.white))
+                setTextColor(ContextCompat.getColor(context, android.R.color.black))
+                isCursorVisible = true
+                requestFocus()
+                setBackgroundResource(R.drawable.edittext_border)
+                hint = "Enter Barcode"
+                val layoutParams = this.layoutParams
+                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                this.layoutParams = layoutParams
             }
         }
     }

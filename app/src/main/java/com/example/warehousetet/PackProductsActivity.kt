@@ -167,6 +167,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         barcodeInput = findViewById(R.id.packBarcodeInput)
         val packConfirmButton = findViewById<Button>(R.id.packConfirmButton)
         val clearButton = findViewById<Button>(R.id.packClearButton)
+        val enterManuallyButton = findViewById<Button>(R.id.enterManuallyButton)
 
         shouldShowPrinterIcon = false
 
@@ -221,6 +222,23 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             vibrateDevice(vibrator)
 
             barcodeInput.text.clear()
+        }
+
+        enterManuallyButton.setOnClickListener {
+            packConfirmButton.visibility = View.VISIBLE
+            clearButton.visibility = View.VISIBLE
+            enterManuallyButton.visibility = View.GONE
+            barcodeInput.apply {
+                setBackgroundColor(ContextCompat.getColor(context, android.R.color.white))
+                setTextColor(ContextCompat.getColor(context, android.R.color.black))
+                isCursorVisible = true
+                requestFocus()
+                setBackgroundResource(R.drawable.edittext_border)
+                hint = "Enter Barcode"
+                val layoutParams = this.layoutParams
+                layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+                this.layoutParams = layoutParams
+            }
         }
     }
 
