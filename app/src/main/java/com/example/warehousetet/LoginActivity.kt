@@ -77,7 +77,7 @@ class LoginActivity : AppCompatActivity() {
 //        }
         loginButton.setOnClickListener {
             if (!isNetworkAvailable(this)) {
-                Toast.makeText(this, "No internet connection available.", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "No Internet Connection Available.", Toast.LENGTH_LONG).show()
             } else {
                 val username = usernameEditText.text.toString()
                 val password = passwordEditText.text.toString()
