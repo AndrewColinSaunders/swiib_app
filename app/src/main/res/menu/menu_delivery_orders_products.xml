@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/action_flag"
         android:title="Flag"
-        android:icon="@drawable/flag_solid"
+        android:icon="@drawable/flag_solid2"
         app:showAsAction="ifRoom|withText">
     </item>
 </menu>

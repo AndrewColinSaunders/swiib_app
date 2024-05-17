@@ -55,6 +55,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.internal.ViewUtils.hideKeyboard
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.MultiFormatWriter
@@ -140,6 +141,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             Log.e("PackProductsActivity", "Invalid pack ID passed to PackProductsActivity.")
         }
     }
+
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_pack_products, menu)
@@ -294,6 +296,8 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
         return super.dispatchKeyEvent(event)
     }
+
+
 
     private fun verifyProductBarcode(scannedBarcode: String) = lifecycleScope.launch {
         val matchingMoveLine = packProductsAdapter.moveLineOutGoings.find { moveLine ->
@@ -1542,35 +1546,7 @@ override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
         }
     }
 
-//    private fun displayPackagesDialog(packageNames: List<String>, vibrator: Vibrator?) {
-//        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_packages, null)
-//        val layout = dialogView.findViewById<LinearLayout>(R.id.linear_layout_packages)
-//
-//        packageNames.forEach { packageName ->
-//            // Inflate CardView for each package item
-//            val cardView = LayoutInflater.from(this).inflate(R.layout.package_item, layout, false) as CardView
-//            val textView = cardView.findViewById<TextView>(R.id.package_item_text_view)
-//            textView.text = packageName
-//            textView.setOnClickListener {
-//                printPackage(packageName)
-//                vibrateDevice(vibrator)
-//            }
-//            layout.addView(cardView)
-//        }
-//
-//        // Initialize the dialog before setting up the button listener
-//        val dialog = AlertDialog.Builder(this)
-//            .setView(dialogView)
-//            .create()
-//
-//        val cancelButton = dialogView.findViewById<Button>(R.id.buttonCancelQuantity)
-//        cancelButton.setOnClickListener {
-//            // Properly dismiss the dialog
-//            dialog.dismiss()
-//        }
-//
-//        dialog.show()
-//    }
+
     private fun displayPackagesDialog(packageNames: List<String>, vibrator: Vibrator?) {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_packages, null)
         val layout = dialogView.findViewById<LinearLayout>(R.id.linear_layout_packages)
@@ -1607,7 +1583,6 @@ override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
             dialog.dismiss()
         }
     }
-
 
     private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {
         Build.VERSION.SDK_INT >= 33 -> getParcelableExtra(key, T::class.java)
