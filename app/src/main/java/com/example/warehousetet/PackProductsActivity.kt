@@ -187,7 +187,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 if (odooXmlRpcClient.validateOperationDO(packId, this@PackProductsActivity)) {
                     Toast.makeText(this@PackProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
 
-                    MediaPlayer.create(this@PackProductsActivity, R.raw.validation_sound_effect).apply {
+                    MediaPlayer.create(this@PackProductsActivity, R.raw.button_pressed).apply {
                         start()
                         setOnCompletionListener {
                             it.release()
@@ -257,15 +257,17 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 odooXmlRpcClient.fetchMoveLinesByOperationId(packId)
             }
             Log.d("PackProductsActivity", "Fetched move lines: $fetchedMoveLines")
-            Log.d("DeliveryOrdersProductsActivity1234556", "Fetched move lines: ${fetchedMoveLines.map { it.productName + ": " + it.quantity }}")
 
             val packagedMoveLinesIds = mutableListOf<PackagedMovedLine>()
 
             // Check and log if move lines are already packaged
+            var allPackaged = true
             fetchedMoveLines.forEach { moveLine ->
                 if (moveLine.resultPackageId != null) {
                     Log.d("PackProductsActivity", "Already packaged: MoveLine ID ${moveLine.lineId} in package ${moveLine.resultPackageName}")
                     packagedMoveLinesIds.add(PackagedMovedLine(moveLine.lineId))
+                } else {
+                    allPackaged = false
                 }
             }
 
@@ -279,10 +281,17 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             val uniqueProductNames = fetchedMoveLines.map { it.productName }.distinct()
             val barcodes = fetchProductBarcodes(uniqueProductNames)
             Log.d("PackProductsActivity", "Fetched barcodes for all products: ${barcodes.map { "${it.key}: ${it.value}" }.joinToString(", ")}")
+
+            // Make the validate button visible if all move lines are packaged
+            runOnUiThread {
+                validateButton.visibility = if (allPackaged) View.VISIBLE else View.GONE
+            }
+
         } catch (e: Exception) {
             Log.e("PackProductsActivity", "Error fetching move lines for pack: ${e.localizedMessage}")
         }
     }
+
 
 
     private fun updateRelevantSerialNumbers(moveLineOutGoings: List<MoveLineOutGoing>) {
