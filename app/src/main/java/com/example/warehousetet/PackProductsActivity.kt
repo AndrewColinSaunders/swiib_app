@@ -187,7 +187,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 if (odooXmlRpcClient.validateOperationDO(packId, this@PackProductsActivity)) {
                     Toast.makeText(this@PackProductsActivity, "Operation validated successfully!", Toast.LENGTH_SHORT).show()
 
-                    MediaPlayer.create(this@PackProductsActivity, R.raw.button_pressed).apply {
+                    MediaPlayer.create(this@PackProductsActivity, R.raw.validation_sound_effect).apply {
                         start()
                         setOnCompletionListener {
                             it.release()
@@ -258,17 +258,32 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
             }
             Log.d("PackProductsActivity", "Fetched move lines: $fetchedMoveLines")
             Log.d("DeliveryOrdersProductsActivity1234556", "Fetched move lines: ${fetchedMoveLines.map { it.productName + ": " + it.quantity }}")
+
+            val packagedMoveLinesIds = mutableListOf<PackagedMovedLine>()
+
+            // Check and log if move lines are already packaged
+            fetchedMoveLines.forEach { moveLine ->
+                if (moveLine.resultPackageId != null) {
+                    Log.d("PackProductsActivity", "Already packaged: MoveLine ID ${moveLine.lineId} in package ${moveLine.resultPackageName}")
+                    packagedMoveLinesIds.add(PackagedMovedLine(moveLine.lineId))
+                }
+            }
+
+            // Send packaged move lines to the adapter
+            packProductsAdapter.setPackagedMoveLines(packagedMoveLinesIds)
+
+            // Update UI with fetched move lines
             updateUIForMoveLines(fetchedMoveLines)
             updateRelevantSerialNumbers(fetchedMoveLines)
 
             val uniqueProductNames = fetchedMoveLines.map { it.productName }.distinct()
             val barcodes = fetchProductBarcodes(uniqueProductNames)
-
             Log.d("PackProductsActivity", "Fetched barcodes for all products: ${barcodes.map { "${it.key}: ${it.value}" }.joinToString(", ")}")
         } catch (e: Exception) {
             Log.e("PackProductsActivity", "Error fetching move lines for pack: ${e.localizedMessage}")
         }
     }
+
 
     private fun updateRelevantSerialNumbers(moveLineOutGoings: List<MoveLineOutGoing>) {
         serialNumberToMoveLineIdMap.clear()
@@ -1336,7 +1351,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
     companion object {
-        const val CAMERA_REQUEST_CODE = 1001
+        private const val CAMERA_REQUEST_CODE = 1001
     }
 
     private fun startCameraIntent() {
@@ -1481,7 +1496,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
 
-//override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+    //override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
 //    super.onPrepareOptionsMenu(menu)
 //    val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
 //    subMenu?.clear()
@@ -1605,3 +1620,4 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
 }
+
