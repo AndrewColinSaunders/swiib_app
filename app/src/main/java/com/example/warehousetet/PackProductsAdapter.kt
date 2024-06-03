@@ -67,6 +67,29 @@ class PackProductsAdapter(
         checkAllVerified()
     }
 
+    fun setPackagedMoveLines(packagedMoveLinesList: List<PackagedMovedLine>) {
+        // Find the set of IDs from the new packaged move lines
+        val newPackagedIds = packagedMoveLinesList.map { it.moveLineId }.toSet()
+
+        // Determine changes by comparing the new IDs with the existing packaged IDs
+        val changes = moveLineOutGoings.mapIndexedNotNull { index, moveLine ->
+            // Check if the current move line's packaged state is different from the new state
+            val isCurrentlyPackaged = packagedMoveLines.any { it.moveLineId == moveLine.lineId }
+            val isNewlyPackaged = moveLine.lineId in newPackagedIds
+            if (isCurrentlyPackaged != isNewlyPackaged) index else null
+        }
+
+        // Update the internal list of packaged move lines
+        packagedMoveLines.clear()
+        packagedMoveLines.addAll(packagedMoveLinesList)
+
+        // Notify adapter of changes only where necessary
+        for (index in changes) {
+            notifyItemChanged(index)
+        }
+    }
+
+
     private fun checkAllVerified() {
         val allVerified = moveLineOutGoings.all { moveLine ->
             packagedMoveLines.any { it.moveLineId == moveLine.lineId }
@@ -80,4 +103,5 @@ class PackProductsAdapter(
 
 
 }
+
 

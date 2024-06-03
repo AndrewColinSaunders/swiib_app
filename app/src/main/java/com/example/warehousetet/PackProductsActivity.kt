@@ -257,18 +257,42 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
                 odooXmlRpcClient.fetchMoveLinesByOperationId(packId)
             }
             Log.d("PackProductsActivity", "Fetched move lines: $fetchedMoveLines")
-            Log.d("DeliveryOrdersProductsActivity1234556", "Fetched move lines: ${fetchedMoveLines.map { it.productName + ": " + it.quantity }}")
+
+            val packagedMoveLinesIds = mutableListOf<PackagedMovedLine>()
+
+            // Check and log if move lines are already packaged
+            var allPackaged = true
+            fetchedMoveLines.forEach { moveLine ->
+                if (moveLine.resultPackageId != null) {
+                    Log.d("PackProductsActivity", "Already packaged: MoveLine ID ${moveLine.lineId} in package ${moveLine.resultPackageName}")
+                    packagedMoveLinesIds.add(PackagedMovedLine(moveLine.lineId))
+                } else {
+                    allPackaged = false
+                }
+            }
+
+            // Send packaged move lines to the adapter
+            packProductsAdapter.setPackagedMoveLines(packagedMoveLinesIds)
+
+            // Update UI with fetched move lines
             updateUIForMoveLines(fetchedMoveLines)
             updateRelevantSerialNumbers(fetchedMoveLines)
 
             val uniqueProductNames = fetchedMoveLines.map { it.productName }.distinct()
             val barcodes = fetchProductBarcodes(uniqueProductNames)
-
             Log.d("PackProductsActivity", "Fetched barcodes for all products: ${barcodes.map { "${it.key}: ${it.value}" }.joinToString(", ")}")
+
+            // Make the validate button visible if all move lines are packaged
+            runOnUiThread {
+                validateButton.visibility = if (allPackaged) View.VISIBLE else View.GONE
+            }
+
         } catch (e: Exception) {
             Log.e("PackProductsActivity", "Error fetching move lines for pack: ${e.localizedMessage}")
         }
     }
+
+
 
     private fun updateRelevantSerialNumbers(moveLineOutGoings: List<MoveLineOutGoing>) {
         serialNumberToMoveLineIdMap.clear()
@@ -1336,7 +1360,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
         }
     }
     companion object {
-        const val CAMERA_REQUEST_CODE = 1001
+        private const val CAMERA_REQUEST_CODE = 1001
     }
 
     private fun startCameraIntent() {
@@ -1481,7 +1505,7 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
 
-//override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+    //override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
 //    super.onPrepareOptionsMenu(menu)
 //    val subMenu = menu?.findItem(R.id.menu_more)?.subMenu
 //    subMenu?.clear()
@@ -1605,3 +1629,4 @@ class PackProductsActivity : AppCompatActivity(), PackProductsAdapter.Verificati
     }
 
 }
+

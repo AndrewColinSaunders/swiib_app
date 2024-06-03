@@ -32,8 +32,6 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
-import android.window.OnBackInvokedDispatcher
-import androidx.activity.addCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -48,7 +46,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-//import org.apache.xmlrpc.client.XmlRpcClient
 import java.io.ByteArrayOutputStream
 import java.util.Properties
 import javax.mail.Message
@@ -308,7 +305,6 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         }
 
         clearButton.setOnClickListener {
-            val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
             vibrateDevice(vibrator)
 
             barcodeInput.text.clear()
@@ -577,7 +573,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     //                                                  FlAG CODE
     //                  Test whether camera opens on another device if it doesn't work on yours
     //================================================================================================================
-    private suspend fun sendEmailToBuyer(buyerEmail: String, buyerName: String, packName: String?) {
+    private suspend fun sendEmailToBuyer(buyerEmail: String, buyerName: String, deliveryOrdersName: String?) {
         withContext(Dispatchers.IO) {
             val props = Properties().apply {
                 put("mail.smtp.host", "mail.dattec.co.za")
@@ -597,23 +593,21 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
                 val message = MimeMessage(session).apply {
                     setFrom(InternetAddress("info@dattec.co.za"))
                     setRecipients(Message.RecipientType.TO, InternetAddress.parse(buyerEmail))
-                    subject = "Action Required: Discrepancy in Received Quantity for Receipt $packName"
+                    subject = "Immediate Attention Required: Issue with Your Delivery for Order $deliveryOrdersName Name"
                     setText("""
-                    Dear $buyerName,
-
-                    During a recent receipt event, we identified a discrepancy in the quantities received for the following item:
-
-                    - Pack Name: $packName
-
-                    The recorded quantity does not match the expected quantity as per our purchase order. This discrepancy requires your immediate attention and action.
-
-                    Please review the receipt and product details at your earliest convenience and undertake the necessary steps to rectify this discrepancy. It is crucial to address these issues promptly to maintain accurate inventory records and ensure operational efficiency.
-
-                    Thank you for your prompt attention to this matter.
-
-                    Best regards,
-                    The Swiib Team
-                """.trimIndent())
+                            Dear $buyerName,
+                        
+                            We are reaching out to notify you of an issue encountered during the delivery process of your recent order (Order ID: $deliveryOrdersName). The details of the issue may involve discrepancies in quantity, lost items, or damage to the delivered goods.
+                        
+                            To ensure the accuracy and satisfaction of your order, we kindly request your immediate review of the delivered items. Please compare them against your order details and shipping documentation, and report any irregularities back to us.
+                        
+                            Your prompt action is crucial for resolving these issues efficiently and maintaining the quality of our service. Please contact our support team at your earliest convenience to discuss any concerns or to report discrepancies.
+                        
+                            We apologize for any inconvenience this may cause and thank you for your understanding and cooperation.
+                        
+                            Best regards,
+                            The Customer Support Team
+                            """.trimIndent())
                 }
                 Transport.send(message)
                 Log.d("EmailSender", "Email sent successfully to $buyerEmail.")
@@ -835,3 +829,4 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
     }
 
 }
+
