@@ -122,7 +122,7 @@ class HomePageActivity : AppCompatActivity() {
         // Set a click listener for the button
         button.setOnClickListener {
             it.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            Toast.makeText(this, "$optionName clicked", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "$optionName Under maintenance.", Toast.LENGTH_SHORT).show()
             // Add additional logic here for navigating to different activities
         }
     }

@@ -5078,7 +5078,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
     }
 
     companion object {
-        private const val CAMERA_REQUEST_CODE = 1001
+        const val CAMERA_REQUEST_CODE = 1001
     }
 
     private inline fun <reified T : Parcelable> Intent.parcelable(key: String): T? = when {

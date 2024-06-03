@@ -1,4 +1,3 @@
-//
 //package com.example.warehousetet
 //
 //import android.content.Context
@@ -62,15 +61,14 @@
 //    private lateinit var confirmButton: Button
 //    private lateinit var cameraLauncher: ActivityResultLauncher<Intent>
 //
-//    //    private var productBarcodes = hashMapOf<String, String>()
 //    private var quantityMatches = mutableMapOf<ProductPickKey, Boolean>()
 //    private var barcodeToProductIdMap = mutableMapOf<String, Int>()
-//    // Assuming this is declared at the class level
 //    private val confirmedLines = mutableSetOf<Int>()
 //    private var transferId: Int = -1
 //
 //    private var transferName: String? = null
 //    private var destLocationName: String? = null
+//
 //    override fun onCreate(savedInstanceState: Bundle?) {
 //        super.onCreate(savedInstanceState)
 //        setContentView(R.layout.pick_activity_products)
@@ -80,33 +78,18 @@
 //        barcodeInput = findViewById(R.id.pickBarcodeInput)
 //        confirmButton = findViewById(R.id.pickConfirmButton)
 //
-//
 //        transferId = intent.getIntExtra("TRANSFER_ID", -1)
 //        transferName = intent.getStringExtra("TRANSFER_NAME") ?: "Transfer"
-//
-//
-////        val locationName = intent.getStringExtra("LOCATION")
-//
-//
 //        destLocationName = intent.getStringExtra("DEST_LOCATION")
-//
 //
 //        supportActionBar?.title = transferName
 //        setupRecyclerView()
 //
 //        if (transferId != -1) {
 //            fetchProductsForPick(transferId)
-//            coroutineScope.launch {
-//                try {
-////                    displayLocationsForPick(pickId)
-//                } catch (e: Exception) {
-//                    Log.e("IntTransferProductsActivity", "Error displaying locations for pick: ${e.message}")
-//                }
-//            }
 //        } else {
 //            Log.e("IntTransferProductsActivity", "Invalid delivery order ID passed to IntTransferProductsActivity.")
 //        }
-//
 //
 //        findViewById<Button>(R.id.pickClearButton).setOnClickListener {
 //            findViewById<EditText>(R.id.pickBarcodeInput).text.clear()
@@ -142,74 +125,52 @@
 //            }
 //        }
 //
-//
 //        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 //        setupBarcodeVerification(transferId)
 //        restoreButtonVisibility(transferId)
 //        loadMatchStatesFromPreferences(transferId)
-//        restoreButtonVisibility(transferId)
 //    }
-////    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-////        menuInflater.inflate(R.menu.flag_menu_item, menu)
-////        return true
-////    }
-////    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-////        when (item.itemId) {
-////            android.R.id.home -> {
-////                onBackPressedDispatcher.onBackPressed()
-////                return true
-////            }
-////            R.id.action_flag -> {
-////                showFlagDialog()
-////                return true  // Ensure to return true after handling the action
-////            }
-////        }
-////        return super.onOptionsItemSelected(item)
-////    }
+//
 //    override fun onCreateOptionsMenu(menu: Menu): Boolean {
 //        menuInflater.inflate(R.menu.menu_products_activity, menu)
 //        return true
 //    }
+//
 //    override fun onOptionsItemSelected(item: MenuItem): Boolean {
 //        return when (item.itemId) {
 //            android.R.id.home -> {
 //                onBackPressedDispatcher.onBackPressed()
 //                true
 //            }
-//            R.id.action_flag_receipt -> {  // Updated ID
+//            R.id.action_flag_receipt -> {
 //                showFlagDialog()
-//                true  // Ensure to return true after handling the action
+//                true
 //            }
 //            else -> super.onOptionsItemSelected(item)
 //        }
 //    }
+//
 //    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
 //        super.onPrepareOptionsMenu(menu)
-//        // Find the nested "Flag" menu item using its ID.
 //        val menuItem = menu.findItem(R.id.action_flag_receipt)
-//        // Create a SpannableString with the title of the menu item.
 //        val spanString = SpannableString(menuItem.title).apply {
-//            // Apply a red color span.
 //            setSpan(ForegroundColorSpan(ContextCompat.getColor(this@IntTransferProductsActivity, R.color.danger_red)), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
-//            // You can also make the text bold if desired.
 //            setSpan(StyleSpan(Typeface.BOLD), 0, length, Spannable.SPAN_INCLUSIVE_INCLUSIVE)
 //        }
-//        // Set the modified SpannableString back as the title of the menu item.
 //        menuItem.title = spanString
 //        return true
 //    }
-//
 //
 //    private fun showFlagDialog() {
 //        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_flag_pick, findViewById(android.R.id.content), false)
 //        val dialogBuilder = AlertDialog.Builder(this).apply {
 //            setView(dialogView)
-//            setCancelable(false)  // Prevent dialog from being dismissed by back press or outside touches
+//            setCancelable(false)
 //        }
 //        val dialog = dialogBuilder.create()
 //
 //        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
-//            dialog.dismiss()  // Dismiss the dialog when "Cancel" is clicked
+//            dialog.dismiss()
 //        }
 //
 //        dialogView.findViewById<Button>(R.id.btnFlagPick).setOnClickListener {
@@ -228,11 +189,8 @@
 //                    val buyerDetails = odooXmlRpcClient.fetchAndLogBuyerDetails(pickName)
 //                    if (buyerDetails != null) {
 //                        withContext(Dispatchers.Main) {
-//                            // Capture image before sending the email
 //                            captureImage()
 //                        }
-//
-//                        // Ensure email is sent after image capture dialog completion
 //                        sendEmailToBuyer(buyerDetails.login, buyerDetails.name, pickName)
 //                        withContext(Dispatchers.Main) {
 //                            Log.d("PickProductsActivity", "Pick flagged and buyer notified via email.")
@@ -256,16 +214,13 @@
 //                        barcodeInput.requestFocus()
 //                    }
 //                }
-//                dialog.dismiss()  // Dismiss the dialog once the operations are complete
+//                dialog.dismiss()
 //            }
 //        }
 //
-//        dialog.show()  // Show the dialog
+//        dialog.show()
 //    }
 //
-////    companion object {
-////        const val CAMERA_REQUEST_CODE = 1001
-////    }
 //    private fun captureImage() {
 //        val builder = AlertDialog.Builder(this)
 //        builder.setTitle("Capture Image?")
@@ -309,125 +264,67 @@
 //            coroutineScope.launch {
 //                val updateResult = odooXmlRpcClient.updatePickingImage(transferId, encodedImage)
 //                Log.d("OdooUpdate", "Update result: $updateResult")
-//                barcodeInput.setText("")
-//                barcodeInput.requestFocus()
+//                withContext(Dispatchers.Main) {
+//                    barcodeInput.setText("")
+//                    barcodeInput.requestFocus()
+//                }
 //            }
 //        } else {
 //            Log.e("CaptureImage", "Failed to capture image")
-//            barcodeInput.setText("")
-//            barcodeInput.requestFocus()
+//            runOnUiThread {
+//                barcodeInput.setText("")
+//                barcodeInput.requestFocus()
+//            }
 //        }
 //    }
 //
-////    private fun captureImage() {
-////        // Inflate the custom layout for the dialog
-////        val dialogView = LayoutInflater.from(this).inflate(R.layout.capture_image_dialog, null)
-////
-////        // Create and show the dialog
-////        val dialog = AlertDialog.Builder(this)
-////            .setView(dialogView)
-////            .create()
-////
-////        // Find buttons and set up click listeners
-////        dialogView.findViewById<Button>(R.id.btnNo).setOnClickListener {
-////            dialog.dismiss()
-////        }
-////
-////        dialogView.findViewById<Button>(R.id.btnCaptureImage).setOnClickListener {
-////            dialog.dismiss()
-////            openCamera()  // Pass pickId to ensure it is available after capturing the image
-////        }
-////        dialog.show()
-////    }
-////
-////    private fun openCamera() {
-////        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-////        if (cameraIntent.resolveActivity(packageManager) != null) {
-////            startActivityForResult(cameraIntent, CAMERA_REQUEST_CODE)
-////        } else {
-////            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
-////        }
-////    }
-//
-////    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-////        super.onActivityResult(requestCode, resultCode, data)
-////        if (requestCode == CAMERA_REQUEST_CODE && resultCode == RESULT_OK) {
-////            val imageBitmap = data?.extras?.get("data") as? Bitmap
-////            if (imageBitmap != null) {
-////                val byteArrayOutputStream = ByteArrayOutputStream()
-////                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-////                val byteArray = byteArrayOutputStream.toByteArray()
-////                val encodedImage = Base64.encodeToString(byteArray, Base64.DEFAULT)
-////
-////                Log.d("CaptureImage", "Encoded image: $encodedImage") // Log the encoded string or its length
-////
-////                coroutineScope.launch {
-////                    val updateResult = odooXmlRpcClient.updatePickingImage(transferId, encodedImage)
-////                    Log.d("OdooUpdate", "Update result: $updateResult") // Log the result from the server
-////                }
-////            } else {
-////                Log.e("CaptureImage", "Failed to capture image")
-////            }
-////        }
-////    }
-//
 //    override fun onResume() {
 //        super.onResume()
-//        // Restore visibility state whenever the activity resumes
 //        restoreButtonVisibility(transferId)
 //    }
 //
 //    private fun setupRecyclerView() {
 //        val recyclerView: RecyclerView = findViewById(R.id.pickProductsRecyclerView)
-//        // Ensure you are passing all necessary parameters in the correct order
-//        // The parameters should be (List<MoveLine>, Map<ProductPickKey, Boolean>, Map<Int, String>, Int, OnProductClickListener)
 //        intTransferProductsAdapter = IntTransferProductsAdapter(
-//            emptyList(),                    // List of MoveLine, initially empty
-//            quantityMatches,                // Map of quantity matches
-//            mapOf(),                        // Empty map for tracking types initially
-//            transferId,                         // Pick ID
-//            this                            // Listener, 'this' refers to PickProductsActivity implementing OnProductClickListener
+//            emptyList(),
+//            quantityMatches,
+//            mapOf(),
+//            transferId,
+//            this
 //        )
 //        recyclerView.layoutManager = LinearLayoutManager(this)
 //        recyclerView.adapter = intTransferProductsAdapter
 //    }
 //
-//
 //    override fun onProductClick(product: MoveLine) {
 //        showProductDialog(product)
 //    }
 //
-//
 //    private fun showProductDialog(product: MoveLine) {
-//        // Inflate the custom layout for the dialog
 //        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_product_details, null)
 //
-//        // Retrieve all the TextViews from the inflated layout
 //        val textProductName = dialogView.findViewById<TextView>(R.id.textProductName)
 //        val textProductQuantity = dialogView.findViewById<TextView>(R.id.textProductQuantity)
 //        val textProductFromLocation = dialogView.findViewById<TextView>(R.id.textProductFromLocation)
 //        val textProductToLocation = dialogView.findViewById<TextView>(R.id.textProductToLocationHeading)
 //        val textProductLotNumber = dialogView.findViewById<TextView>(R.id.textProductLotNumber)
 //        val editTextProductLotNumber = dialogView.findViewById<EditText>(R.id.editTextProductLotNumber)
-//        val lotNumberLayout = dialogView.findViewById<LinearLayout>(R.id.lotNumberLayout) // Reference to the LinearLayout
+//        val lotNumberLayout = dialogView.findViewById<LinearLayout>(R.id.lotNumberLayout)
 //        val buttonEditLotNumber = dialogView.findViewById<ImageButton>(R.id.buttonEditLotNumber)
 //        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
-//        val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmSN) // Ensure this ID is correct
+//        val buttonConfirmQuantity = dialogView.findViewById<Button>(R.id.buttonConfirmSN)
 //
-//        // Set values to the TextViews
 //        textProductName.text = product.productName
 //        textProductQuantity.text = getString(R.string.product_quantity, product.quantity)
 //        textProductFromLocation.text = getString(R.string.from_location, product.locationName)
 //        textProductToLocation.text = getString(R.string.to_location, product.locationDestName)
 //        textProductLotNumber.text = product.lotName
 //
-//        // Determine the product's tracking type
 //        coroutineScope.launch {
 //            val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(product.productName)
 //            val trackingType = trackingAndExpiration?.first ?: "none"
 //
 //            withContext(Dispatchers.Main) {
-//                // Toggle the visibility for editing the lot number based on tracking type
 //                if (trackingType == "serial" && product.lotName.isNotEmpty()) {
 //                    lotNumberLayout.visibility = View.VISIBLE
 //                    buttonEditLotNumber.visibility = View.VISIBLE
@@ -451,7 +348,6 @@
 //            }
 //        }
 //
-//        // Create and show the dialog
 //        val dialog = AlertDialog.Builder(this)
 //            .setView(dialogView)
 //            .create()
@@ -468,12 +364,10 @@
 //                        withContext(Dispatchers.Main) {
 //                            Log.d("UpdateProduct", "Successfully updated move line for product ID: ${product.productId}")
 //                            fetchProductsForPick(transferId)
-//
 //                        }
 //                    } catch (e: Exception) {
 //                        withContext(Dispatchers.Main) {
 //                            Log.e("UpdateProduct", "Failed to update move line: ${e.localizedMessage}")
-//
 //                        }
 //                    }
 //                }
@@ -490,6 +384,7 @@
 //
 //        dialog.show()
 //    }
+//
 //    private fun fetchProductsForPick(pickId: Int) {
 //        coroutineScope.launch {
 //            try {
@@ -497,7 +392,6 @@
 //                val fetchedLines = odooXmlRpcClient.fetchMoveLinesByPickingId(pickId)
 //                val updatedMoveLinesWithDetails = mutableListOf<MoveLine>()
 //
-//                // Fetch additional package information if required
 //                odooXmlRpcClient.fetchResultPackagesByPickingId(pickId)
 //
 //                val fetchJobs = fetchedLines.map { moveLine ->
@@ -514,11 +408,9 @@
 //
 //                updatedMoveLinesWithDetails.addAll(fetchJobs.awaitAll())
 //
-//                // Optionally fetch barcodes for all products in the fetched lines
 //                fetchBarcodesForProducts(fetchedLines)
 //
 //                withContext(Dispatchers.Main) {
-//                    // After all async operations complete, update the UI with the detailed move lines
 //                    updateUIForProducts(updatedMoveLinesWithDetails, pickId)
 //                    Log.d("PickProductsActivity", "UI updated with detailed move lines for Pick")
 //                }
@@ -529,12 +421,10 @@
 //    }
 //
 //    private fun updateUIForProducts(moveLines: List<MoveLine>, pickId: Int) {
-//        // Explicitly defining types in the map creation
 //        val newQuantityMatches: MutableMap<ProductPickKey, Boolean> = moveLines.associateBy({ ProductPickKey(it.id, pickId) }, { moveLine ->
 //            quantityMatches.getOrDefault(ProductPickKey(moveLine.id, pickId), false)
 //        }).toMutableMap()
 //
-//        // Update the quantityMatches and the adapter for RecyclerView
 //        quantityMatches.clear()
 //        quantityMatches.putAll(newQuantityMatches)
 //        intTransferProductsAdapter.updateProducts(moveLines, pickId, quantityMatches)
@@ -546,8 +436,7 @@
 //            coroutineScope.launch {
 //                val barcode = odooXmlRpcClient.fetchProductBarcodeByName(moveLine.productName)
 //                barcode?.let {
-//                    // Assuming barcodeToProductIdMap should map barcode to product ID
-//                    synchronized(this@IntTransferProductsActivity) { // Ensure to use your current activity or context correctly
+//                    synchronized(this@IntTransferProductsActivity) {
 //                        barcodeToProductIdMap[barcode] = moveLine.productId
 //                    }
 //                }
@@ -555,20 +444,6 @@
 //        }
 //    }
 //
-////    private fun setupBarcodeVerification(pickId: Int) {
-////        confirmButton.setOnClickListener {
-////            val enteredBarcode = barcodeInput.text.toString().trim()
-////            verifyBarcode(enteredBarcode, pickId)
-////            hideKeyboard()
-////        }
-////
-////        barcodeInput.setOnEditorActionListener { _, actionId, event ->
-////            if (actionId == EditorInfo.IME_ACTION_DONE || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
-////                confirmButton.performClick()
-////                true
-////            } else false
-////        }
-////    }
 //    private fun setupBarcodeVerification(pickId: Int) {
 //        fun performBarcodeVerification() {
 //            val enteredBarcode = barcodeInput.text.toString().trim()
@@ -613,7 +488,7 @@
 //                    val trackingType = trackingAndExpiration?.first ?: "none"
 //
 //                    withContext(Dispatchers.Main) {
-//                        showSourceLocationDialog(productLine.productName, productLine.quantity, pickId, productLine.id, productLine.locationName, trackingType,productLine.productId, productLine.lotName)
+//                        showSourceLocationDialog(productLine.productName, productLine.quantity, pickId, productLine.id, productLine.locationName, trackingType, productLine.productId, productLine.lotName)
 //                    }
 //                }
 //            } else if (packagingProductInfo != null) {
@@ -650,7 +525,7 @@
 //
 //        val dialog = AlertDialog.Builder(this)
 //            .setView(dialogView)
-//            .setCancelable(false) // Disables dismiss by clicking outside or pressing back
+//            .setCancelable(false)
 //            .create()
 //
 //        dialogView.findViewById<Button>(R.id.confirmButton).setOnClickListener {
@@ -658,7 +533,6 @@
 //            if (enteredLocation.isNotEmpty()) {
 //                coroutineScope.launch {
 //                    if (enteredLocation == locationName) {
-//                        // If the entered location matches the expected location
 //                        withContext(Dispatchers.Main) {
 //                            Toast.makeText(this@IntTransferProductsActivity, "Source location confirmed: $enteredLocation", Toast.LENGTH_SHORT).show()
 //                            dialog.dismiss()
@@ -670,10 +544,9 @@
 //                            }
 //                        }
 //                    } else {
-//                        // If the entered location does not match
 //                        withContext(Dispatchers.Main) {
 //                            Toast.makeText(this@IntTransferProductsActivity, "Incorrect location, please re-enter.", Toast.LENGTH_SHORT).show()
-//                            sourceLocationInput.text.clear() // Clear the input for re-entry
+//                            sourceLocationInput.text.clear()
 //                        }
 //                    }
 //                }
@@ -688,53 +561,12 @@
 //            barcodeInput.requestFocus()
 //        }
 //
-//        dialog.show() // Display the dialog
-//        sourceLocationInput.requestFocus() // Autofocus on the source location input field when the dialog shows
+//        dialog.show()
+//        sourceLocationInput.requestFocus()
 //    }
 //
-////    private fun displayQuantityDialog(productName: String, expectedQuantity: Double, pickId: Int, lineId: Int) {
-////
-////        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, null)
-////        val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
-////        val buttonConfirm = dialogView.findViewById<Button>(R.id.buttonConfirm)
-////        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
-////
-////        val fullText = "Confirm the quantity of $expectedQuantity for $productName has been picked."
-////        val spannableString = SpannableString(fullText)
-////
-////        // Styling for expectedQuantity
-////        val quantityStart = fullText.indexOf("$expectedQuantity")
-////        val quantityEnd = quantityStart + "$expectedQuantity".length
-////        spannableString.setSpan(StyleSpan(Typeface.BOLD), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-////        spannableString.setSpan(RelativeSizeSpan(1.1f), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) // 10% larger
-////
-////        // Styling for productName
-////        val productNameStart = fullText.indexOf(productName)
-////        val productNameEnd = productNameStart + productName.length
-////        spannableString.setSpan(StyleSpan(Typeface.BOLD), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-////        spannableString.setSpan(RelativeSizeSpan(1.1f), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) // 10% larger
-////
-////        textViewConfirmation.text = spannableString
-////
-////        val alertDialog = AlertDialog.Builder(this).apply {
-////            setView(dialogView)
-////            create()
-////        }.show()
-////
-////        buttonConfirm.setOnClickListener {
-////            // Pass the lineId to match state update function
-////            updateProductMatchState(lineId, pickId)
-////            confirmedLines.add(lineId)
-////            alertDialog.dismiss()  // Close the dialog after confirmation
-////        }
-////
-////        buttonCancel.setOnClickListener {
-////            alertDialog.dismiss()  // Close the dialog when cancel is clicked
-////        }
-////    }
-//
 //    private fun displayQuantityDialog(productName: String, expectedQuantity: Double, pickId: Int, lineId: Int) {
-//        val rootView = findViewById<ViewGroup>(android.R.id.content)  // Use root view to resolve layout parameters
+//        val rootView = findViewById<ViewGroup>(android.R.id.content)
 //        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_quantity_confirmation, rootView, false)
 //        val textViewConfirmation = dialogView.findViewById<TextView>(R.id.ConfirmationTextView)
 //        val buttonConfirm = dialogView.findViewById<Button>(R.id.buttonConfirm)
@@ -743,13 +575,11 @@
 //        val fullText = getString(R.string.confirm_quantity_message, expectedQuantity, productName)
 //        val spannableString = SpannableString(fullText)
 //
-//        // Styling for expectedQuantity
 //        val quantityStart = fullText.indexOf("$expectedQuantity")
 //        val quantityEnd = quantityStart + "$expectedQuantity".length
 //        spannableString.setSpan(StyleSpan(Typeface.BOLD), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 //        spannableString.setSpan(RelativeSizeSpan(1.1f), quantityStart, quantityEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 //
-//        // Styling for productName
 //        val productNameStart = fullText.indexOf(productName)
 //        val productNameEnd = productNameStart + productName.length
 //        spannableString.setSpan(StyleSpan(Typeface.BOLD), productNameStart, productNameEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -777,7 +607,6 @@
 //        }
 //    }
 //
-//
 //    private fun promptConfirmLotQuantity(productName: String, lotName: String, quantity: Double, locationName: String, lineId: Int, pickId: Int) {
 //        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_confirm_quantity, null)
 //        dialogView.findViewById<TextView>(R.id.textProductInfo).text = getString(R.string.product_message, productName)
@@ -788,81 +617,25 @@
 //        val confirmButton = dialogView.findViewById<Button>(R.id.confirmButton)
 //        val buttonCancel = dialogView.findViewById<Button>(R.id.buttonCancel)
 //        val alertDialog = AlertDialog.Builder(this)
-//
 //            .setView(dialogView)
 //            .create()
 //
 //        confirmButton.setOnClickListener {
 //            confirmLotNumber(productName, quantity, lotName, lineId, pickId)
 //            Toast.makeText(this@IntTransferProductsActivity, "Quantity confirmed for $productName.", Toast.LENGTH_SHORT).show()
-//            alertDialog.dismiss()  // Close the dialog after confirmation
+//            alertDialog.dismiss()
 //            barcodeInput.requestFocus()
 //        }
 //        buttonCancel.setOnClickListener {
 //            alertDialog.dismiss()
-//            barcodeInput.requestFocus()// Close the dialog when cancel is clicked
+//            barcodeInput.requestFocus()
 //        }
 //
 //        alertDialog.show()
 //    }
 //
-////    private fun confirmLotNumber(productName: String, quantity: Double, lotName: String, lineId: Int, pickId: Int) {
-////        // Inflate the custom layout for the dialog
-////        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_entry, null)
-////        val textProductInfo: TextView = dialogView.findViewById(R.id.textProductInfo)
-////        val textLotInfo: TextView = dialogView.findViewById(R.id.textLotInfo)
-////        val editText: EditText = dialogView.findViewById(R.id.editLotNumber)
-////        editText.setHintTextColor(Color.WHITE)
-////        val textQuantityInfo: TextView = dialogView.findViewById(R.id.textQuantityInfo)
-////        val confirmButton: Button = dialogView.findViewById(R.id.confirmButton)
-////        val buttonCancel: Button = dialogView.findViewById(R.id.buttonCancel)
-////
-////        // Set the texts for TextViews
-////        textProductInfo.text = getString(R.string.product_message, productName)
-////        textQuantityInfo.text = getString(R.string.product_quantity, quantity)
-////        textLotInfo.text = getString(R.string.lot_info, lotName)
-////
-////        // Configure and show AlertDialog
-////        val alertDialog = AlertDialog.Builder(this).apply {
-////            setView(dialogView)
-////            setCancelable(false)
-////            create()
-////        }.show()
-////
-////        // Set up the confirm button action
-////        confirmButton.setOnClickListener {
-////            val enteredLotNumber = editText.text.toString()
-////            if (enteredLotNumber == lotName) {
-////                showGreenToast("Correct LOT number confirmed for $productName.")
-////                updateProductMatchState(lineId, pickId)
-////                confirmedLines.add(lineId)
-////                alertDialog.dismiss()  // Close the dialog when the correct number is confirmed
-////            } else {
-////                showRedToast("Incorrect LOT number entered.")
-////            }
-////        }
-////        buttonCancel.setOnClickListener {
-////            alertDialog.dismiss()  // Close the dialog when cancel is clicked
-////        }
-////
-////        // Set up the editor action listener for the enter key
-////        editText.setOnEditorActionListener { v, actionId, event ->
-////            if (actionId == EditorInfo.IME_ACTION_DONE || event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
-////                confirmButton.performClick()
-////                true
-////            } else {
-////                false
-////            }
-////        }
-////
-////        // Automatically show keyboard when dialog appears
-////        editText.requestFocus()
-////        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-////        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-////    }
-//
 //    private fun confirmLotNumber(productName: String, quantity: Double, lotName: String, lineId: Int, pickId: Int) {
-//        val rootView = findViewById<ViewGroup>(android.R.id.content)  // Use root view to resolve layout parameters
+//        val rootView = findViewById<ViewGroup>(android.R.id.content)
 //        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_lot_entry, rootView, false)
 //        val textProductInfo: TextView = dialogView.findViewById(R.id.textProductInfo)
 //        val textLotInfo: TextView = dialogView.findViewById(R.id.textLotInfo)
@@ -872,7 +645,6 @@
 //        val confirmButton: Button = dialogView.findViewById(R.id.confirmButton)
 //        val buttonCancel: Button = dialogView.findViewById(R.id.buttonCancel)
 //
-//        // Set the texts for TextViews using string resources
 //        textProductInfo.text = getString(R.string.product_message, productName)
 //        textQuantityInfo.text = getString(R.string.product_quantity, quantity)
 //        textLotInfo.text = getString(R.string.lot_info, lotName)
@@ -915,7 +687,6 @@
 //        imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
 //    }
 //
-//
 //    private fun promptForSerialNumber(productName: String, pickId: Int, productId: Int, lineId: Int) {
 //        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_serial_number_input, null)
 //        val serialNumberInput = dialogView.findViewById<EditText>(R.id.serialNumberInput)
@@ -925,7 +696,6 @@
 //        messageTextView.text = getString(R.string.product_message, productName)
 //        serialNumberInput.setHintTextColor(Color.WHITE)
 //
-//        // Set up the editor action listener for the serial number input
 //        serialNumberInput.setOnEditorActionListener { _, actionId, event ->
 //            if (actionId == EditorInfo.IME_ACTION_DONE || (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
 //                buttonConfirmSN.performClick()
@@ -935,18 +705,15 @@
 //            }
 //        }
 //
-//        // Access SharedPreferences to retrieve saved serial numbers, using both pickId and productId in the key
 //        val sharedPrefs = getSharedPreferences("SerialNumbers", Context.MODE_PRIVATE)
 //        val key = "Serials_${pickId}_$productId"
 //        val savedSerials = sharedPrefs.getStringSet(key, mutableSetOf()) ?: mutableSetOf()
 //
-//        // Configure the dialog
 //        val dialog = AlertDialog.Builder(this)
 //            .setView(dialogView)
-//            .setCancelable(false)  // Disable dismissing the dialog by pressing back or clicking outside
+//            .setCancelable(false)
 //            .create()
 //
-//        // Set up the confirm button action
 //        buttonConfirmSN.setOnClickListener {
 //            val enteredSerialNumber = serialNumberInput.text.toString().trim()
 //            if (enteredSerialNumber.isNotEmpty()) {
@@ -961,11 +728,8 @@
 //                        val serialNumbers = odooXmlRpcClient.fetchLotAndSerialNumbersByProductId(productId)
 //
 //                        if (serialNumbers?.contains(enteredSerialNumber) == true) {
-//                            // Create a new HashSet based on the existing savedSerials set
 //                            val newSavedSerials = HashSet(savedSerials)
 //                            newSavedSerials.add(enteredSerialNumber)
-//
-//                            // Save the new set to SharedPreferences
 //                            sharedPrefs.edit().putStringSet(key, newSavedSerials).apply()
 //
 //                            odooXmlRpcClient.updateMoveLinesForPick(lineId, pickId, enteredSerialNumber, productId)
@@ -978,8 +742,7 @@
 //                                fetchProductsForPick(pickId)
 //                                barcodeInput.requestFocus()
 //                            }
-//                        }
-//                         else {
+//                        } else {
 //                            withContext(Dispatchers.Main) {
 //                                Toast.makeText(this@IntTransferProductsActivity, "Serial number does not exist. Please enter a valid serial number.", Toast.LENGTH_SHORT).show()
 //                                serialNumberInput.setText("")
@@ -995,15 +758,12 @@
 //            }
 //        }
 //
-//        // Set up the cancel button action
 //        buttonCancelSN.setOnClickListener {
-//            dialog.dismiss()  // Dismiss the dialog
+//            dialog.dismiss()
 //            barcodeInput.requestFocus()
 //        }
 //
 //        dialog.show()
-//
-//        // Request focus and show keyboard for the serial number input
 //        serialNumberInput.requestFocus()
 //        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
 //        imm.showSoftInput(serialNumberInput, InputMethodManager.SHOW_IMPLICIT)
@@ -1020,7 +780,7 @@
 //
 //        val session = Session.getDefaultInstance(props, object : javax.mail.Authenticator() {
 //            override fun getPasswordAuthentication(): PasswordAuthentication {
-//                return PasswordAuthentication("info@dattec.co.za", "0s3*X4n)#m,z") // Replace with your actual password
+//                return PasswordAuthentication("info@dattec.co.za", "0s3*X4n)#m,z")
 //            }
 //        })
 //
@@ -1048,10 +808,14 @@
 //            }
 //            Transport.send(message)
 //            Log.d("EmailSender", "Email sent successfully to $buyerEmail.")
-//            barcodeInput.requestFocus()
+//            coroutineScope.launch(Dispatchers.Main) {
+//                barcodeInput.requestFocus()
+//            }
 //        } catch (e: MessagingException) {
 //            Log.e("EmailSender", "Failed to send email.", e)
-//            barcodeInput.requestFocus()
+//            coroutineScope.launch(Dispatchers.Main) {
+//                barcodeInput.requestFocus()
+//            }
 //        }
 //    }
 //
@@ -1066,7 +830,6 @@
 //        if (productLine != null) {
 //            quantityMatches[key] = matched
 //
-//            // Refresh the UI to reflect the updated state
 //            runOnUiThread {
 //                val position = intTransferProductsAdapter.findProductPositionById(lineId)
 //                if (position != -1) {
@@ -1100,10 +863,9 @@
 //                            mediaPlayer?.setOnCompletionListener {
 //                                it.release()
 //                            }
-//                            // Redirect to PickActivity upon successful validation
 //                            val intent = Intent(this@IntTransferProductsActivity, InternalTransfersActivity::class.java)
 //                            startActivity(intent)
-//                            finish()  // Optionally call finish() if you want to remove this activity from the back stack
+//                            finish()
 //                        } else {
 //                            Toast.makeText(applicationContext, "Failed to validate picking.\nPlease flag or recount quantities", Toast.LENGTH_SHORT).show()
 //                            barcodeInput.requestFocus()
@@ -1148,7 +910,7 @@
 //                        }
 //                        val intent = Intent(this@IntTransferProductsActivity, InternalTransfersActivity::class.java)
 //                        startActivity(intent)
-//                        finish()  // Optionally call finish() if you want to remove this activity from the back stack
+//                        finish()
 //                    } else {
 //                        Toast.makeText(applicationContext, "Failed to validate picking.", Toast.LENGTH_SHORT).show()
 //                        barcodeInput.requestFocus()
@@ -1173,7 +935,6 @@
 //        sharedPref.all.forEach { (prefKey, value) ->
 //            if (value is Boolean) {
 //                if (prefKey.startsWith("ValidateButtonVisible")) {
-//                    // Correct handling of the ValidateButtonVisible key
 //                    val parts = prefKey.split("_")
 //                    if (parts.size == 2) {
 //                        val storedPickId = parts[1].toIntOrNull()
@@ -1182,7 +943,6 @@
 //                        }
 //                    }
 //                } else {
-//                    // Handling standard product match keys
 //                    val parts = prefKey.split("_")
 //                    if (parts.size == 2) {
 //                        try {
@@ -1204,7 +964,6 @@
 //        quantityMatches.clear()
 //        quantityMatches.putAll(tempQuantityMatches)
 //
-//        // Now update the adapter with the loaded match states
 //        runOnUiThread {
 //            intTransferProductsAdapter.updateProducts(intTransferProductsAdapter.lines, pickId, quantityMatches)
 //        }
@@ -1212,15 +971,22 @@
 //}
 
 
+
+
 package com.example.warehousetet
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Typeface
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.MediaStore
 import android.text.Spannable
 import android.text.SpannableString
@@ -1248,6 +1014,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -1439,12 +1206,15 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
         val builder = AlertDialog.Builder(this)
         builder.setTitle("Capture Image?")
         builder.setMessage("Would you like to capture an image?")
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
 
         builder.setNegativeButton("No") { dialog, _ ->
+            vibrateDevice(vibrator)
             dialog.dismiss()
         }
 
         builder.setPositiveButton("Capture Image") { dialog, _ ->
+            vibrateDevice(vibrator)
             dialog.dismiss()
             openCamera()
         }
@@ -1454,13 +1224,26 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
     }
 
     private fun openCamera() {
-        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        if (cameraIntent.resolveActivity(packageManager) != null) {
-            cameraLauncher.launch(cameraIntent)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA),
+                ProductsActivity.CAMERA_REQUEST_CODE
+            )
         } else {
-            Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
-            barcodeInput.setText("")
-            barcodeInput.requestFocus()
+            startCameraIntent()
+        }
+    }
+
+    private fun startCameraIntent() {
+        val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        try {
+            if (cameraIntent.resolveActivity(packageManager) != null) {
+                cameraLauncher.launch(cameraIntent)
+            } else {
+                Toast.makeText(this, "Camera not available.", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Log.e("CameraIntent", "Failed to start camera intent", e)
+            Toast.makeText(this, "Failed to open camera: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -1488,6 +1271,30 @@ class IntTransferProductsActivity : AppCompatActivity(), IntTransferProductsAdap
             runOnUiThread {
                 barcodeInput.setText("")
                 barcodeInput.requestFocus()
+            }
+        }
+    }
+
+    private fun vibrateDevice(vibrator: Vibrator?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(50)
+        }
+    }
+
+    companion object {
+        private const val CAMERA_REQUEST_CODE = 1001
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_REQUEST_CODE) {
+            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                startCameraIntent()
+            } else {
+                Toast.makeText(this, "Camera permission is necessary to capture images", Toast.LENGTH_SHORT).show()
             }
         }
     }
