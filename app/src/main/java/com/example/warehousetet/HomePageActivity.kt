@@ -65,7 +65,7 @@ class HomePageActivity : AppCompatActivity() {
     setupOptionButton(R.id.btnPick, "Pick")
     setupOptionButton(R.id.btnPack, "Pack")
     setupOptionButton(R.id.btnDeliveryOrders, "Delivery Orders")
-    setupOptionButton(R.id.btnReturns, "Returns")
+    setupOptionButton(R.id.btnCycleCount, "Cycle Count")
 
 
 

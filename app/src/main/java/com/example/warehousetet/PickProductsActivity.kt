@@ -2055,6 +2055,8 @@ import android.media.MediaPlayer
 import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.MediaStore
 import android.text.Spannable
 import android.text.SpannableString
@@ -2267,21 +2269,33 @@ class PickProductsActivity : AppCompatActivity(), PickProductsAdapter.OnProductC
     }
 
     private fun captureImage() {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Capture Image?")
-        builder.setMessage("Would you like to capture an image?")
+        val dialogView = layoutInflater.inflate(R.layout.dialog_capture_image, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
 
-        builder.setNegativeButton("No") { dialog, _ ->
+        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
+            vibrateDevice(vibrator)
             dialog.dismiss()
         }
 
-        builder.setPositiveButton("Capture Image") { dialog, _ ->
+        dialogView.findViewById<Button>(R.id.btnCaptureImage).setOnClickListener {
+            vibrateDevice(vibrator)
             dialog.dismiss()
             openCamera()
         }
 
-        val dialog = builder.create()
         dialog.show()
+    }
+    private fun vibrateDevice(vibrator: Vibrator?) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(50)
+        }
     }
 
     private fun openCamera() {

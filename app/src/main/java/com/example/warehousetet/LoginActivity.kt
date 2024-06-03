@@ -54,27 +54,6 @@ class LoginActivity : AppCompatActivity() {
             } else false
         }
 
-//        loginButton.setOnClickListener {
-//            val username = usernameEditText.text.toString()
-//            val password = passwordEditText.text.toString()
-//
-//            coroutineScope.launch {
-//                val odooXmlRpcClient = OdooXmlRpcClient(credentialManager)
-//                val userId = odooXmlRpcClient.login(username, password)
-//                Log.d("OdooXmlRpcClient", "Received UserID from login attempt: $userId")
-//
-//                withContext(Dispatchers.Main) {
-//                    if (userId > 0) {
-//                        Log.d("OdooXmlRpcClient", "Login successful with UserID: $userId before storing in prefs")
-//                        handleLoginSuccess(username, password, userId)
-//                        Log.d("OdooXmlRpcClient", "Stored UserId: ${credentialManager.getUserId()} after login")
-//                    } else {
-//                        handleLoginFailure("Invalid username or password.")
-//                    }
-//                }
-//            }
-//
-//        }
         loginButton.setOnClickListener {
             if (!isNetworkAvailable(this)) {
                 Toast.makeText(this, "No Internet Connection Available.", Toast.LENGTH_LONG).show()

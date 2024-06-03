@@ -616,10 +616,7 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
             }
         }
     }
-
-
-
-
+    
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
 
@@ -710,27 +707,50 @@ class DeliveryOrdersProductsActivity : AppCompatActivity(), DeliveryOrdersProduc
         dialog.show()
     }
 
+//    private fun captureImage(pickId: Int) {
+//        val builder = AlertDialog.Builder(this)
+//        builder.setTitle("Capture Image?")
+//        builder.setMessage("Would you like to capture an image?")
+//        val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
+//
+//        builder.setNegativeButton("No") { dialog, _ ->
+//            vibrateDevice(vibrator)
+//            dialog.dismiss()
+//        }
+//
+//        builder.setPositiveButton("Capture Image") { dialog, _ ->
+//            vibrateDevice(vibrator)
+//            dialog.dismiss()
+//            Log.d("CaptureImage", "Opening camera for packId: $pickId")
+//            openCamera(pickId)
+//        }
+//
+//        val dialog = builder.create()
+//        dialog.show()
+//    }
     private fun captureImage(pickId: Int) {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("Capture Image?")
-        builder.setMessage("Would you like to capture an image?")
+        val dialogView = layoutInflater.inflate(R.layout.dialog_capture_image, null)
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
         val vibrator = ContextCompat.getSystemService(this, Vibrator::class.java)
 
-        builder.setNegativeButton("No") { dialog, _ ->
+        dialogView.findViewById<Button>(R.id.btnCancel).setOnClickListener {
             vibrateDevice(vibrator)
             dialog.dismiss()
         }
 
-        builder.setPositiveButton("Capture Image") { dialog, _ ->
+        dialogView.findViewById<Button>(R.id.btnCaptureImage).setOnClickListener {
             vibrateDevice(vibrator)
             dialog.dismiss()
             Log.d("CaptureImage", "Opening camera for packId: $pickId")
             openCamera(pickId)
         }
 
-        val dialog = builder.create()
         dialog.show()
     }
+
 
     private fun openCamera(packId: Int) {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {

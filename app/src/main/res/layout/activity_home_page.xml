@@ -1,4 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
@@ -9,17 +11,17 @@
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:gravity="center_horizontal"
-        android:padding="16dp">
+        android:padding="@dimen/_16sdp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Warehouse Operations"
-            android:textSize="30sp"
+            android:textSize="@dimen/_25sdp"
             android:textStyle="bold"
             android:textAlignment="center"
-            android:layout_marginBottom="10dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginBottom="@dimen/_10sdp"
+            android:layout_marginTop="@dimen/_10sdp"
             android:textColor="@color/white"/>
 
         <!-- Row 1 -->
@@ -32,24 +34,24 @@
             <Button
                 android:id="@+id/btnReceipt"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="@dimen/_110sdp"
                 android:layout_weight="1"
                 android:drawableTop="@drawable/arrow_right_to_bracket_solid"
                 android:text="Receipt"
                 android:background="@drawable/rounded_button"
-                android:padding="8dp"
-                android:layout_margin="8dp"/>
+                android:padding="@dimen/_8sdp"
+                android:layout_margin="@dimen/_8sdp"/>
 
             <Button
                 android:id="@+id/btnInternalTransfers"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="@dimen/_110sdp"
                 android:layout_weight="1"
                 android:drawableTop="@drawable/right_left_solid"
                 android:text="Internal Transfers"
                 android:background="@drawable/rounded_button"
-                android:padding="8dp"
-                android:layout_margin="8dp"/>
+                android:padding="@dimen/_8sdp"
+                android:layout_margin="@dimen/_8sdp"/>
         </LinearLayout>
 
         <!-- Row 2 -->
@@ -62,24 +64,24 @@
             <Button
                 android:id="@+id/btnPick"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="@dimen/_110sdp"
                 android:layout_weight="1"
-                android:drawableTop="@drawable/hand_back_fist_regular"
+                android:drawableTop="@drawable/hand_delivery_box_box_svgrepo_com"
                 android:text="Pick"
                 android:background="@drawable/rounded_button"
-                android:padding="8dp"
-                android:layout_margin="8dp"/>
+                android:padding="@dimen/_8sdp"
+                android:layout_margin="@dimen/_8sdp"/>
 
             <Button
                 android:id="@+id/btnPack"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="@dimen/_110sdp"
                 android:layout_weight="1"
-                android:drawableTop="@drawable/box_open_solid"
+                android:drawableTop="@drawable/package_box_ui_4_svgrepo_com"
                 android:text="Pack"
                 android:background="@drawable/rounded_button"
-                android:padding="8dp"
-                android:layout_margin="8dp"/>
+                android:padding="@dimen/_8sdp"
+                android:layout_margin="@dimen/_8sdp"/>
         </LinearLayout>
 
         <!-- Row 3 -->
@@ -92,25 +94,144 @@
             <Button
                 android:id="@+id/btnDeliveryOrders"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="@dimen/_110sdp"
                 android:layout_weight="1"
-                android:drawableTop="@drawable/truck_fast_solid"
+                android:drawableTop="@drawable/delivery_svgrepo_com"
                 android:text="Delivery Orders"
                 android:background="@drawable/rounded_button"
-                android:padding="8dp"
-                android:layout_margin="8dp"/>
+                android:padding="@dimen/_8sdp"
+                android:layout_margin="@dimen/_8sdp"/>
 
             <Button
-                android:id="@+id/btnReturns"
+                android:id="@+id/btnCycleCount"
                 android:layout_width="0dp"
-                android:layout_height="120dp"
+                android:layout_height="@dimen/_110sdp"
                 android:layout_weight="1"
                 android:drawableTop="@drawable/rotate_left_solid"
-                android:text="Returns"
+                android:text="Cycle Count"
                 android:background="@drawable/rounded_button"
-                android:padding="8dp"
-                android:layout_margin="8dp"/>
+                android:padding="@dimen/_8sdp"
+                android:layout_margin="@dimen/_8sdp"/>
         </LinearLayout>
 
     </LinearLayout>
 </ScrollView>
+
+
+
+    <!--<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"-->
+<!--    android:layout_width="match_parent"-->
+<!--    android:layout_height="match_parent"-->
+<!--    android:fillViewport="true"-->
+<!--    android:background="#11151c">-->
+
+<!--    <LinearLayout-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:orientation="vertical"-->
+<!--        android:gravity="center_horizontal"-->
+<!--        android:padding="16dp">-->
+
+<!--        <TextView-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Warehouse Operations"-->
+<!--            android:textSize="30sp"-->
+<!--            android:textStyle="bold"-->
+<!--            android:textAlignment="center"-->
+<!--            android:layout_marginBottom="10dp"-->
+<!--            android:layout_marginTop="10dp"-->
+<!--            android:textColor="@color/white"/>-->
+
+<!--        &lt;!&ndash; Row 1 &ndash;&gt;-->
+<!--        <LinearLayout-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:orientation="horizontal"-->
+<!--            android:gravity="center">-->
+
+<!--            <Button-->
+<!--                android:id="@+id/btnReceipt"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="120dp"-->
+<!--                android:layout_weight="1"-->
+<!--                android:drawableTop="@drawable/arrow_right_to_bracket_solid"-->
+<!--                android:text="Receipt"-->
+<!--                android:background="@drawable/rounded_button"-->
+<!--                android:padding="8dp"-->
+<!--                android:layout_margin="8dp"/>-->
+
+<!--            <Button-->
+<!--                android:id="@+id/btnInternalTransfers"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="120dp"-->
+<!--                android:layout_weight="1"-->
+<!--                android:drawableTop="@drawable/right_left_solid"-->
+<!--                android:text="Internal Transfers"-->
+<!--                android:background="@drawable/rounded_button"-->
+<!--                android:padding="8dp"-->
+<!--                android:layout_margin="8dp"/>-->
+<!--        </LinearLayout>-->
+
+<!--        &lt;!&ndash; Row 2 &ndash;&gt;-->
+<!--        <LinearLayout-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:orientation="horizontal"-->
+<!--            android:gravity="center">-->
+
+<!--            <Button-->
+<!--                android:id="@+id/btnPick"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="120dp"-->
+<!--                android:layout_weight="1"-->
+<!--                android:drawableTop="@drawable/hand_back_fist_regular"-->
+<!--                android:text="Pick"-->
+<!--                android:background="@drawable/rounded_button"-->
+<!--                android:padding="8dp"-->
+<!--                android:layout_margin="8dp"/>-->
+
+<!--            <Button-->
+<!--                android:id="@+id/btnPack"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="120dp"-->
+<!--                android:layout_weight="1"-->
+<!--                android:drawableTop="@drawable/box_open_solid"-->
+<!--                android:text="Pack"-->
+<!--                android:background="@drawable/rounded_button"-->
+<!--                android:padding="8dp"-->
+<!--                android:layout_margin="8dp"/>-->
+<!--        </LinearLayout>-->
+
+<!--        &lt;!&ndash; Row 3 &ndash;&gt;-->
+<!--        <LinearLayout-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:orientation="horizontal"-->
+<!--            android:gravity="center">-->
+
+<!--            <Button-->
+<!--                android:id="@+id/btnDeliveryOrders"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="120dp"-->
+<!--                android:layout_weight="1"-->
+<!--                android:drawableTop="@drawable/truck_fast_solid"-->
+<!--                android:text="Delivery Orders"-->
+<!--                android:background="@drawable/rounded_button"-->
+<!--                android:padding="8dp"-->
+<!--                android:layout_margin="8dp"/>-->
+
+<!--            <Button-->
+<!--                android:id="@+id/btnReturns"-->
+<!--                android:layout_width="0dp"-->
+<!--                android:layout_height="120dp"-->
+<!--                android:layout_weight="1"-->
+<!--                android:drawableTop="@drawable/rotate_left_solid"-->
+<!--                android:text="Returns"-->
+<!--                android:background="@drawable/rounded_button"-->
+<!--                android:padding="8dp"-->
+<!--                android:layout_margin="8dp"/>-->
+<!--        </LinearLayout>-->
+
+<!--    </LinearLayout>-->
+<!--</ScrollView>-->
