@@ -4,5 +4,3 @@ data class PackageWithProducts(
     val packageName: String,
     val products: List<MoveLineOutGoing>
 )
-
-//yes
