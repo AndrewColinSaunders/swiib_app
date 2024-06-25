@@ -26,16 +26,24 @@
 //    }
 //
 //    fun filter(query: String) {
+//        val oldFilteredTransfers = filteredTransfers
 //        filteredTransfers = if (query.isEmpty()) transfers else transfers.filter {
 //            it.name.contains(query, ignoreCase = true)
 //        }
-//        notifyDataSetChanged()
+//        updateList(oldFilteredTransfers, filteredTransfers)
 //    }
 //
 //    fun updateTransfers(newTransfers: List<InternalTransfers>) {
+//        val oldTransfers = transfers
 //        transfers = newTransfers
 //        filteredTransfers = newTransfers
-//        notifyDataSetChanged()
+//        updateList(oldTransfers, newTransfers)
+//    }
+//
+//    private fun updateList(oldList: List<InternalTransfers>, newList: List<InternalTransfers>) {
+//        val diffCallback = TransfersDiffCallback(oldList, newList)
+//        val diffResult = DiffUtil.calculateDiff(diffCallback)
+//        diffResult.dispatchUpdatesTo(this)
 //    }
 //
 //    inner class ViewHolder(itemView: View, private val onTransferClicked: (InternalTransfers) -> Unit) : RecyclerView.ViewHolder(itemView) {
@@ -59,7 +67,20 @@
 //        }
 //    }
 //}
-
+//
+//class TransfersDiffCallback(
+//    private val oldList: List<InternalTransfers>,
+//    private val newList: List<InternalTransfers>
+//) : DiffUtil.Callback() {
+//    override fun getOldListSize(): Int = oldList.size
+//    override fun getNewListSize(): Int = newList.size
+//
+//    override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
+//        oldList[oldItemPosition].id == newList[newItemPosition].id
+//
+//    override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
+//        oldList[oldItemPosition] == newList[newItemPosition]
+//}
 
 
 package com.example.warehousetet
