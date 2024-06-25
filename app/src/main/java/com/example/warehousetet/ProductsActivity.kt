@@ -1715,10 +1715,10 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         loadMatchStatesFromPreferences(receiptId)
     }
 
-    private fun setupActionBar() {
+    fun setupActionBar() {
         supportActionBar?.title = receiptName
     }
-    fun initializeFields() {
+    private fun initializeFields() {
         odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
         barcodeInput = findViewById(R.id.barcodeInput)
         confirmButton = findViewById(R.id.confirmButton)
@@ -1726,7 +1726,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         receiptName = intent.getStringExtra("RECEIPT_NAME")
         Log.d("ProductsActivity", "Received receipt name: $receiptName")
     }
-    fun initializeRecyclerView() {
+    private fun initializeRecyclerView() {
         val recyclerView: RecyclerView = findViewById(R.id.productsRecyclerView)
         productsAdapter = ProductsAdapter(emptyList(), mapOf(), receiptId, this)
         recyclerView.layoutManager = LinearLayoutManager(this)
