@@ -1658,8 +1658,8 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
     private var pickSerialNumbers = hashMapOf<Int, MutableList<String>>()
     private var pickLotNumbers = hashMapOf<Int, MutableList<String>>()
 
-    private var barcodeToProductIdMap = mutableMapOf<String, Int>()
-    private var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
+    var barcodeToProductIdMap = mutableMapOf<String, Int>()
+    var quantityMatches = mutableMapOf<ProductReceiptKey, Boolean>()
     private val confirmedLines = mutableSetOf<Int>()
 
     var receiptName: String? = null
@@ -1718,7 +1718,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
     fun setupActionBar() {
         supportActionBar?.title = receiptName
     }
-    private fun initializeFields() {
+    fun initializeFields() {
         odooXmlRpcClient = OdooXmlRpcClient(CredentialManager(this))
         barcodeInput = findViewById(R.id.barcodeInput)
         confirmButton = findViewById(R.id.confirmButton)
@@ -1732,42 +1732,13 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = productsAdapter
     }
-    private fun handleCameraResult(result: ActivityResult) {
+    fun handleCameraResult(result: ActivityResult) {
         if (result.resultCode == RESULT_OK) {
             val data = result.data
             val imageBitmap = data?.parcelable<Bitmap>("data")
             if (imageBitmap != null) {
-                val byteArrayOutputStream = ByteArrayOutputStream()
-                imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
-                val byteArray = byteArrayOutputStream.toByteArray()
-                val encodedImage = Base64.encodeToString(byteArray, Base64.DEFAULT)
-
-                Log.d("CaptureImage", "Encoded image: $encodedImage")
-
-                lifecycleScope.launch {
-                    try {
-                        withContext(Dispatchers.IO) {
-                            odooXmlRpcClient.updatePickingImage(receiptId, encodedImage)
-                        }
-                        Log.d("OdooUpdate", "Image updated successfully on server")
-
-                        // Ensure UI updates are on the main thread
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@ProductsActivity, "Image updated successfully on server", Toast.LENGTH_SHORT).show()
-                            barcodeInput.setText("")
-                            barcodeInput.requestFocus()
-                        }
-                    } catch (e: Exception) {
-                        Log.e("OdooUpdate", "Failed to update image: ${e.localizedMessage}", e)
-
-                        // Ensure UI updates are on the main thread
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(this@ProductsActivity, "Failed to update image.", Toast.LENGTH_SHORT).show()
-                            barcodeInput.setText("")
-                            barcodeInput.requestFocus()
-                        }
-                    }
-                }
+                val encodedImage = processImage(imageBitmap)
+                updateImageOnServer(encodedImage)
             } else {
                 Log.e("CaptureImage", "Failed to capture image")
             }
@@ -1777,8 +1748,40 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         }
     }
 
+    fun processImage(imageBitmap: Bitmap): String {
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        imageBitmap.compress(Bitmap.CompressFormat.JPEG, 100, byteArrayOutputStream)
+        val byteArray = byteArrayOutputStream.toByteArray()
+        return Base64.encodeToString(byteArray, Base64.DEFAULT)
+    }
 
-    override fun onResume() {
+    private fun updateImageOnServer(encodedImage: String) {
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    odooXmlRpcClient.updatePickingImage(receiptId, encodedImage)
+                }
+                Log.d("OdooUpdate", "Image updated successfully on server")
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ProductsActivity, "Image updated successfully on server", Toast.LENGTH_SHORT).show()
+                    barcodeInput.setText("")
+                    barcodeInput.requestFocus()
+                }
+            } catch (e: Exception) {
+                Log.e("OdooUpdate", "Failed to update image: ${e.localizedMessage}", e)
+
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ProductsActivity, "Failed to update image.", Toast.LENGTH_SHORT).show()
+                    barcodeInput.setText("")
+                    barcodeInput.requestFocus()
+                }
+            }
+        }
+    }
+
+
+    public override fun onResume() {
         super.onResume()
         // Restore visibility state whenever the activity resumes
         restoreButtonVisibility(receiptId)
@@ -1913,29 +1916,34 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         recyclerView.adapter = productsAdapter
     }
 
-    private fun setupBarcodeVerification(receiptId: Int) {
-        fun performBarcodeVerification() {
-            val enteredBarcode = barcodeInput.text.toString().trim()
-            verifyBarcode(enteredBarcode, receiptId)
-            hideKeyboard()
-            barcodeInput.setText("")
+    fun setupBarcodeVerification(receiptId: Int) {
+        barcodeInput.setOnEditorActionListener { _, actionId, event ->
+            handleEditorActions(actionId, event, receiptId)
         }
 
         confirmButton.setOnClickListener {
-            performBarcodeVerification()
+            performBarcodeVerification(receiptId)
         }
+    }
 
-        barcodeInput.setOnEditorActionListener { _, actionId, event ->
-            if (actionId == EditorInfo.IME_ACTION_DONE ||
-                (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
-                if (confirmButton.visibility == View.GONE || confirmButton.visibility == View.INVISIBLE) {
-                    performBarcodeVerification()
-                } else {
-                    confirmButton.performClick()
-                }
-                true
-            } else false
+    internal fun handleEditorActions(actionId: Int, event: KeyEvent?, receiptId: Int): Boolean {
+        if (actionId == EditorInfo.IME_ACTION_DONE ||
+            (event?.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+            if (confirmButton.visibility == View.GONE || confirmButton.visibility == View.INVISIBLE) {
+                performBarcodeVerification(receiptId)
+            } else {
+                confirmButton.performClick()
+            }
+            return true
         }
+        return false
+    }
+
+    private fun performBarcodeVerification(receiptId: Int) {
+        val enteredBarcode = barcodeInput.text.toString().trim()
+        verifyBarcode(enteredBarcode, receiptId)
+        hideKeyboard()
+        barcodeInput.setText("")
     }
 
     private fun hideKeyboard() {
@@ -1943,30 +1951,11 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         imm.hideSoftInputFromWindow(barcodeInput.windowToken, 0)
     }
 
-    private suspend fun fetchProductsForReceipt(pickId: Int) {
+    suspend fun fetchProductsForReceipt(pickId: Int) {
         try {
             Log.d("PickProductsActivity", "Fetching products for pick ID: $pickId")
-            val fetchedLines = odooXmlRpcClient.fetchReceiptMoveLinesByPickingId(pickId)
-            val updatedMoveLinesWithDetails = mutableListOf<ReceiptMoveLine>()
-
-            // Optionally fetch additional package information if required
-            odooXmlRpcClient.fetchResultPackagesByPickingId(pickId)
-
-            // Fetch product tracking and expiration details asynchronously
-            val fetchJobs = fetchedLines.map { moveLine ->
-                coroutineScope.async(Dispatchers.IO) {
-                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(moveLine.productName) ?: Pair("none", false)
-                    val barcode = barcodeToProductIdMap.filterValues { it == moveLine.productId }.keys.firstOrNull()?.toString()
-
-                    moveLine.copy(
-                        trackingType = trackingAndExpiration.first ?: "none",
-                        useExpirationDate = trackingAndExpiration.second,
-                        barcode = barcode
-                    )
-                }
-            }
-
-            updatedMoveLinesWithDetails.addAll(fetchJobs.awaitAll())
+            val fetchedLines = fetchMoveLines(pickId)
+            val updatedMoveLinesWithDetails = fetchProductDetails(fetchedLines)
 
             // Optionally fetch barcodes for all products in the fetched lines
             fetchBarcodesForProducts(fetchedLines)
@@ -1979,6 +1968,29 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
             }
         } catch (e: Exception) {
             Log.e("PickProductsActivity", "Error fetching move lines or updating UI: ${e.localizedMessage}", e)
+        }
+    }
+
+    suspend fun fetchMoveLines(pickId: Int): List<ReceiptMoveLine> {
+        val fetchedLines = odooXmlRpcClient.fetchReceiptMoveLinesByPickingId(pickId)
+        odooXmlRpcClient.fetchResultPackagesByPickingId(pickId)
+        return fetchedLines
+    }
+
+    suspend fun fetchProductDetails(fetchedLines: List<ReceiptMoveLine>): List<ReceiptMoveLine> {
+        return coroutineScope {
+            val fetchJobs = fetchedLines.map { moveLine ->
+                async(Dispatchers.IO) {
+                    val trackingAndExpiration = odooXmlRpcClient.fetchProductTrackingAndExpirationByName(moveLine.productName) ?: Pair("none", false)
+                    val barcode = barcodeToProductIdMap.filterValues { it == moveLine.productId }.keys.firstOrNull()?.toString()
+                    moveLine.copy(
+                        trackingType = trackingAndExpiration.first ?: "none",
+                        useExpirationDate = trackingAndExpiration.second,
+                        barcode = barcode
+                    )
+                }
+            }
+            fetchJobs.awaitAll()
         }
     }
 
@@ -1996,7 +2008,7 @@ class ProductsActivity : AppCompatActivity(), ProductsAdapter.OnProductClickList
         }
     }
 
-    private fun updateUIForProducts(products: List<ReceiptMoveLine>, receiptId: Int) {
+    fun updateUIForProducts(products: List<ReceiptMoveLine>, receiptId: Int) {
         // Assuming barcodeToProductIdMap and productSerialNumbers are already populated or handled within the fetched products loop
         val newQuantityMatches = products.associate {
             ProductReceiptKey(it.id, receiptId) to (quantityMatches[ProductReceiptKey(it.id, receiptId)] ?: false)

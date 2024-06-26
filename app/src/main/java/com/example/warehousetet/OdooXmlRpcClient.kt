@@ -14,7 +14,7 @@ import java.net.URL
 
 
 
-class OdooXmlRpcClient(val credentialManager: CredentialManager) {
+open class OdooXmlRpcClient(val credentialManager: CredentialManager) {
 
     private fun getClientConfig(endpoint: String): XmlRpcClientConfigImpl? {
         try {
@@ -182,7 +182,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
     }
 
 
-    suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<String?, Boolean?>? {
+    open suspend fun fetchProductTrackingAndExpirationByName(productName: String): Pair<String?, Boolean?>? {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e(
@@ -776,7 +776,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
         }
     }
 
-    suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
+    open suspend fun fetchResultPackagesByPickingId(pickingId: Int): List<PackageInfo> {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchResultPackagesByPickingId.")
@@ -862,7 +862,7 @@ class OdooXmlRpcClient(val credentialManager: CredentialManager) {
             Log.e("OdooXmlRpcClient", "Error updating image for picking ID $pickingId: ${e.localizedMessage}", e)
         }
     }
-    suspend fun fetchReceiptMoveLinesByPickingId(pickingId: Int): List<ReceiptMoveLine> {
+    open suspend fun fetchReceiptMoveLinesByPickingId(pickingId: Int): List<ReceiptMoveLine> {
         val config = getClientConfig("object")
         if (config == null) {
             Log.e("OdooXmlRpcClient", "Client configuration is null, aborting fetchReceiptMoveLinesByPickingId.")
